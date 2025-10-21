@@ -308,6 +308,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f38f0d1bd4380d4daf0594932f07430, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  useSymmetry: 1
   pointCount: 5
   heightSpacing: 0.75
   randomHeightSpacing: 0
@@ -377,9 +378,11 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   curvatureDirection: {x: 1, y: 0, z: 0}
-  centeredTip: 0
+  centeredTip: 1
   tipXForcedZero: 0
-  tipEdgeCollapseChance: 0.2
+  useRandomTipHeightOffset: 0
+  randomTipHeightOffsetMinMax: 0.259
+  tipSegmentHeightOffset: 0
   chanceForTipLeaningToLeftRight: 0.3
   tipLeanStrengthCurve:
     serializedVersion: 2
@@ -405,6 +408,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  edgeCollapseChance: 0
   activeCurvatureCurve:
     serializedVersion: 2
     m_Curve: []

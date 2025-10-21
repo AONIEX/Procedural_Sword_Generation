@@ -13,7 +13,12 @@ public struct Segment
 
 public class SplineAndLineGen : MonoBehaviour
 {
- 
+
+
+    [Header("Symmetry")]
+    public bool useSymmetry; // Stops the use of angles and make sure a straight blade is symmetri
+
+    [Header("Core Controls")]
     [Range(3,10)]
     public int pointCount = 5;
     [Range(0.25f, 2f)]
@@ -54,11 +59,13 @@ public class SplineAndLineGen : MonoBehaviour
     [Range(-1, 1)]
     public float tipSegmentHeightOffset = 0f; // Can be positive or negative
 
-    [Range(0,1)]
-    public float tipEdgeCollapseChance = 0.2f;// chance of having one side of the blade flat or following the spline for something like a machette with a flat bacl
+  
     [Range(0, 1)]
     public float chanceForTipLeaningToLeftRight = 0.3f; //chance of the tip being crooked or focusing on the left or right side of the blade
     public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1); // To help force the tip to lean fully or partially left or right based on prefrences (for something like a katana witha tip to one side)
+    [Header("Edges")]
+    [Range(0, 1)]
+    public float edgeCollapseChance = 0.2f;// chance of having one side of the blade flat or following the spline for something like a machette with a flat bacl
 
 
     [Header("Testing")]
@@ -85,12 +92,12 @@ public class SplineAndLineGen : MonoBehaviour
         bool collapseRightSide = false;
 
         float collapseChance = Random.value;
-        if (collapseChance < 0.1f)
+        if (collapseChance < edgeCollapseChance/2)
         {
             collapseLeftSide = true;
             Debug.Log("Left side Collapsed");
         }
-        else if (collapseChance < 0.2f)
+        else if (collapseChance < edgeCollapseChance)
         {
             collapseRightSide = true;
             Debug.Log("Right side Collapsed");
@@ -195,6 +202,11 @@ public class SplineAndLineGen : MonoBehaviour
             float biased = Mathf.Pow(raw, 2f);
             float mid = 0f;
             float range = Mathf.Max(Mathf.Abs(minAndMaxAngle.x), Mathf.Abs(minAndMaxAngle.y));
+
+            if (useSymmetry)
+            {
+                range = 0;
+            }
 
             float angle = 0f;
             if (i != 0)
