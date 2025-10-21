@@ -2,26 +2,29 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 
+
+public struct Segment
+{
+    public Vector3 center;
+    public Vector3 left;
+    public Vector3 right;
+}
+
 public class SplineAndLineGen : MonoBehaviour
 {
-    private struct Segment
-    {
-        public Vector3 center;
-        public Vector3 left;
-        public Vector3 right;
-    }
-
+ 
     [Range(3,10)]
     public int pointCount = 5;
     [Range(0.25f, 2f)]
     public float heightSpacing = 0.5f;
     public bool randomHeightSpacing = false;
+    public bool multipleSpacingValues = false;
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     private SplineContainer splineContainer;
-    private List<Segment> segments = new List<Segment>();
+    public List<Segment> segments = new List<Segment>();
     [Header("Width Control")]
     public bool useRandomWidthCurve = true;
     public AnimationCurve userDefinedCurve;
@@ -43,7 +46,7 @@ public class SplineAndLineGen : MonoBehaviour
 
     [Header("Tip Control")]
     public bool centeredTip = false;
-
+    public float tipEdgeCollapseChance = 0.2f;
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
@@ -61,8 +64,25 @@ public class SplineAndLineGen : MonoBehaviour
         }
     }
 
-    void GenerateLinesAndSplines()
+    public void GenerateLinesAndSplines()
     {
+
+        bool collapseLeftSide = false;
+        bool collapseRightSide = false;
+
+        float collapseChance = Random.value;
+        if (collapseChance < 0.1f)
+        {
+            collapseLeftSide = true;
+            Debug.Log("Left side Collapsed");
+        }
+        else if (collapseChance < 0.2f)
+        {
+            collapseRightSide = true;
+            Debug.Log("Right side Collapsed");
+
+        }
+
 
         if (splineContainer == null)
             splineContainer = GetComponent<SplineContainer>() ?? gameObject.AddComponent<SplineContainer>();
@@ -79,32 +99,49 @@ public class SplineAndLineGen : MonoBehaviour
             activeCurvatureCurve = GenerateCurvatureCurve();
         }
 
-        float stepSize = heightSpacing;
-        if (randomHeightSpacing)
-        {
-            stepSize  = Random.Range(minAndMaxHeightSpacing.x, minAndMaxHeightSpacing.y);
-        }
+        Vector3 pos = Vector3.zero;
+        float totalHeight = 0f;
 
         for (int i = 0; i < pointCount; i++)
         {
-            Vector3 pos = new Vector3(0, i * stepSize, 0);
-            float heightRatio = i / (float)(pointCount - 1);
+            float stepSize = heightSpacing;
 
-            //Aplly Curvature
-            if (applyCurvature)
+            if (i == 0)
             {
-                if (!(i == pointCount - 1 && centeredTip))
+                stepSize = 0f; // force first point to start at height 0
+            }
+            else if (randomHeightSpacing)
+            {
+                if (multipleSpacingValues)
                 {
-                    pos = GenerateCurvature(pos, heightRatio);
+                    stepSize = Random.Range(minAndMaxHeightSpacing.x, minAndMaxHeightSpacing.y);
+                }
+                else if (i == 0)
+                {
+                    stepSize = Random.Range(minAndMaxHeightSpacing.x, minAndMaxHeightSpacing.y);
                 }
             }
+
+            // Accumulate vertical position
+            pos += new Vector3(0, stepSize, 0);
+            totalHeight += stepSize;
+
+            float heightRatio = totalHeight / (heightSpacing * (pointCount - 1));
+
+            if (applyCurvature)
+            {
+                pos = GenerateCurvature(pos, heightRatio);
+            }
+
+            if (i == pointCount - 1 && centeredTip)
+            {
+                pos.x = 0f; // only center the tip if centeredTip is true
+            }
+
+
             spline.Add(new BezierKnot(pos));
 
-            if (i == pointCount - 1)
-                continue; // tip
-
-
-
+            // Width bias
             float bias = widthBiasCurve.Evaluate(heightRatio);
             if (!useRandomWidthCurve)
             {
@@ -112,11 +149,47 @@ public class SplineAndLineGen : MonoBehaviour
             }
             float width = Mathf.Lerp(minAndMaxWidth.x, minAndMaxWidth.y, bias);
 
-            float angle = (i == 0) ? 0f : Random.Range(minAndMaxAngle.x, minAndMaxAngle.y);
-            Vector3 dir = Quaternion.Euler(0, 0, angle) * Vector3.right;
+            // Angle bias toward 0
+            float raw = Random.value;
+            float biased = Mathf.Pow(raw, 2f);
+            float mid = 0f;
+            float range = Mathf.Max(Mathf.Abs(minAndMaxAngle.x), Mathf.Abs(minAndMaxAngle.y));
 
+            float angle = 0f;
+            if (i != 0)
+            {
+                angle = Mathf.Lerp(mid - range, mid + range, biased);
+            }
+
+            Vector3 dir = Quaternion.Euler(0, 0, angle) * Vector3.right;
             Vector3 left = pos - dir * width * 0.5f;
             Vector3 right = pos + dir * width * 0.5f;
+            if (collapseLeftSide)
+            {
+                left = pos;
+            }
+            if (collapseRightSide)
+            {
+                right = pos;
+            }
+          
+
+            if (i == pointCount - 1)
+            {
+                left = pos;     // collapse width
+                right = pos;
+            }
+
+           
+
+
+
+            //if (i == pointCount - 2)
+            //{
+            //    // Pre-tip segment: collapse its right side to avoid drawing a line to the tip
+            //    right = pos;
+            //}
+
 
             segments.Add(new Segment { center = pos, left = left, right = right });
         }
@@ -206,6 +279,18 @@ public class SplineAndLineGen : MonoBehaviour
         return pos + curvatureDirection.normalized * curveStrength * curvature_Max;
     }
 
+    //Gets the spline points for mesh generation
+    public List<Vector3> GetSplinePoints()
+    {
+        List<Vector3> points = new List<Vector3>();
+        foreach (var knot in splineContainer.Spline)
+        {
+            points.Add(knot.Position);
+        }
+        return points;
+    }
+
+
 
     void OnDrawGizmos()
     {
@@ -226,4 +311,6 @@ public class SplineAndLineGen : MonoBehaviour
             Gizmos.DrawSphere(tip, 0.07f);
         }
     }
+
+
 }
