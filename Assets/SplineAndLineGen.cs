@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Splines;
 
 
@@ -16,37 +17,50 @@ public class SplineAndLineGen : MonoBehaviour
     [Range(3,10)]
     public int pointCount = 5;
     [Range(0.25f, 2f)]
-    public float heightSpacing = 0.5f;
-    public bool randomHeightSpacing = false;
-    public bool multipleSpacingValues = false;
-    public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
-    public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
-    public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
+    public float heightSpacing = 0.5f; // manual height spacing for specific sized blades
+    public bool randomHeightSpacing = false; // random height spacing choice for more different sized blaseds
+    public bool multipleSpacingValues = false; // multiple space values used for chaotic blades, but allows for more unique ness
+    public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f); // min and max height spacing used for randomness
+    public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f); // minimum and maximum width of the blade used for randomness
+    public Vector2 minAndMaxAngle = new Vector2(-45f, 45f); // minimum and max angle used for segments and blade shape randomness
 
-    private SplineContainer splineContainer;
-    public List<Segment> segments = new List<Segment>();
+    private SplineContainer splineContainer; // spline creation script
+    public List<Segment> segments = new List<Segment>(); // sword segments
     [Header("Width Control")]
-    public bool useRandomWidthCurve = true;
-    public AnimationCurve userDefinedCurve;
-    public AnimationCurve widthBiasCurve;
+    public bool useRandomWidthCurve = true; // choice to use random width curve
+    public AnimationCurve userDefinedCurve; // allows user to somewhat force the width based on a curve
+    public AnimationCurve widthBiasCurve; // allows contorl of width based on curve
 
     [Header("Curvature Control")]
-    public bool smoothCurvature;
-    public bool applyCurvature;
-    public bool useRandomCurvatureCurve = true;
-    [Range(0, 1)]
-    public float curvature_Max;
+    public bool smoothCurvature; // curvature as a smaller chance of being zig zaggy or wobbly
+    public bool applyCurvature; //want curvature or not
+    public bool useRandomCurvatureCurve = true; //use of random curvature compared to own choise
+    [Range(0, 0.75f)]
+    public float curvature_Max; // max curvature the blade can have
     [Range(0,1)]
-    public float curvature_PeakFactor = 0.3f; //0.3-0.6 for best smoothness
+    public float curvature_PeakFactor = 0.3f; // controls the smoothness of the blades edges --- 0.3-0.6 for best smoothness 
     [Range(0, 1)]
-    public float curvature_StepSize = 0.3f;
-    public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1);
+    public float curvature_StepSize = 0.3f; // allows to control how smoot or chaotic the curvature is
+    public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1); // allows for customisation of blades curve, if randomness isnt wanted
 
-    public Vector3 curvatureDirection = new Vector3(1,0,0);
+    public Vector3 curvatureDirection = new Vector3(1,0,0); // direction of the curve made to randomly go left or right
 
     [Header("Tip Control")]
-    public bool centeredTip = false;
-    public float tipEdgeCollapseChance = 0.2f;
+    public bool centeredTip = false; // centered tip no chance of tip being to the left or right
+    public bool tipXForcedZero = false; // tip is forced to 0 better for straght blades, or for forcing blades wanting to curve back towards the center
+    public bool useRandomTipHeightOffset;
+    [Range(0,1)]
+    public float randomTipHeightOffsetMinMax = 0.1f;
+    [Range(-1, 1)]
+    public float tipSegmentHeightOffset = 0f; // Can be positive or negative
+
+    [Range(0,1)]
+    public float tipEdgeCollapseChance = 0.2f;// chance of having one side of the blade flat or following the spline for something like a machette with a flat bacl
+    [Range(0, 1)]
+    public float chanceForTipLeaningToLeftRight = 0.3f; //chance of the tip being crooked or focusing on the left or right side of the blade
+    public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1); // To help force the tip to lean fully or partially left or right based on prefrences (for something like a katana witha tip to one side)
+
+
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
@@ -122,18 +136,45 @@ public class SplineAndLineGen : MonoBehaviour
                 }
             }
 
+
+            if (i == pointCount - 1)
+            {
+                if (useRandomTipHeightOffset)
+                {
+                    stepSize += Random.Range(-randomTipHeightOffsetMinMax, randomTipHeightOffsetMinMax); ;
+                }
+                else
+                {
+                    stepSize += tipSegmentHeightOffset;
+                }
+            }
+
             // Accumulate vertical position
             pos += new Vector3(0, stepSize, 0);
             totalHeight += stepSize;
 
             float heightRatio = totalHeight / (heightSpacing * (pointCount - 1));
 
+            int centerIndex = Mathf.FloorToInt(pointCount / 2);
+
             if (applyCurvature)
             {
-                pos = GenerateCurvature(pos, heightRatio);
+                if (tipXForcedZero && i >= centerIndex)
+                {
+                    // Curve toward center X as we approach the tip to allow for a more natural look for a centered tip
+                    float towardCenterBias = Mathf.InverseLerp(centerIndex, pointCount - 1, i); // 0 to 1
+                    float curveAmount = activeCurvatureCurve.Evaluate(heightRatio);
+                    float xOffset = Mathf.Lerp(pos.x, 0f, curveAmount * towardCenterBias);
+                    pos.x = xOffset;
+                }
+                else
+                {
+                    pos = GenerateCurvature(pos, heightRatio);
+                }
             }
 
-            if (i == pointCount - 1 && centeredTip)
+
+            if (i == pointCount - 1 && tipXForcedZero)
             {
                 pos.x = 0f; // only center the tip if centeredTip is true
             }
@@ -172,15 +213,43 @@ public class SplineAndLineGen : MonoBehaviour
             {
                 right = pos;
             }
-          
+
 
             if (i == pointCount - 1)
             {
-                left = pos;     // collapse width
-                right = pos;
+                if (!centeredTip)
+                {
+                    float tipBiasChance = Random.value;
+
+                    if (tipBiasChance < chanceForTipLeaningToLeftRight / 2)
+                    {
+                        // Lean toward left
+                        Debug.Log("TIP LEANING LEFT");
+
+                        float leanStrength = tipLeanStrengthCurve.Evaluate(Random.value); 
+                        pos = Vector3.Lerp(pos, left, leanStrength);
+
+                    }
+                    else if (tipBiasChance < chanceForTipLeaningToLeftRight)
+                    {
+                        // Lean toward right
+                        Debug.Log("TIP LEANING RIGHT");
+                        float leanStrength = tipLeanStrengthCurve.Evaluate(Random.value);
+                        pos = Vector3.Lerp(pos, right, leanStrength);
+
+                    }
+
+                    left = pos;
+                    right = pos;
+                }
+                else
+                {
+                    left = pos;
+                    right = pos;
+                }
             }
 
-           
+
 
 
 
@@ -249,7 +318,7 @@ public class SplineAndLineGen : MonoBehaviour
         //}
 
         // Makes sure the tip is centered
-        if (centeredTip)
+        if (tipXForcedZero)
         {
             values[keyCount - 1] = 0f;
         }

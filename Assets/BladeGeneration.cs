@@ -7,9 +7,10 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
     [Header("Detail")]
     [Range(1,10)]
-    public int subDivisions = 3;
-    public int tipSubdivisions = 5;
-    public int tipSteps = 5;
+    public int subDivisions = 3; // to decide how detailed the blade mesh is 
+    [Range(1, 10)]
+    public int tipSubdivisions = 5;// to decide how detailed the tip of the blade mesh is 
+
 
     // Start is called before the first frame update
     void Start()
