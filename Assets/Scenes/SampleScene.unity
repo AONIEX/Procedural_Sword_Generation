@@ -308,14 +308,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f38f0d1bd4380d4daf0594932f07430, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  presetName: 
+  bladePreset: 2
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7
     heightSpacing: 0.7
     heightSpacingMode: 0
+    totalBladeHeight: 3
     minAndMaxHeightSpacing: {x: 0.25, y: 1}
     minAndMaxWidth: {x: 0.2, y: 1}
-    minAndMaxAngle: {x: -45, y: 45}
+    minAndMaxAngle: {x: -20, y: 20}
   widthSettings:
     useRandomWidthCurve: 1
     userDefinedCurve:
@@ -377,6 +380,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   curvatureSettings:
+    straightSegmentThreshold: 0
     curvatureMode: 0
     curvature_Max: 0
     curvature_PeakFactor: 0.3
@@ -406,6 +410,9 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     curvatureDirection: {x: 1, y: 0, z: 0}
+  edgeSettings:
+    edgeCollapseMode: 0
+    collapsePattern: LRL
   activeCurvatureCurve:
     serializedVersion: 2
     m_Curve: []

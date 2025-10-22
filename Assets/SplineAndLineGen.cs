@@ -1,7 +1,26 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Splines;
+
+#region Variables and Enmums
+[System.Serializable]
+public class BladePreset
+{
+    public string presetName;
+    public CoreSettings coreSettings;
+    public WidthSettings widthSettings;
+    public CurvatureSettings curvatureSettings;
+    public TipSettings tipSettings;
+    public EdgeSettings edgeSettings;
+    public bool useSymmetry;
+}
+[System.Serializable]
+public class BladePresetCollection
+{
+    public List<BladePreset> presets = new List<BladePreset>();
+}
 
 
 public struct Segment //Points for creating the mesh
@@ -23,6 +42,8 @@ public enum TipLeanMode
     Centered,       // Tip is centered (X = 0)
     RandomLean,     // Tip leans left or right randomly
     ForcedCenterX,  // Tip X is forced to 0 regardless of curvature
+    ForcedLeft,     // Tip leans explicitly to the left
+    ForcedRight,    // Tip leans explicitly to the right
     None            // No special tip logic
 }
 
@@ -40,18 +61,21 @@ public enum EdgeCollapseMode //for edge collapsing and unique blade shapes
 public enum HeightSpacingMode { 
     Fixed, 
     RandomUniform, 
-    RandomChaotic 
+    RandomChaotic,
+    SetHeight
 }
 
 public enum BladePresets
 {
+    None,
     Katana,
     Shotel,
     Scimatar,
     Needle,
     Gladius,
     LongSword,
-    Jian
+    Jian,
+    Custom
 }
 
 [System.Serializable]
@@ -65,7 +89,7 @@ public class TipSettings
     [Range(0, 1)]
     public float randomHeightOffset = 0.1f;
     [Tooltip("Defines the offset for the tip of the blade (Allows for shorter or longer tips)")]
-    [Range(-1, 1)]
+    [Range(-2, 1)]
     public float heightOffset = 0f;
 
     [Tooltip("Curve allows user to control the tip leaning strength")]
@@ -78,7 +102,7 @@ public class CoreSettings
 {
     [Header("Core Controls")]
     [Tooltip("Defines the amount of segments wanted (More allows for more randomness and detail but also more chaos)")]
-    [Range(3, 10)]
+    [Range(3, 20)]
     public int splinePointCount = 5;
     [Tooltip("Defines spcaing between blade segments")]
     [Range(0.25f, 2f)]
@@ -87,6 +111,7 @@ public class CoreSettings
     [Tooltip("Fixed(User Defined), Random Uniformerd(Random but consistent through out segments), Rand Chaotic (Random and different between segments)")]
 
     public HeightSpacingMode heightSpacingMode = HeightSpacingMode.Fixed;
+    public float totalBladeHeight = 3;
 
     [Tooltip("Defines the minimum and maximum spacing between segments (Used for randomness)")]
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f); 
@@ -110,6 +135,7 @@ public class WidthSettings
 [System.Serializable]
 public class CurvatureSettings
 {
+    public int straightSegmentThreshold = 0;
     public CurvatureMode curvatureMode = CurvatureMode.None;
     [Range(0, 2)]
     public float curvature_Max; // max curvature the blade can have
@@ -128,11 +154,14 @@ public class EdgeSettings
     [Tooltip("Defines edge collapse pattern across blade thirds. Use 'L', 'R', or 'N' for None.")]
     public string collapsePattern = "LRL"; // Example: Left, Right, Left
 }
-
+#endregion
 
 public class SplineAndLineGen : MonoBehaviour
 {
-
+    
+    [Header("Blade Preset")]
+    public string presetName;
+    public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
     public bool useSymmetry; // Stops the use of angles and make sure a straight blade is symmetri
@@ -158,14 +187,26 @@ public class SplineAndLineGen : MonoBehaviour
 
     void Start()
     {
+        LoadPreset();
+
         GenerateLinesAndSplines();
+        bladePreset = BladePresets.None;
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            GenerateLinesAndSplines();
+            if(bladePreset == BladePresets.None)
+            {
+                GenerateLinesAndSplines();
+
+            }
+            else
+            {
+                LoadPreset();
+                bladePreset = BladePresets.None;
+            }
         }
     }
 
@@ -218,22 +259,56 @@ public class SplineAndLineGen : MonoBehaviour
                     case HeightSpacingMode.RandomChaotic:
                         stepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
                         break;
+                    case HeightSpacingMode.SetHeight:
+                        stepSize = coreSettings.totalBladeHeight / Mathf.Max(coreSettings.splinePointCount - 1, 1);
+                        break;
+
                 }
             }
 
-            if (i == coreSettings.splinePointCount - 1)
-            {
-                stepSize += tipSettings.heightOffset;
-            }
+           
+
 
             pos += new Vector3(0, stepSize, 0);
             totalHeight += stepSize;
 
-            float heightRatio = totalHeight / (coreSettings.heightSpacing * (coreSettings.splinePointCount - 1));
+            float heightRatio;
 
-            if (curvatureSettings.curvatureMode != CurvatureMode.None)
+            switch (coreSettings.heightSpacingMode)
             {
-                pos = GenerateCurvature(pos, heightRatio, i);
+                case HeightSpacingMode.SetHeight:
+                    heightRatio = totalHeight / Mathf.Max(coreSettings.totalBladeHeight, 0.0001f);
+                    break;
+
+                default:
+                    heightRatio = totalHeight / Mathf.Max(coreSettings.heightSpacing * (coreSettings.splinePointCount - 1), 0.0001f);
+                    break;
+            }
+
+
+            if (curvatureSettings.curvatureMode != CurvatureMode.None && i >= curvatureSettings.straightSegmentThreshold)
+            {
+                // Recalculate heightRatio relative to the curved portion only
+                int curvedStart = curvatureSettings.straightSegmentThreshold;
+                int curvedCount = Mathf.Max(coreSettings.splinePointCount - curvedStart - 1, 1);
+                float curvedRatio = (i - curvedStart) / (float)curvedCount;
+
+                pos = GenerateCurvature(pos, curvedRatio, i);
+            }
+
+            if (i == coreSettings.splinePointCount - 1 && segments.Count >= 5)
+            {
+                Vector3 averageDirection = Vector3.zero;
+
+                // Sum directions from the last 5 segments
+                for (int j = segments.Count - 5; j < segments.Count - 1; j++)
+                {
+                    Vector3 direction = (segments[j + 1].center - segments[j].center).normalized;
+                    averageDirection += direction;
+                }
+
+                averageDirection.Normalize(); // Final averaged direction
+                pos += averageDirection * tipSettings.heightOffset;
             }
 
 
@@ -342,30 +417,41 @@ public class SplineAndLineGen : MonoBehaviour
                         right = pos;
                         break;
 
-                    case TipLeanMode.RandomLean:
-                        float tipBiasChance = Random.value;
-                        float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
-
-                        if (tipBiasChance < 0.5f)
+                    case TipLeanMode.ForcedLeft:
                         {
-                            Debug.Log("TIP LEANING LEFT");
-                            pos = Vector3.Lerp(pos, left, leanStrength);
+                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
+                            Vector3 leanedPos = Vector3.Lerp(pos, left, leanStrength);
+                            pos = leanedPos;
+                            left = leanedPos;
+                            right = leanedPos;
                         }
-                        else
-                        {
-                            Debug.Log("TIP LEANING RIGHT");
-                            pos = Vector3.Lerp(pos, right, leanStrength);
-                        }
-
-                        left = pos;
-                        right = pos;
                         break;
 
+                    case TipLeanMode.ForcedRight:
+                        {
+                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
+                            Vector3 leanedPos = Vector3.Lerp(pos, right, leanStrength);
+                            pos = leanedPos;
+                            left = leanedPos;
+                            right = leanedPos;
+                        }
+                        break;
+
+                    case TipLeanMode.RandomLean:
+                        {
+                            float tipBiasChance = Random.value;
+                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
+                            Vector3 leanTarget = tipBiasChance < .5f ? left : right;
+                            Vector3 leanedPos = Vector3.Lerp(pos, leanTarget, leanStrength);
+                            pos = leanedPos;
+                            left = leanedPos;
+                            right = leanedPos;
+                        }
+                        break;
 
                     case TipLeanMode.None:
                     default:
                         break;
-
                 }
             }
 
@@ -391,9 +477,9 @@ public class SplineAndLineGen : MonoBehaviour
             }
             previousCenter = center;
 
-            spline.Add(new BezierKnot(pos));
+            spline.Add(new BezierKnot(center));
 
-            segments.Add(new Segment { center = pos, left = left, right = right });
+            segments.Add(new Segment { center = center, left = left, right = right });
         }
 
         spline.SetTangentMode(TangentMode.AutoSmooth);
@@ -470,7 +556,7 @@ public class SplineAndLineGen : MonoBehaviour
 
     Vector3 GenerateCurvature(Vector3 pos, float heightRatio, int segmentIndex)
     {
-        if (curvatureSettings.curvatureMode == CurvatureMode.None || segmentIndex <= 1)
+        if (curvatureSettings.curvatureMode == CurvatureMode.None)//|| segmentIndex <= curvatureSettings.straightSegmentThreshold
             return pos;
 
         float curveStrength = 0f;
@@ -557,5 +643,152 @@ public class SplineAndLineGen : MonoBehaviour
         }
     }
 
+    public void SaveCurrentPreset(string presetName)
+    {
+        BladePreset preset = new BladePreset
+        {
+            presetName = presetName,
+            coreSettings = this.coreSettings,
+            widthSettings = this.widthSettings,
+            curvatureSettings = this.curvatureSettings,
+            tipSettings = this.tipSettings,
+            edgeSettings = this.edgeSettings,
+            useSymmetry = this.useSymmetry
+        };
 
+        string folderPath = Path.Combine(Application.dataPath, "Presets");
+        Directory.CreateDirectory(folderPath); // ensures folder exists
+
+        string filePath = Path.Combine(folderPath, presetName + ".json");
+        string json = JsonUtility.ToJson(preset, true);
+        File.WriteAllText(filePath, json);
+
+        Debug.Log("Preset saved to: " + filePath);
+#if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+#endif
+
+    }
+
+    [ContextMenu("Load Preset")]
+    public void LoadPreset()
+    {
+        string chosenPreset = "";
+        switch (bladePreset)
+        {
+            case BladePresets.None:
+                Debug.LogWarning("No blade preset selected.");
+                return;
+
+            case BladePresets.Katana:
+                chosenPreset = "Katana";
+                break;
+            case BladePresets.Shotel:
+                chosenPreset = "Shotel";
+                break;
+            case BladePresets.Scimatar:
+                chosenPreset = "Scimitar";
+                break;
+            case BladePresets.Needle:
+                chosenPreset = "Needle";
+                break;
+            case BladePresets.Gladius:
+                chosenPreset = "Gladius";
+                break;
+            case BladePresets.LongSword:
+                chosenPreset = "LongSword";
+                break;
+            case BladePresets.Jian:
+                chosenPreset = "Jian";
+                break;
+            case BladePresets.Custom:
+                if (string.IsNullOrWhiteSpace(presetName))
+                {
+                    Debug.LogWarning("Custom preset name is empty.");
+                    return;
+                }
+                chosenPreset = presetName;
+                break;
+
+            default:
+                Debug.LogWarning("Unknown blade preset.");
+                return;
+        }
+
+        string folderPath = Path.Combine(Application.dataPath, "Presets");
+        string filePath = Path.Combine(folderPath, chosenPreset + ".json");
+
+        if (!File.Exists(filePath))
+        {
+            Debug.LogWarning("Preset not found: " + filePath);
+            return;
+        }
+
+        string json = File.ReadAllText(filePath);
+        BladePreset loadedPreset = JsonUtility.FromJson<BladePreset>(json);
+
+        ApplyPreset(loadedPreset);
+
+#if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+#endif
+
+        Debug.Log("Loaded preset: " + presetName);
+    }
+
+
+    public void ApplyPreset(BladePreset preset)
+    {
+        presetName = preset.presetName;
+        coreSettings = preset.coreSettings;
+        widthSettings = preset.widthSettings;
+        curvatureSettings = preset.curvatureSettings;
+        tipSettings = preset.tipSettings;
+        edgeSettings = preset.edgeSettings;
+        useSymmetry = preset.useSymmetry;
+
+        GenerateLinesAndSplines();
+    }
+
+    [ContextMenu("Save Current Preset")]
+    public void SavePreset()
+    {
+        SaveCurrentPreset(presetName);
+    }
+
+    public void GenerateScimitar()
+    {
+        presetName = "Scimitar";
+        coreSettings.splinePointCount = 12;
+        coreSettings.heightSpacingMode = HeightSpacingMode.SetHeight;
+        coreSettings.totalBladeHeight = 1.2f;
+        coreSettings.minAndMaxWidth = new Vector2(0.06f, 0.14f);
+        coreSettings.minAndMaxAngle = new Vector2(0f, 10f); // slight directional variance
+        useSymmetry = false;
+
+        widthSettings.useRandomWidthCurve = false;
+        widthSettings.userDefinedCurve = new AnimationCurve(
+            new Keyframe(0f, 1f),
+            new Keyframe(0.6f, 0.6f),
+            new Keyframe(1f, 0.2f)
+        ); // strong taper
+
+        curvatureSettings.curvatureMode = CurvatureMode.RandomCurve;
+        curvatureSettings.straightSegmentThreshold = 3;
+        activeCurvatureCurve = new AnimationCurve(
+            new Keyframe(0f, 0f),
+            new Keyframe(0.5f, 0.2f),
+            new Keyframe(0.9f, 0.5f),
+            new Keyframe(1f, 0.6f)
+        ); // aggressive arc near tip
+
+        tipSettings.heightOffset = 0.12f;
+        tipSettings.tipLeanMode = TipLeanMode.ForcedRight;
+        tipSettings.tipLeanStrengthCurve = AnimationCurve.Linear(0f, 0.4f, 1f, 1f); // stronger lean near tip
+
+        edgeSettings.edgeCollapseMode = EdgeCollapseMode.Patterned;
+        edgeSettings.collapsePattern = "NNNNNNNNNNNRR"; // collapse right side near tip
+
+        GenerateLinesAndSplines();
+    }
 }

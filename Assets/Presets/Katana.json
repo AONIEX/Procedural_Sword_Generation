@@ -1,0 +1,188 @@
+{
+    "presetName": "Katana",
+    "coreSettings": {
+        "splinePointCount": 14,
+        "heightSpacing": 0.4286339282989502,
+        "heightSpacingMode": 3,
+        "totalBladeHeight": 4.0,
+        "minAndMaxHeightSpacing": {
+            "x": 0.25,
+            "y": 1.0
+        },
+        "minAndMaxWidth": {
+            "x": 0.10000000149011612,
+            "y": 0.20000000298023225
+        },
+        "minAndMaxAngle": {
+            "x": -30.0,
+            "y": 30.0
+        }
+    },
+    "widthSettings": {
+        "useRandomWidthCurve": true,
+        "userDefinedCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 1.0,
+                    "inSlope": -0.22214238345623017,
+                    "outSlope": -0.22214238345623017,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.2603769898414612
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.0,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        },
+        "widthBiasCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.6269230842590332,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.5,
+                    "value": 0.8635838031768799,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.49505671858787539,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        }
+    },
+    "curvatureSettings": {
+        "straightSegmentThreshold": 0,
+        "curvatureMode": 1,
+        "curvature_Max": 0.1522413045167923,
+        "curvature_PeakFactor": 0.30000001192092898,
+        "curvature_StepSize": 0.30000001192092898,
+        "curvatureShape": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.0,
+                    "inSlope": 0.0,
+                    "outSlope": 2.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.5,
+                    "value": 1.0,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.0,
+                    "inSlope": -2.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        },
+        "curvatureDirection": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    },
+    "tipSettings": {
+        "tipLeanMode": 3,
+        "randomHeightOffset": 0.09099999815225601,
+        "heightOffset": 0.029999999329447748,
+        "tipLeanStrengthCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.4000000059604645,
+                    "inSlope": 0.0,
+                    "outSlope": 0.20000001788139344,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.6000000238418579,
+                    "inSlope": 0.20000001788139344,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        }
+    },
+    "edgeSettings": {
+        "edgeCollapseMode": 0,
+        "collapsePattern": "LRL"
+    },
+    "useSymmetry": false
+}

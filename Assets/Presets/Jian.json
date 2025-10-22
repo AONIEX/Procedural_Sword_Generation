@@ -1,0 +1,199 @@
+{
+    "presetName": "Jian",
+    "coreSettings": {
+        "splinePointCount": 14,
+        "heightSpacing": 0.3499999940395355,
+        "heightSpacingMode": 3,
+        "totalBladeHeight": 3.0,
+        "minAndMaxHeightSpacing": {
+            "x": 0.30000001192092898,
+            "y": 0.5
+        },
+        "minAndMaxWidth": {
+            "x": 0.10000000149011612,
+            "y": 0.4000000059604645
+        },
+        "minAndMaxAngle": {
+            "x": -20.0,
+            "y": 20.0
+        }
+    },
+    "widthSettings": {
+        "useRandomWidthCurve": true,
+        "userDefinedCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.800000011920929,
+                    "inSlope": -0.25341498851776125,
+                    "outSlope": -0.25341498851776125,
+                    "tangentMode": 34,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.3333333432674408
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.15166886150836945,
+                    "value": 0.7615648508071899,
+                    "inSlope": -0.2808718681335449,
+                    "outSlope": -0.2808718681335449,
+                    "tangentMode": 34,
+                    "weightedMode": 0,
+                    "inWeight": 0.3333333432674408,
+                    "outWeight": 0.3333333432674408
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.5,
+                    "inSlope": -0.3083287179470062,
+                    "outSlope": -0.3083287179470062,
+                    "tangentMode": 34,
+                    "weightedMode": 0,
+                    "inWeight": 0.3333333432674408,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        },
+        "widthBiasCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.8959236145019531,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.5,
+                    "value": 0.7240918874740601,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.23224076628684998,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        }
+    },
+    "curvatureSettings": {
+        "straightSegmentThreshold": 0,
+        "curvatureMode": 0,
+        "curvature_Max": 1.0,
+        "curvature_PeakFactor": 0.5,
+        "curvature_StepSize": 0.30000001192092898,
+        "curvatureShape": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 0.0,
+                    "inSlope": 0.0,
+                    "outSlope": 2.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.5,
+                    "value": 1.0,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 0.0,
+                    "inSlope": -2.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        },
+        "curvatureDirection": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    },
+    "tipSettings": {
+        "tipLeanMode": 0,
+        "randomHeightOffset": 0.10000000149011612,
+        "heightOffset": 0.05999999865889549,
+        "tipLeanStrengthCurve": {
+            "serializedVersion": "2",
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 0.0,
+                    "value": 1.0,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 1.0,
+                    "inSlope": 0.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
+            "m_PreInfinity": 2,
+            "m_PostInfinity": 2,
+            "m_RotationOrder": 4
+        }
+    },
+    "edgeSettings": {
+        "edgeCollapseMode": 6,
+        "collapsePattern": "NN"
+    },
+    "useSymmetry": false
+}
