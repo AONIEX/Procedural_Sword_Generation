@@ -10,8 +10,8 @@
             "y": 0.5
         },
         "minAndMaxWidth": {
-            "x": 0.15000000596046449,
-            "y": 0.30000001192092898
+            "x": 0.17499999701976777,
+            "y": 0.25
         },
         "minAndMaxAngle": {
             "x": -20.0,
@@ -19,7 +19,7 @@
         }
     },
     "widthSettings": {
-        "useRandomWidthCurve": false,
+        "useRandomWidthCurve": true,
         "userDefinedCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.5641278624534607,
+                    "value": 0.507951557636261,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.6824598908424377,
+                    "value": 0.3315912187099457,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.19122695922851563,
+                    "value": 0.2917846441268921,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -157,7 +157,7 @@
         }
     },
     "tipSettings": {
-        "tipLeanMode": 0,
+        "tipLeanMode": 3,
         "randomHeightOffset": 0.10000000149011612,
         "heightOffset": -0.30000001192092898,
         "tipLeanStrengthCurve": {
@@ -195,5 +195,5 @@
         "edgeCollapseMode": 6,
         "collapsePattern": "NNNNN"
     },
-    "useSymmetry": false
+    "useSymmetry": true
 }

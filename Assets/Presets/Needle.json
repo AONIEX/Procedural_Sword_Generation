@@ -11,7 +11,7 @@
         },
         "minAndMaxWidth": {
             "x": 0.05000000074505806,
-            "y": 0.11999999731779099
+            "y": 0.20000000298023225
         },
         "minAndMaxAngle": {
             "x": 0.0,
@@ -19,7 +19,7 @@
         }
     },
     "widthSettings": {
-        "useRandomWidthCurve": false,
+        "useRandomWidthCurve": true,
         "userDefinedCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.8363004326820374,
+                    "value": 0.8612260818481445,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.8185505270957947,
+                    "value": 0.45259276032447817,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.15754245221614839,
+                    "value": 0.29802221059799197,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,

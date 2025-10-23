@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.6386035680770874,
+                    "value": 0.6324242353439331,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.5150552988052368,
+                    "value": 0.6281304359436035,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -89,7 +89,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.5070422291755676,
+                    "value": 0.14529401063919068,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -106,7 +106,7 @@
     "curvatureSettings": {
         "straightSegmentThreshold": 1,
         "curvatureMode": 2,
-        "curvature_Max": 1.0,
+        "curvature_Max": 0.5600000023841858,
         "curvature_PeakFactor": 0.13699999451637269,
         "curvature_StepSize": 0.04399999976158142,
         "curvatureShape": {
@@ -151,13 +151,13 @@
             "m_RotationOrder": 4
         },
         "curvatureDirection": {
-            "x": 1.0,
+            "x": -1.0,
             "y": 0.0,
             "z": 0.0
         }
     },
     "tipSettings": {
-        "tipLeanMode": 0,
+        "tipLeanMode": 2,
         "randomHeightOffset": 0.10000000149011612,
         "heightOffset": 0.10000000149011612,
         "tipLeanStrengthCurve": {

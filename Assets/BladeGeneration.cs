@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class BladeGeneration : MonoBehaviour
@@ -6,8 +7,15 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Detail")]
-    [Range(1, 10)] public int subDivisions = 3;
-    [Range(1, 10)] public int tipSubdivisions = 5;
+    [Range(1, 20)] public int subDivisions = 3;
+    [Range(1, 20)] public int tipSubdivisions = 5;
+    [Range(2, 20)] public int spineResolution = 5; // total points across each ring (including left and right)
+
+    [Header("Debug")]
+    public float baseWidth = 0f;
+    public GameObject guard;
+    public GameObject handle;
+
 
     void Start()
     {
@@ -16,7 +24,6 @@ public class BladeGeneration : MonoBehaviour
         SmoothSegmentCenters(); // optional smoothing
         GenerateBladeMesh();
     }
-
     public void GenerateBladeMesh()
     {
         Mesh bladeMesh = new Mesh();
@@ -26,72 +33,91 @@ public class BladeGeneration : MonoBehaviour
         if (segments == null || segments.Count < 2) return;
 
         List<int> ringStarts = new List<int>();
+        List<Vector3> smoothLefts = new List<Vector3>();
+        List<Vector3> smoothRights = new List<Vector3>();
 
+        // Step 1: Build smoothed left/right paths
         for (int i = 0; i < segments.Count - 1; i++)
         {
-            Segment a = segments[i];
-            Segment b = segments[i + 1];
+            Segment p0 = segments[Mathf.Max(i - 1, 0)];
+            Segment p1 = segments[i];
+            Segment p2 = segments[i + 1];
+            Segment p3 = segments[Mathf.Min(i + 2, segments.Count - 1)];
+
             int currentSubdivisions = (i == segments.Count - 2) ? tipSubdivisions : subDivisions;
 
             for (int j = 0; j <= currentSubdivisions; j++)
             {
                 float t = j / (float)currentSubdivisions;
-
-                Segment p0 = segments[Mathf.Max(i - 1, 0)];
-                Segment p1 = segments[i];
-                Segment p2 = segments[i + 1];
-                Segment p3 = segments[Mathf.Min(i + 2, segments.Count - 1)];
-
-                Vector3 center = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
-                ringStarts.Add(vertices.Count);
-                vertices.Add(transform.InverseTransformPoint(left));
-                vertices.Add(transform.InverseTransformPoint(center));
-                vertices.Add(transform.InverseTransformPoint(right));
+                // Capture base width from first ring
+                if (smoothLefts.Count == 0 && i == 0 && j == 0)
+                {
+                    baseWidth = Vector3.Distance(left, right);
+                }
+
+                smoothLefts.Add(left);
+                smoothRights.Add(right);
             }
         }
 
+        // Step 2: Build full-width rings
+        int ringCount = smoothLefts.Count;
+        for (int i = 0; i < ringCount; i++)
+        {
+            Vector3 left = smoothLefts[i];
+            Vector3 right = smoothRights[i];
+
+            ringStarts.Add(vertices.Count);
+
+            for (int s = spineResolution - 1; s >= 0; s--)
+            {
+                float t = s / (float)(spineResolution - 1);
+                Vector3 point = Vector3.Lerp(left, right, t);
+                vertices.Add(point);
+            }
+        }
+
+        // Step 3: Stitch triangles between rings (correct winding)
         for (int i = 0; i < ringStarts.Count - 1; i++)
         {
             int baseA = ringStarts[i];
             int baseB = ringStarts[i + 1];
 
-            // Left strip
-            triangles.Add(baseA);
-            triangles.Add(baseA + 1);
-            triangles.Add(baseB);
+            for (int j = 0; j < spineResolution - 1; j++)
+            {
+                int a = baseA + j;
+                int b = baseA + j + 1;
+                int c = baseB + j;
+                int d = baseB + j + 1;
 
-            triangles.Add(baseA + 1);
-            triangles.Add(baseB + 1);
-            triangles.Add(baseB);
+                triangles.Add(a);
+                triangles.Add(c);
+                triangles.Add(b);
 
-            // Right strip
-            triangles.Add(baseA + 1);
-            triangles.Add(baseA + 2);
-            triangles.Add(baseB + 1);
-
-            triangles.Add(baseA + 2);
-            triangles.Add(baseB + 2);
-            triangles.Add(baseB + 1);
+                triangles.Add(b);
+                triangles.Add(c);
+                triangles.Add(d);
+            }
         }
 
+        // Step 4: Add tip triangle fan
         Segment tipSegment = segments[segments.Count - 1];
-        Vector3 tipPoint = transform.InverseTransformPoint(tipSegment.center);
+        Vector3 tipPoint = tipSegment.center;
         int tipIndex = vertices.Count;
         vertices.Add(tipPoint);
 
         int finalRingStart = ringStarts[ringStarts.Count - 1];
+        for (int i = 0; i < spineResolution - 1; i++)
+        {
+            triangles.Add(finalRingStart + i);
+            triangles.Add(tipIndex);
+            triangles.Add(finalRingStart + i + 1);
+        }
 
-        triangles.Add(finalRingStart);
-        triangles.Add(finalRingStart + 1);
-        triangles.Add(tipIndex);
-
-        triangles.Add(finalRingStart + 1);
-        triangles.Add(finalRingStart + 2);
-        triangles.Add(tipIndex);
-
+        // Step 5: Finalize mesh
         bladeMesh.SetVertices(vertices);
         bladeMesh.SetTriangles(triangles, 0);
         bladeMesh.RecalculateNormals();
@@ -105,7 +131,6 @@ public class BladeGeneration : MonoBehaviour
         if (meshRenderer == null) meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.material = new Material(Shader.Find("Standard"));
     }
-
     Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         return 0.5f * (
@@ -124,8 +149,8 @@ public class BladeGeneration : MonoBehaviour
         for (int i = 1; i < segments.Count - 1; i++)
         {
           Segment s = segments[i];
-s.center = Vector3.Lerp(s.center, (segments[i - 1].center + segments[i + 1].center) * 0.5f, 0.25f);
-segments[i] = s;
+    s.center = Vector3.Lerp(s.center, (segments[i - 1].center + segments[i + 1].center) * 0.5f, 0.25f);
+    segments[i] = s;
 
         }
     }
@@ -137,18 +162,59 @@ segments[i] = s;
             splineGen.GenerateLinesAndSplines();
             SmoothSegmentCenters();
             GenerateBladeMesh();
+            CalculateHandandGuardSize();
         }
+    }
+
+    public void CalculateHandandGuardSize()
+    {
+        if(guard != null)
+            guard.transform.localScale =  new Vector3(baseWidth * 2, guard.transform.localScale.y, guard.transform.localScale.z);
+        if (handle != null)
+            handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
+
     }
 
     void OnDrawGizmos()
     {
-        if (splineGen?.segments == null) return;
+        if (splineGen?.segments == null || splineGen.segments.Count < 2) return;
 
         Gizmos.color = Color.cyan;
         foreach (var seg in splineGen.segments)
         {
-            Gizmos.DrawSphere(seg.center, 0.01f);
-            Gizmos.DrawLine(seg.left, seg.right);
+            // Draw original segment layout in world space
+            Gizmos.DrawSphere(transform.TransformPoint(seg.center), 0.005f);
+            Gizmos.DrawLine(transform.TransformPoint(seg.left), transform.TransformPoint(seg.right));
+        }
+
+        // Optional: draw smoothed paths if blade mesh has been generated
+        if (Application.isPlaying)
+        {
+            MeshFilter mf = GetComponent<MeshFilter>();
+            if (mf?.mesh == null) return;
+
+            var verts = mf.mesh.vertices;
+
+            // Draw centerline
+            Gizmos.color = Color.yellow;
+            for (int i = 1; i < verts.Count() - 3; i += 3)
+            {
+                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
+            }
+
+            // Draw left edge
+            Gizmos.color = Color.red;
+            for (int i = 0; i < verts.Count() - 3; i += 3)
+            {
+                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
+            }
+
+            // Draw right edge
+            Gizmos.color = Color.green;
+            for (int i = 2; i < verts.Count() - 3; i += 3)
+            {
+                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
+            }
         }
     }
 }
