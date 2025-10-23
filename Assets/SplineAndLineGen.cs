@@ -129,7 +129,8 @@ public class WidthSettings
     [Tooltip("Allows creating of own width curve")]
     public AnimationCurve userDefinedCurve;
     [Tooltip("Allows the user to see the random width curve")]
-    public AnimationCurve widthBiasCurve; 
+    public AnimationCurve widthBiasCurve;
+    public float noiseInfluence = 1;
 }
 
 [System.Serializable]
@@ -311,12 +312,15 @@ public class SplineAndLineGen : MonoBehaviour
                 pos += averageDirection * tipSettings.heightOffset;
             }
 
-
             float bias = widthSettings.useRandomWidthCurve
                 ? widthSettings.widthBiasCurve.Evaluate(heightRatio)
                 : widthSettings.userDefinedCurve.Evaluate(heightRatio);
 
-            float width = Mathf.Lerp(coreSettings.minAndMaxWidth.x, coreSettings.minAndMaxWidth.y, bias);
+            float noise = Mathf.PerlinNoise(i * 0.1f, 0f);
+            float blendFactor = widthSettings.noiseInfluence; // Expose this in inspector
+            float combinedBias = Mathf.Lerp(bias, noise, blendFactor);
+            float width = Mathf.Lerp(coreSettings.minAndMaxWidth.x, coreSettings.minAndMaxWidth.y, combinedBias);
+
 
             float raw = Random.value;
             float biased = Mathf.Pow(raw, 2f);
@@ -628,16 +632,19 @@ public class SplineAndLineGen : MonoBehaviour
         if (segments == null || segments.Count == 0)
             return;
 
+
+        Vector3 offset = transform.position;
         Gizmos.color = Color.cyan;
         foreach (var seg in segments)
         {
-            Gizmos.DrawLine(seg.left, seg.right);
-            Gizmos.DrawSphere(seg.center, 0.05f);
+            Gizmos.DrawLine(seg.left + offset, seg.right + offset);
+            Gizmos.DrawSphere(seg.center + offset, 0.05f);
         }
 
         if (splineContainer != null && splineContainer.Spline.Count > 0)
         {
             Vector3 tip = splineContainer.Spline[splineContainer.Spline.Count - 1].Position;
+            tip += offset;
             Gizmos.color = Color.magenta;
             Gizmos.DrawSphere(tip, 0.07f);
         }
@@ -756,39 +763,5 @@ public class SplineAndLineGen : MonoBehaviour
         SaveCurrentPreset(presetName);
     }
 
-    public void GenerateScimitar()
-    {
-        presetName = "Scimitar";
-        coreSettings.splinePointCount = 12;
-        coreSettings.heightSpacingMode = HeightSpacingMode.SetHeight;
-        coreSettings.totalBladeHeight = 1.2f;
-        coreSettings.minAndMaxWidth = new Vector2(0.06f, 0.14f);
-        coreSettings.minAndMaxAngle = new Vector2(0f, 10f); // slight directional variance
-        useSymmetry = false;
-
-        widthSettings.useRandomWidthCurve = false;
-        widthSettings.userDefinedCurve = new AnimationCurve(
-            new Keyframe(0f, 1f),
-            new Keyframe(0.6f, 0.6f),
-            new Keyframe(1f, 0.2f)
-        ); // strong taper
-
-        curvatureSettings.curvatureMode = CurvatureMode.RandomCurve;
-        curvatureSettings.straightSegmentThreshold = 3;
-        activeCurvatureCurve = new AnimationCurve(
-            new Keyframe(0f, 0f),
-            new Keyframe(0.5f, 0.2f),
-            new Keyframe(0.9f, 0.5f),
-            new Keyframe(1f, 0.6f)
-        ); // aggressive arc near tip
-
-        tipSettings.heightOffset = 0.12f;
-        tipSettings.tipLeanMode = TipLeanMode.ForcedRight;
-        tipSettings.tipLeanStrengthCurve = AnimationCurve.Linear(0f, 0.4f, 1f, 1f); // stronger lean near tip
-
-        edgeSettings.edgeCollapseMode = EdgeCollapseMode.Patterned;
-        edgeSettings.collapsePattern = "NNNNNNNNNNNRR"; // collapse right side near tip
-
-        GenerateLinesAndSplines();
-    }
+   
 }

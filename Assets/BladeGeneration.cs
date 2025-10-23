@@ -9,21 +9,25 @@ public class BladeGeneration : MonoBehaviour
     [Header("Detail")]
     [Range(1, 20)] public int subDivisions = 3;
     [Range(1, 20)] public int tipSubdivisions = 5;
-    [Range(2, 20)] public int spineResolution = 5; // total points across each ring (including left and right)
+    [Range(2, 20)] public int spineResolution = 5;
+
+    [Header("Curvature Smoothing")]
+    [Range(1, 10)] public int curvatureWindow = 5;
+    [Range(0f, 1f)] public float curvatureBlend = 0.5f;
 
     [Header("Debug")]
     public float baseWidth = 0f;
     public GameObject guard;
     public GameObject handle;
 
-
     void Start()
     {
         splineGen = GetComponent<SplineAndLineGen>();
         splineGen.GenerateLinesAndSplines();
-        SmoothSegmentCenters(); // optional smoothing
+        SmoothSegmentCenters();
         GenerateBladeMesh();
     }
+
     public void GenerateBladeMesh()
     {
         Mesh bladeMesh = new Mesh();
@@ -36,7 +40,7 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
 
-        // Step 1: Build smoothed left/right paths
+        // Step 1: Build smoothed left/right paths with curvature-aware smoothing
         for (int i = 0; i < segments.Count - 1; i++)
         {
             Segment p0 = segments[Mathf.Max(i - 1, 0)];
@@ -52,7 +56,27 @@ public class BladeGeneration : MonoBehaviour
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
-                // Capture base width from first ring
+                // Curvature-aware smoothing
+                int count = 0;
+                Vector3 curvatureLeft = Vector3.zero;
+                Vector3 curvatureRight = Vector3.zero;
+
+                for (int k = Mathf.Max(0, smoothLefts.Count - curvatureWindow); k < smoothLefts.Count; k++)
+                {
+                    curvatureLeft += smoothLefts[k];
+                    curvatureRight += smoothRights[k];
+                    count++;
+                }
+
+                if (count > 0)
+                {
+                    curvatureLeft /= count;
+                    curvatureRight /= count;
+
+                    left = Vector3.Lerp(left, curvatureLeft, curvatureBlend);
+                    right = Vector3.Lerp(right, curvatureRight, curvatureBlend);
+                }
+
                 if (smoothLefts.Count == 0 && i == 0 && j == 0)
                 {
                     baseWidth = Vector3.Distance(left, right);
@@ -80,7 +104,7 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // Step 3: Stitch triangles between rings (correct winding)
+        // Step 3: Stitch triangles between rings
         for (int i = 0; i < ringStarts.Count - 1; i++)
         {
             int baseA = ringStarts[i];
@@ -131,6 +155,7 @@ public class BladeGeneration : MonoBehaviour
         if (meshRenderer == null) meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.material = new Material(Shader.Find("Standard"));
     }
+
     Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         return 0.5f * (
@@ -148,10 +173,9 @@ public class BladeGeneration : MonoBehaviour
 
         for (int i = 1; i < segments.Count - 1; i++)
         {
-          Segment s = segments[i];
-    s.center = Vector3.Lerp(s.center, (segments[i - 1].center + segments[i + 1].center) * 0.5f, 0.25f);
-    segments[i] = s;
-
+            Segment s = segments[i];
+            s.center = Vector3.Lerp(s.center, (segments[i - 1].center + segments[i + 1].center) * 0.5f, 0.25f);
+            segments[i] = s;
         }
     }
 
@@ -168,11 +192,10 @@ public class BladeGeneration : MonoBehaviour
 
     public void CalculateHandandGuardSize()
     {
-        if(guard != null)
-            guard.transform.localScale =  new Vector3(baseWidth * 2, guard.transform.localScale.y, guard.transform.localScale.z);
+        if (guard != null)
+            guard.transform.localScale = new Vector3(baseWidth * 2, guard.transform.localScale.y, guard.transform.localScale.z);
         if (handle != null)
             handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
-
     }
 
     void OnDrawGizmos()
@@ -182,39 +205,15 @@ public class BladeGeneration : MonoBehaviour
         Gizmos.color = Color.cyan;
         foreach (var seg in splineGen.segments)
         {
-            // Draw original segment layout in world space
             Gizmos.DrawSphere(transform.TransformPoint(seg.center), 0.005f);
             Gizmos.DrawLine(transform.TransformPoint(seg.left), transform.TransformPoint(seg.right));
         }
 
-        // Optional: draw smoothed paths if blade mesh has been generated
         if (Application.isPlaying)
         {
             MeshFilter mf = GetComponent<MeshFilter>();
             if (mf?.mesh == null) return;
-
             var verts = mf.mesh.vertices;
-
-            // Draw centerline
-            Gizmos.color = Color.yellow;
-            for (int i = 1; i < verts.Count() - 3; i += 3)
-            {
-                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
-            }
-
-            // Draw left edge
-            Gizmos.color = Color.red;
-            for (int i = 0; i < verts.Count() - 3; i += 3)
-            {
-                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
-            }
-
-            // Draw right edge
-            Gizmos.color = Color.green;
-            for (int i = 2; i < verts.Count() - 3; i += 3)
-            {
-                Gizmos.DrawLine(transform.TransformPoint(verts[i]), transform.TransformPoint(verts[i + 3]));
-            }
         }
     }
 }

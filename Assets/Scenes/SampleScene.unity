@@ -353,6 +353,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    noiseInfluence: 0
   tipSettings:
     tipLeanMode: 0
     randomHeightOffset: 0.1
@@ -437,6 +438,8 @@ MonoBehaviour:
   subDivisions: 7
   tipSubdivisions: 2
   spineResolution: 5
+  curvatureWindow: 5
+  curvatureBlend: 0.5
   baseWidth: 0
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
