@@ -434,7 +434,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8af8a08a31fa4a48acc4a65dc2b1fbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  splineGen: {fileID: 0}
+  splineGen: {fileID: 28350893}
   subDivisions: 7
   tipSubdivisions: 2
   spineResolution: 5

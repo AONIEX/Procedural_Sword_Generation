@@ -1,10 +1,10 @@
 {
     "presetName": "Shotel",
     "coreSettings": {
-        "splinePointCount": 9,
+        "splinePointCount": 15,
         "heightSpacing": 0.5640000104904175,
-        "heightSpacingMode": 0,
-        "totalBladeHeight": 3.0,
+        "heightSpacingMode": 3,
+        "totalBladeHeight": 4.0,
         "minAndMaxHeightSpacing": {
             "x": 0.30000001192092898,
             "y": 0.5
@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.507951557636261,
+                    "value": 0.8149206638336182,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.3315912187099457,
+                    "value": 0.8585785031318665,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.2917846441268921,
+                    "value": 0.6110348105430603,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -90,7 +90,8 @@
             "m_PreInfinity": 2,
             "m_PostInfinity": 2,
             "m_RotationOrder": 4
-        }
+        },
+        "noiseInfluence": 1.0
     },
     "curvatureSettings": {
         "straightSegmentThreshold": 1,
@@ -157,9 +158,9 @@
         }
     },
     "tipSettings": {
-        "tipLeanMode": 3,
+        "tipLeanMode": 0,
         "randomHeightOffset": 0.10000000149011612,
-        "heightOffset": -0.30000001192092898,
+        "heightOffset": -0.20000000298023225,
         "tipLeanStrengthCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -195,5 +196,5 @@
         "edgeCollapseMode": 6,
         "collapsePattern": "NNNNN"
     },
-    "useSymmetry": true
+    "useSymmetry": false
 }

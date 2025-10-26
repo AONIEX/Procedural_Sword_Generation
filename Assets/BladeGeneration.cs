@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class BladeGeneration : MonoBehaviour
@@ -11,7 +10,9 @@ public class BladeGeneration : MonoBehaviour
     [Range(1, 20)] public int tipSubdivisions = 5;
     [Range(2, 20)] public int spineResolution = 5;
 
+    //https://meshlib.io/feature/mesh-smoothing/
     [Header("Curvature Smoothing")]
+    // controls how many previous segments are averaged when applying curvature
     [Range(1, 10)] public int curvatureWindow = 5;
     [Range(0f, 1f)] public float curvatureBlend = 0.5f;
 
@@ -39,8 +40,8 @@ public class BladeGeneration : MonoBehaviour
         List<int> ringStarts = new List<int>();
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
+        List<Vector3> smoothCenters = new List<Vector3>();
 
-        // Step 1: Build smoothed left/right paths with curvature-aware smoothing
         for (int i = 0; i < segments.Count - 1; i++)
         {
             Segment p0 = segments[Mathf.Max(i - 1, 0)];
@@ -48,46 +49,47 @@ public class BladeGeneration : MonoBehaviour
             Segment p2 = segments[i + 1];
             Segment p3 = segments[Mathf.Min(i + 2, segments.Count - 1)];
 
-            int currentSubdivisions = (i == segments.Count - 2) ? tipSubdivisions : subDivisions;
+            bool isTipSegment = (i == segments.Count - 2);
+            int currentSubdivisions = isTipSegment ? tipSubdivisions : subDivisions;
 
             for (int j = 0; j <= currentSubdivisions; j++)
             {
                 float t = j / (float)currentSubdivisions;
+
+                Vector3 center = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
-                // Curvature-aware smoothing
-                int count = 0;
-                Vector3 curvatureLeft = Vector3.zero;
-                Vector3 curvatureRight = Vector3.zero;
+                Vector3 leftOffset = left - center;
+                Vector3 rightOffset = right - center;
 
-                for (int k = Mathf.Max(0, smoothLefts.Count - curvatureWindow); k < smoothLefts.Count; k++)
-                {
-                    curvatureLeft += smoothLefts[k];
-                    curvatureRight += smoothRights[k];
-                    count++;
-                }
+                float tipFalloff = isTipSegment ? Mathf.Clamp01(1f - t) : 1f;
+                float adjustedBlend = curvatureBlend * tipFalloff;
 
-                if (count > 0)
-                {
-                    curvatureLeft /= count;
-                    curvatureRight /= count;
+                ApplyCurvatureSmoothingWithCenter(
+                    ref leftOffset,
+                    ref rightOffset,
+                    center,
+                    smoothLefts,
+                    smoothRights,
+                    smoothCenters,
+                    adjustedBlend // pass this instead of using curvatureBlend directly
+                );
 
-                    left = Vector3.Lerp(left, curvatureLeft, curvatureBlend);
-                    right = Vector3.Lerp(right, curvatureRight, curvatureBlend);
-                }
+                left = center + leftOffset;
+                right = center + rightOffset;
 
                 if (smoothLefts.Count == 0 && i == 0 && j == 0)
                 {
                     baseWidth = Vector3.Distance(left, right);
                 }
 
+                smoothCenters.Add(center);
                 smoothLefts.Add(left);
                 smoothRights.Add(right);
             }
         }
 
-        // Step 2: Build full-width rings
         int ringCount = smoothLefts.Count;
         for (int i = 0; i < ringCount; i++)
         {
@@ -104,7 +106,6 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // Step 3: Stitch triangles between rings
         for (int i = 0; i < ringStarts.Count - 1; i++)
         {
             int baseA = ringStarts[i];
@@ -127,7 +128,6 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // Step 4: Add tip triangle fan
         Segment tipSegment = segments[segments.Count - 1];
         Vector3 tipPoint = tipSegment.center;
         int tipIndex = vertices.Count;
@@ -141,7 +141,6 @@ public class BladeGeneration : MonoBehaviour
             triangles.Add(finalRingStart + i + 1);
         }
 
-        // Step 5: Finalize mesh
         bladeMesh.SetVertices(vertices);
         bladeMesh.SetTriangles(triangles, 0);
         bladeMesh.RecalculateNormals();
@@ -156,6 +155,39 @@ public class BladeGeneration : MonoBehaviour
         meshRenderer.material = new Material(Shader.Find("Standard"));
     }
 
+    void ApplyCurvatureSmoothingWithCenter(
+       ref Vector3 leftOffset,
+       ref Vector3 rightOffset,
+       Vector3 center,
+       List<Vector3> smoothLefts,
+       List<Vector3> smoothRights,
+       List<Vector3> smoothCenters,
+       float blendOverride)
+    {
+        int count = 0;
+        Vector3 avgLeftOffset = Vector3.zero;
+        Vector3 avgRightOffset = Vector3.zero;
+
+        for (int k = Mathf.Max(0, smoothCenters.Count - curvatureWindow); k < smoothCenters.Count; k++)
+        {
+            Vector3 prevCenter = smoothCenters[k];
+            Vector3 prevLeftOffset = smoothLefts[k] - prevCenter;
+            Vector3 prevRightOffset = smoothRights[k] - prevCenter;
+
+            avgLeftOffset += prevLeftOffset;
+            avgRightOffset += prevRightOffset;
+            count++;
+        }
+
+        if (count > 0)
+        {
+            avgLeftOffset /= count;
+            avgRightOffset /= count;
+
+            leftOffset = Vector3.Lerp(leftOffset, avgLeftOffset, blendOverride);
+            rightOffset = Vector3.Lerp(rightOffset, avgRightOffset, blendOverride);
+        }
+    }
     Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         return 0.5f * (

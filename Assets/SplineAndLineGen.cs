@@ -223,92 +223,68 @@ public class SplineAndLineGen : MonoBehaviour
         widthSettings.widthBiasCurve = GenerateRandomWidthCurve();
 
         if (curvatureSettings.curvatureMode == CurvatureMode.RandomCurve)
-        {
             activeCurvatureCurve = GenerateCurvatureCurve();
-        }
 
         Vector3 pos = Vector3.zero;
         float totalHeight = 0f;
         float uniformStepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
         bool alternatingStartsLeft = Random.value < 0.5f;
         Vector3 previousCenter = Vector3.zero;
+        float seedOffset = Random.Range(0f, 1000f);
 
         if (edgeSettings.edgeCollapseMode == EdgeCollapseMode.RandomPatterned)
-        {
-            edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount); // or any length you want
-        }
-
+            edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount);
 
         for (int i = 0; i < coreSettings.splinePointCount; i++)
         {
-            float stepSize = coreSettings.heightSpacing;
+            float stepSize;
+
+            switch (coreSettings.heightSpacingMode)
+            {
+                case HeightSpacingMode.Fixed:
+                    stepSize = coreSettings.heightSpacing;
+                    break;
+                case HeightSpacingMode.RandomUniform:
+                    stepSize = uniformStepSize;
+                    break;
+                case HeightSpacingMode.RandomChaotic:
+                    stepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
+                    break;
+                case HeightSpacingMode.SetHeight:
+                    stepSize = coreSettings.totalBladeHeight / Mathf.Max(coreSettings.splinePointCount - 1, 1);
+                    break;
+                default:
+                    stepSize = coreSettings.heightSpacing;
+                    break;
+            }
 
             if (i == 0)
-            {
                 stepSize = 0f;
-            }
-            else
-            {
-                switch (coreSettings.heightSpacingMode)
-                {
-                    case HeightSpacingMode.Fixed:
-                        stepSize = coreSettings.heightSpacing;
-                        break;
-                    case HeightSpacingMode.RandomUniform:
-                        stepSize = uniformStepSize;
-                        break;
-                    case HeightSpacingMode.RandomChaotic:
-                        stepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
-                        break;
-                    case HeightSpacingMode.SetHeight:
-                        stepSize = coreSettings.totalBladeHeight / Mathf.Max(coreSettings.splinePointCount - 1, 1);
-                        break;
-
-                }
-            }
-
-           
-
 
             pos += new Vector3(0, stepSize, 0);
             totalHeight += stepSize;
 
-            float heightRatio;
-
-            switch (coreSettings.heightSpacingMode)
-            {
-                case HeightSpacingMode.SetHeight:
-                    heightRatio = totalHeight / Mathf.Max(coreSettings.totalBladeHeight, 0.0001f);
-                    break;
-
-                default:
-                    heightRatio = totalHeight / Mathf.Max(coreSettings.heightSpacing * (coreSettings.splinePointCount - 1), 0.0001f);
-                    break;
-            }
-
+            float heightRatio = (coreSettings.heightSpacingMode == HeightSpacingMode.SetHeight)
+                ? totalHeight / Mathf.Max(coreSettings.totalBladeHeight, 0.0001f)
+                : totalHeight / Mathf.Max(coreSettings.heightSpacing * (coreSettings.splinePointCount - 1), 0.0001f);
 
             if (curvatureSettings.curvatureMode != CurvatureMode.None && i >= curvatureSettings.straightSegmentThreshold)
             {
-                // Recalculate heightRatio relative to the curved portion only
                 int curvedStart = curvatureSettings.straightSegmentThreshold;
                 int curvedCount = Mathf.Max(coreSettings.splinePointCount - curvedStart - 1, 1);
                 float curvedRatio = (i - curvedStart) / (float)curvedCount;
-
                 pos = GenerateCurvature(pos, curvedRatio, i);
             }
 
             if (i == coreSettings.splinePointCount - 1 && segments.Count >= 5)
             {
                 Vector3 averageDirection = Vector3.zero;
-
-                // Sum directions from the last 5 segments
                 for (int j = segments.Count - 5; j < segments.Count - 1; j++)
                 {
                     Vector3 direction = (segments[j + 1].center - segments[j].center).normalized;
                     averageDirection += direction;
                 }
-
-                averageDirection.Normalize(); // Final averaged direction
+                averageDirection.Normalize();
                 pos += averageDirection * tipSettings.heightOffset;
             }
 
@@ -316,178 +292,132 @@ public class SplineAndLineGen : MonoBehaviour
                 ? widthSettings.widthBiasCurve.Evaluate(heightRatio)
                 : widthSettings.userDefinedCurve.Evaluate(heightRatio);
 
-            float noise = Mathf.PerlinNoise(i * 0.1f, 0f);
-            float blendFactor = widthSettings.noiseInfluence; // Expose this in inspector
-            float combinedBias = Mathf.Lerp(bias, noise, blendFactor);
+            float noise = Mathf.PerlinNoise(i * 0.1f + seedOffset, 0f);
+            float combinedBias = Mathf.Lerp(bias, noise, widthSettings.noiseInfluence);
             float width = Mathf.Lerp(coreSettings.minAndMaxWidth.x, coreSettings.minAndMaxWidth.y, combinedBias);
-
 
             float raw = Random.value;
             float biased = Mathf.Pow(raw, 2f);
             float mid = 0f;
             float range = useSymmetry ? 0f : Mathf.Max(Mathf.Abs(coreSettings.minAndMaxAngle.x), Mathf.Abs(coreSettings.minAndMaxAngle.y));
-
             float angle = i == 0 ? 0f : Mathf.Lerp(mid - range, mid + range, biased);
 
             Vector3 dir = Quaternion.Euler(0, 0, angle) * Vector3.right;
             Vector3 left = pos - dir * width * 0.5f;
             Vector3 right = pos + dir * width * 0.5f;
 
-            bool collapseLeftSide = false;
-            bool collapseRightSide = false;
-            bool isEven = (i % 2 == 0);
-
-            switch (edgeSettings.edgeCollapseMode)
-            {
-                case EdgeCollapseMode.None:
-                    break;
-
-                case EdgeCollapseMode.LeftOnly:
-                    collapseLeftSide = true;
-                    break;
-
-                case EdgeCollapseMode.RightOnly:
-                    collapseRightSide = true;
-                    break;
-
-                case EdgeCollapseMode.Random:
-                    float collapseChance = Random.value;
-                    collapseLeftSide = collapseChance < 0.5f;
-                    collapseRightSide = !collapseLeftSide;
-                    break;
-
-                case EdgeCollapseMode.Alternating:
-                    collapseLeftSide = (alternatingStartsLeft == isEven);
-                    collapseRightSide = !collapseLeftSide;
-                    break;
-
-                case EdgeCollapseMode.LooseAlternating:
-                    {
-                        // Random chance to skip collapse entirely
-                        bool skipCollapse = Random.value < 0.3f; // ~30% chance to skip
-                        if (!skipCollapse)
-                        {
-                            bool startsLeft = alternatingStartsLeft; // defined before loop
-                            collapseLeftSide = (startsLeft == isEven);
-                            collapseRightSide = !collapseLeftSide;
-                        }
-                    }
-                    break;
-
-                case EdgeCollapseMode.Patterned:
-                case EdgeCollapseMode.RandomPatterned:
-                    {
-                        int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
-                        segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
-
-                        char patternChar = edgeSettings.collapsePattern[segmentGroup];
-
-                        switch (patternChar)
-                        {
-                            case 'L':
-                                collapseLeftSide = true;
-                                break;
-                            case 'R':
-                                collapseRightSide = true;
-                                break;
-                            case 'B':
-                                collapseLeftSide = true;
-                                collapseRightSide = true;
-                                break;
-                            case 'N':
-                            default:
-                                break;
-                        }
-                    }
-                    break;
-
-
-
-            }
-
-
-            if (i == coreSettings.splinePointCount - 1)
-            {
-                switch (tipSettings.tipLeanMode)
-                {
-                    case TipLeanMode.Centered:
-                        left = pos;
-                        right = pos;
-                        break;
-
-                    case TipLeanMode.ForcedCenterX:
-                        pos.x = 0f;
-                        left = pos;
-                        right = pos;
-                        break;
-
-                    case TipLeanMode.ForcedLeft:
-                        {
-                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
-                            Vector3 leanedPos = Vector3.Lerp(pos, left, leanStrength);
-                            pos = leanedPos;
-                            left = leanedPos;
-                            right = leanedPos;
-                        }
-                        break;
-
-                    case TipLeanMode.ForcedRight:
-                        {
-                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
-                            Vector3 leanedPos = Vector3.Lerp(pos, right, leanStrength);
-                            pos = leanedPos;
-                            left = leanedPos;
-                            right = leanedPos;
-                        }
-                        break;
-
-                    case TipLeanMode.RandomLean:
-                        {
-                            float tipBiasChance = Random.value;
-                            float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
-                            Vector3 leanTarget = tipBiasChance < .5f ? left : right;
-                            Vector3 leanedPos = Vector3.Lerp(pos, leanTarget, leanStrength);
-                            pos = leanedPos;
-                            left = leanedPos;
-                            right = leanedPos;
-                        }
-                        break;
-
-                    case TipLeanMode.None:
-                    default:
-                        break;
-                }
-            }
+            ApplyTipLean(i, ref pos, ref left, ref right);
 
             Vector3 center = pos;
-
+            bool isEven = (i % 2 == 0);
+            (bool collapseLeftSide, bool collapseRightSide) = DetermineEdgeCollapse(i, isEven, alternatingStartsLeft);
 
             if (collapseLeftSide && collapseRightSide)
             {
-                // Create a thin visible segment perpendicular to the direction
                 Vector3 direction = (center - previousCenter).normalized;
-                Vector3 perpendicular = Vector3.Cross(direction, Vector3.forward); // Z-forward for 2D
-
+                Vector3 perpendicular = Vector3.Cross(direction, Vector3.forward);
                 float collapseWidth = Mathf.Lerp(coreSettings.minAndMaxWidth.x, coreSettings.minAndMaxWidth.y, bias) * 0.5f;
-
                 left = center - perpendicular * collapseWidth;
                 right = center + perpendicular * collapseWidth;
             }
-
             else
             {
                 if (collapseLeftSide) left = center;
                 if (collapseRightSide) right = center;
             }
+
             previousCenter = center;
-
             spline.Add(new BezierKnot(center));
-
             segments.Add(new Segment { center = center, left = left, right = right });
         }
 
         spline.SetTangentMode(TangentMode.AutoSmooth);
     }
+    (bool collapseLeft, bool collapseRight) DetermineEdgeCollapse(int i, bool isEven, bool alternatingStartsLeft)
+    {
+        bool collapseLeft = false;
+        bool collapseRight = false;
+
+        switch (edgeSettings.edgeCollapseMode)
+        {
+            case EdgeCollapseMode.LeftOnly:
+                collapseLeft = true;
+                break;
+            case EdgeCollapseMode.RightOnly:
+                collapseRight = true;
+                break;
+            case EdgeCollapseMode.Random:
+                collapseLeft = Random.value < 0.5f;
+                collapseRight = !collapseLeft;
+                break;
+            case EdgeCollapseMode.Alternating:
+                collapseLeft = (alternatingStartsLeft == isEven);
+                collapseRight = !collapseLeft;
+                break;
+            case EdgeCollapseMode.LooseAlternating:
+                if (Random.value >= 0.3f)
+                {
+                    collapseLeft = (alternatingStartsLeft == isEven);
+                    collapseRight = !collapseLeft;
+                }
+                break;
+            case EdgeCollapseMode.Patterned:
+            case EdgeCollapseMode.RandomPatterned:
+                int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
+                segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
+                char patternChar = edgeSettings.collapsePattern[segmentGroup];
+                switch (patternChar)
+                {
+                    case 'L': collapseLeft = true; break;
+                    case 'R': collapseRight = true; break;
+                    case 'B': collapseLeft = true; collapseRight = true; break;
+                }
+                break;
+        }
+
+        return (collapseLeft, collapseRight);
+    }
+
+    void ApplyTipLean(int i, ref Vector3 pos, ref Vector3 left, ref Vector3 right)
+    {
+        if (i != coreSettings.splinePointCount - 1) return;
+
+        switch (tipSettings.tipLeanMode)
+        {
+            case TipLeanMode.Centered:
+                left = pos;
+                right = pos;
+                break;
+
+            case TipLeanMode.ForcedCenterX:
+                pos.x = 0f;
+                left = pos;
+                right = pos;
+                break;
+
+            case TipLeanMode.ForcedLeft:
+            case TipLeanMode.ForcedRight:
+            case TipLeanMode.RandomLean:
+                float leanStrength = tipSettings.tipLeanStrengthCurve.Evaluate(Random.value);
+                Vector3 leanTarget = tipSettings.tipLeanMode switch
+                {
+                    TipLeanMode.ForcedLeft => left,
+                    TipLeanMode.ForcedRight => right,
+                    TipLeanMode.RandomLean => Random.value < 0.5f ? left : right,
+                    _ => pos
+                };
+                Vector3 leanedPos = Vector3.Lerp(pos, leanTarget, leanStrength);
+                pos = leanedPos;
+                left = leanedPos;
+                right = leanedPos;
+                break;
+
+            case TipLeanMode.None:
+            default:
+                break;
+        }
+    }
+
     AnimationCurve GenerateRandomWidthCurve()
     {
         return new AnimationCurve(
