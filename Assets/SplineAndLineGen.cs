@@ -237,7 +237,7 @@ public class SplineAndLineGen : MonoBehaviour
 
         for (int i = 0; i < coreSettings.splinePointCount; i++)
         {
-            float stepSize;
+            float stepSize = i == 0 ? 0f : coreSettings.heightSpacing;
 
             switch (coreSettings.heightSpacingMode)
             {
@@ -253,16 +253,13 @@ public class SplineAndLineGen : MonoBehaviour
                 case HeightSpacingMode.SetHeight:
                     stepSize = coreSettings.totalBladeHeight / Mathf.Max(coreSettings.splinePointCount - 1, 1);
                     break;
-                default:
-                    stepSize = coreSettings.heightSpacing;
-                    break;
             }
-
             if (i == 0)
                 stepSize = 0f;
 
             pos += new Vector3(0, stepSize, 0);
             totalHeight += stepSize;
+
 
             float heightRatio = (coreSettings.heightSpacingMode == HeightSpacingMode.SetHeight)
                 ? totalHeight / Mathf.Max(coreSettings.totalBladeHeight, 0.0001f)
@@ -308,9 +305,48 @@ public class SplineAndLineGen : MonoBehaviour
 
             ApplyTipLean(i, ref pos, ref left, ref right);
 
-            Vector3 center = pos;
+            bool collapseLeftSide = false;
+            bool collapseRightSide = false;
             bool isEven = (i % 2 == 0);
-            (bool collapseLeftSide, bool collapseRightSide) = DetermineEdgeCollapse(i, isEven, alternatingStartsLeft);
+
+            switch (edgeSettings.edgeCollapseMode)
+            {
+                case EdgeCollapseMode.LeftOnly:
+                    collapseLeftSide = true;
+                    break;
+                case EdgeCollapseMode.RightOnly:
+                    collapseRightSide = true;
+                    break;
+                case EdgeCollapseMode.Random:
+                    collapseLeftSide = Random.value < 0.5f;
+                    collapseRightSide = !collapseLeftSide;
+                    break;
+                case EdgeCollapseMode.Alternating:
+                    collapseLeftSide = (alternatingStartsLeft == isEven);
+                    collapseRightSide = !collapseLeftSide;
+                    break;
+                case EdgeCollapseMode.LooseAlternating:
+                    if (Random.value >= 0.3f)
+                    {
+                        collapseLeftSide = (alternatingStartsLeft == isEven);
+                        collapseRightSide = !collapseLeftSide;
+                    }
+                    break;
+                case EdgeCollapseMode.Patterned:
+                case EdgeCollapseMode.RandomPatterned:
+                    int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
+                    segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
+                    char patternChar = edgeSettings.collapsePattern[segmentGroup];
+                    switch (patternChar)
+                    {
+                        case 'L': collapseLeftSide = true; break;
+                        case 'R': collapseRightSide = true; break;
+                        case 'B': collapseLeftSide = true; collapseRightSide = true; break;
+                    }
+                    break;
+            }
+
+            Vector3 center = pos;
 
             if (collapseLeftSide && collapseRightSide)
             {
@@ -333,51 +369,7 @@ public class SplineAndLineGen : MonoBehaviour
 
         spline.SetTangentMode(TangentMode.AutoSmooth);
     }
-    (bool collapseLeft, bool collapseRight) DetermineEdgeCollapse(int i, bool isEven, bool alternatingStartsLeft)
-    {
-        bool collapseLeft = false;
-        bool collapseRight = false;
-
-        switch (edgeSettings.edgeCollapseMode)
-        {
-            case EdgeCollapseMode.LeftOnly:
-                collapseLeft = true;
-                break;
-            case EdgeCollapseMode.RightOnly:
-                collapseRight = true;
-                break;
-            case EdgeCollapseMode.Random:
-                collapseLeft = Random.value < 0.5f;
-                collapseRight = !collapseLeft;
-                break;
-            case EdgeCollapseMode.Alternating:
-                collapseLeft = (alternatingStartsLeft == isEven);
-                collapseRight = !collapseLeft;
-                break;
-            case EdgeCollapseMode.LooseAlternating:
-                if (Random.value >= 0.3f)
-                {
-                    collapseLeft = (alternatingStartsLeft == isEven);
-                    collapseRight = !collapseLeft;
-                }
-                break;
-            case EdgeCollapseMode.Patterned:
-            case EdgeCollapseMode.RandomPatterned:
-                int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
-                segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
-                char patternChar = edgeSettings.collapsePattern[segmentGroup];
-                switch (patternChar)
-                {
-                    case 'L': collapseLeft = true; break;
-                    case 'R': collapseRight = true; break;
-                    case 'B': collapseLeft = true; collapseRight = true; break;
-                }
-                break;
-        }
-
-        return (collapseLeft, collapseRight);
-    }
-
+   
     void ApplyTipLean(int i, ref Vector3 pos, ref Vector3 left, ref Vector3 right)
     {
         if (i != coreSettings.splinePointCount - 1) return;
