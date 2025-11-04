@@ -289,6 +289,7 @@ public class SplineAndLineGen : MonoBehaviour
             float bias = widthSettings.useRandomWidthCurve
                 ? widthSettings.widthBiasCurve.Evaluate(heightRatio)
                 : widthSettings.userDefinedCurve.Evaluate(heightRatio);
+
             //Width bades on noise
             float noise = Mathf.PerlinNoise(i * widthSettings.noiseFrequency + seedOffset, 0f);
             float combinedBias = Mathf.Lerp(bias, noise, widthSettings.noiseInfluence);
