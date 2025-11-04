@@ -310,8 +310,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f38f0d1bd4380d4daf0594932f07430, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  presetName: 
-  bladePreset: 2
+  presetName: random
+  bladePreset: 5
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7

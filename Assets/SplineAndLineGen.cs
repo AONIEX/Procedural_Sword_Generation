@@ -131,6 +131,7 @@ public class WidthSettings
     [Tooltip("Allows the user to see the random width curve")]
     public AnimationCurve widthBiasCurve;
     public float noiseInfluence = 1;
+    public float noiseFrequency = 0.123f; //Affects the noise
 }
 
 [System.Serializable]
@@ -288,9 +289,13 @@ public class SplineAndLineGen : MonoBehaviour
             float bias = widthSettings.useRandomWidthCurve
                 ? widthSettings.widthBiasCurve.Evaluate(heightRatio)
                 : widthSettings.userDefinedCurve.Evaluate(heightRatio);
-
-            float noise = Mathf.PerlinNoise(i * 0.1f + seedOffset, 0f);
+            //Width bades on noise
+            float noise = Mathf.PerlinNoise(i * widthSettings.noiseFrequency + seedOffset, 0f);
             float combinedBias = Mathf.Lerp(bias, noise, widthSettings.noiseInfluence);
+            if (widthSettings.useRandomWidthCurve == false) {
+                combinedBias = bias;
+            }
+
             float width = Mathf.Lerp(coreSettings.minAndMaxWidth.x, coreSettings.minAndMaxWidth.y, combinedBias);
 
             float raw = Random.value;
