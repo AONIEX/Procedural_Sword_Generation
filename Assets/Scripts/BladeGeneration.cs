@@ -6,9 +6,9 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Detail")]
-    [Range(1, 20)] public int subDivisions = 3;
+    [Range(1, 20)] public int segmentSubdivisions = 3;
     [Range(1, 20)] public int tipSubdivisions = 5;
-    [Range(2, 20)] public int spineResolution = 5;
+    [Range(2, 20)] public int widthSubdivisions = 5;
 
     //https://meshlib.io/feature/mesh-smoothing/
     [Header("Curvature Smoothing")]
@@ -114,7 +114,7 @@ public class BladeGeneration : MonoBehaviour
         //
         //Side Walls (This is where i will create sharp edges later)
         //
-        int ringSize = spineResolution;
+        int ringSize = widthSubdivisions;
         int ringCount = smoothLefts.Count;
         
         for (int i = 0; i < ringCount - 1; i++)
@@ -223,7 +223,7 @@ public class BladeGeneration : MonoBehaviour
             Segment p3 = segments[Mathf.Min(i + 2, segments.Count - 1)];
 
             bool isTipSegment = (i == segments.Count - 2);
-            int currentSubdivisions = isTipSegment ? tipSubdivisions : subDivisions;
+            int currentSubdivisions = isTipSegment ? tipSubdivisions : segmentSubdivisions;
 
             bool isLastSegment = (i == segments.Count - 2);
 
@@ -283,9 +283,9 @@ public class BladeGeneration : MonoBehaviour
 
             ringStarts.Add(vertices.Count);
 
-            for (int s = spineResolution - 1; s >= 0; s--)
+            for (int s = widthSubdivisions - 1; s >= 0; s--)
             {
-                float t = s / (float)(spineResolution - 1);
+                float t = s / (float)(widthSubdivisions - 1);
                 Vector3 point = Vector3.Lerp(left, right, t);
                 vertices.Add(point);
             }
@@ -297,7 +297,7 @@ public class BladeGeneration : MonoBehaviour
             int baseA = ringStarts[i];
             int baseB = ringStarts[i + 1];
 
-            for (int j = 0; j < spineResolution - 1; j++)
+            for (int j = 0; j < widthSubdivisions - 1; j++)
             {
                 int a = baseA + j;
                 int b = baseA + j + 1;
@@ -320,7 +320,7 @@ public class BladeGeneration : MonoBehaviour
         vertices.Add(tipPoint);
 
         int finalRingStart = ringStarts[ringStarts.Count - 1];
-        for (int i = 0; i < spineResolution - 1; i++)
+        for (int i = 0; i < widthSubdivisions - 1; i++)
         {
             triangles.Add(finalRingStart + i);
             triangles.Add(tipIndex);
