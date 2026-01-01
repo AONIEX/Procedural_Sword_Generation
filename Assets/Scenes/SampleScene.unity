@@ -354,6 +354,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     noiseInfluence: 0
+    noiseFrequency: 0.123
   tipSettings:
     tipLeanMode: 0
     randomHeightOffset: 0.1
@@ -440,9 +441,17 @@ MonoBehaviour:
   spineResolution: 5
   curvatureWindow: 5
   curvatureBlend: 0.5
-  baseWidth: 0
+  baseWidth: 0.1
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
+  bladeThickness: 0.05
+  taperTowardsTip:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  bladeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
 --- !u!1 &525139034
 GameObject:
   m_ObjectHideFlags: 0
