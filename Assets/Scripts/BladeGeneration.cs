@@ -6,9 +6,9 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Detail")]
-    [Range(1, 20)] public int segmentSubdivisions = 3;
+    [Range(1, 50)] public int segmentSubdivisions = 3;
     [Range(1, 20)] public int tipSubdivisions = 5;
-    [Range(2, 20)] public int widthSubdivisions = 5;
+    [Range(2, 50)] public int widthSubdivisions = 5;
 
     //https://meshlib.io/feature/mesh-smoothing/
     [Header("Curvature Smoothing")]
@@ -41,19 +41,38 @@ public class BladeGeneration : MonoBehaviour
     public float fullerNoiseScale = 0.123f;
     public float fullerNoiseStrength = 0.123f;
 
+
     [System.Serializable]
     public class BladeSectionProfile
     {
         public float position; // 0–1 along blade
+
         [Range(0.0f, 0.9f)]
         public float fullerDepth;
+
         [Range(0.0f, 0.9f)]
         public float fullerWidth;
 
-        [Range(0, 1f)] public float fullerOffset = 0.5f;  // NEW: -1 = left, 0 = center, +1 = righ
+        [Range(0, 1f)]
+        public float fullerOffset = 0.5f;
 
-        public AnimationCurve fullerFalloff; // shape of the groove
+        public AnimationCurve fullerFalloff;
+
+        [Range(1, 7)]
+        public int numberOfFullers = 1;
+
+        [Range(0f, 1f)]
+        public float spacingPercent = 0.1f; // percent of blade width
     }
+    [System.Serializable]
+    public class FullerDefinition
+    {
+        [Range(0f, 1f)] public float widthPercent = 0.2f;
+        [Range(0f, 1f)] public float depthPercent = 0.2f;
+        [Range(0f, 1f)] public float offsetPercent = 0.5f; // 0 = left, 1 = right
+        public AnimationCurve falloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
+    }
+
     public List<BladeSectionProfile> profiles;
 
 
@@ -134,15 +153,6 @@ public class BladeGeneration : MonoBehaviour
         Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
 
 
-        ApplyFuller(
-          vertices,
-          smoothLefts,
-          smoothRights,
-          smoothCenters,
-          bladeNormal,
-          frontVertexCount
-        );
-
 
 
         // 3. Bevel / ridge vertices
@@ -167,6 +177,15 @@ public class BladeGeneration : MonoBehaviour
             sharpStartBack,
             ringCount
         );
+        
+        ApplyFullers(
+             vertices,
+             smoothLefts,
+             smoothRights,
+             smoothCenters,
+             bladeNormal,
+             frontVertexCount
+        );
 
         // 5. Final mesh
         mesh3D.SetVertices(vertices);
@@ -174,8 +193,9 @@ public class BladeGeneration : MonoBehaviour
         mesh3D.SetTriangles(trianglesFrontBack, 0);
         mesh3D.SetTriangles(trianglesSharp, 1);
 
-        mesh3D.RecalculateNormals();
+        RecalculateNormalsSmooth(mesh3D);
         mesh3D.RecalculateTangents();
+
         MeshFilter meshFilter = GetComponent<MeshFilter>();
         if (meshFilter == null)
             meshFilter = gameObject.AddComponent<MeshFilter>();
@@ -187,6 +207,248 @@ public class BladeGeneration : MonoBehaviour
         meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
     }
 
+    private void ApplyFullers(
+      List<Vector3> vertices,
+      List<Vector3> smoothLefts,
+      List<Vector3> smoothRights,
+      List<Vector3> smoothCenters,
+      Vector3 bladeNormal,
+      int frontVertexCount)
+    {
+        if (profiles == null || profiles.Count == 0)
+            return;
+
+        int ringCount = smoothLefts.Count;
+
+        float totalLength = 0f;
+        List<float> cumulativeLengths = new List<float> { 0f };
+
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulativeLengths.Add(totalLength);
+        }
+
+        // Step 1: Calculate depth adjustments for all vertices
+        float[,] depthMap = new float[ringCount, widthSubdivisions];
+
+        for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
+        {
+            float bladePosition = totalLength > 0 ? cumulativeLengths[ringIdx] / totalLength : 0f;
+
+            BladeSectionProfile p0, p1;
+            float blend = GetProfileBlend(bladePosition, out p0, out p1);
+
+            float depthPercent = Mathf.Lerp(p0.fullerDepth, p1.fullerDepth, blend);
+            float widthPercent = Mathf.Lerp(p0.fullerWidth, p1.fullerWidth, blend);
+            float baseOffsetPercent = Mathf.Lerp(p0.fullerOffset, p1.fullerOffset, blend);
+            float spacingPercent = Mathf.Lerp(p0.spacingPercent, p1.spacingPercent, blend);
+            int count = Mathf.RoundToInt(Mathf.Lerp(p0.numberOfFullers, p1.numberOfFullers, blend));
+
+            if (depthPercent <= 0f || widthPercent <= 0f || count <= 0)
+                continue;
+
+            Vector3 left = smoothLefts[ringIdx];
+            Vector3 right = smoothRights[ringIdx];
+            float ringWidth = Vector3.Distance(left, right);
+
+            float fullerDepth = depthPercent * (bladeThickness * 0.5f);
+
+            float baseOffsetNormalized = baseOffsetPercent * 2f - 1f;
+            float spacingNormalized = spacingPercent * 2f;
+            float centerIndex = (count - 1) * 0.5f;
+
+            for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
+            {
+                float widthT = vertIdx / (float)(widthSubdivisions - 1);
+                float widthPosition = (widthT * 2f) - 1f;
+
+                float maxDepth = 0f;
+
+                // Accumulate depth from all fullers at this vertex
+                for (int f = 0; f < count; f++)
+                {
+                    float offsetNormalized = baseOffsetNormalized + (f - centerIndex) * spacingNormalized;
+                    float distFromCenter = widthPosition - offsetNormalized;
+                    float normalizedDist = Mathf.Abs(distFromCenter) / widthPercent;
+
+                    if (normalizedDist > 1f)
+                        continue;
+
+                    float falloff = Mathf.Lerp(
+                        p0.fullerFalloff.Evaluate(normalizedDist),
+                        p1.fullerFalloff.Evaluate(normalizedDist),
+                        blend
+                    );
+
+                    maxDepth = Mathf.Max(maxDepth, fullerDepth * falloff);
+                }
+
+                depthMap[ringIdx, vertIdx] = maxDepth;
+            }
+        }
+
+        // Step 2: Apply longitudinal smoothing
+        int smoothWindow = 5; // Adjust this for more/less smoothing
+        float[,] smoothedDepthMap = new float[ringCount, widthSubdivisions];
+
+        for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
+        {
+            for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
+            {
+                float sum = 0f;
+                float weightSum = 0f;
+
+                for (int r = Mathf.Max(0, ringIdx - smoothWindow);
+                     r <= Mathf.Min(ringCount - 1, ringIdx + smoothWindow);
+                     r++)
+                {
+                    float distance = Mathf.Abs(r - ringIdx);
+                    float weight = 1f - (distance / (smoothWindow + 1f));
+
+                    sum += depthMap[r, vertIdx] * weight;
+                    weightSum += weight;
+                }
+
+                smoothedDepthMap[ringIdx, vertIdx] = sum / weightSum;
+            }
+        }
+
+        // Step 3: Apply the smoothed depths to vertices
+        for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
+        {
+            Vector3 left = smoothLefts[ringIdx];
+            Vector3 right = smoothRights[ringIdx];
+            Vector3 widthDir = (right - left).normalized;
+
+            Vector3 forwardDir;
+            if (ringIdx < smoothCenters.Count - 1)
+                forwardDir = (smoothCenters[ringIdx + 1] - smoothCenters[ringIdx]).normalized;
+            else
+                forwardDir = (smoothCenters[ringIdx] - smoothCenters[ringIdx - 1]).normalized;
+
+            Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+
+            int ringStartIdx = ringIdx * widthSubdivisions;
+
+            for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
+            {
+                int frontIdx = ringStartIdx + vertIdx;
+                int backIdx = frontIdx + frontVertexCount;
+
+                float actualDepth = smoothedDepthMap[ringIdx, vertIdx];
+
+                vertices[frontIdx] -= ringNormal * actualDepth;
+                vertices[backIdx] += ringNormal * actualDepth;
+            }
+        }
+    }
+    private float GetProfileBlend(float bladeT, out BladeSectionProfile p0, out BladeSectionProfile p1)
+    {
+        // Default assignments
+        p0 = profiles[0];
+        p1 = profiles[profiles.Count - 1];
+
+        // Ensure sorted
+        var sorted = new List<BladeSectionProfile>(profiles);
+        sorted.Sort((a, b) => a.position.CompareTo(b.position));
+
+        // Edge cases
+        if (bladeT <= sorted[0].position)
+        {
+            p0 = sorted[0];
+            p1 = sorted[0];
+            return 0f;
+        }
+
+        if (bladeT >= sorted[^1].position)
+        {
+            p0 = sorted[^1];
+            p1 = sorted[^1];
+            return 0f;
+        }
+
+        // Find the two profiles around bladeT
+        for (int i = 0; i < sorted.Count - 1; i++)
+        {
+            if (bladeT >= sorted[i].position && bladeT <= sorted[i + 1].position)
+            {
+                p0 = sorted[i];
+                p1 = sorted[i + 1];
+
+                float t = Mathf.InverseLerp(p0.position, p1.position, bladeT);
+
+                // Smoothstep for better transitions
+                t = t * t * (3f - 2f * t);
+
+                return t;
+            }
+        }
+
+        // Should never hit this, but safe fallback
+        return 0f;
+    }
+    private AnimationCurve BlendCurves(AnimationCurve a, AnimationCurve b, float t)
+    {
+        AnimationCurve result = new AnimationCurve();
+
+        for (int i = 0; i < 20; i++)
+        {
+            float x = i / 19f;
+            float y = Mathf.Lerp(a.Evaluate(x), b.Evaluate(x), t);
+            result.AddKey(x, y);
+        }
+
+        return result;
+    }
+    private FullerDefinition CloneFuller(FullerDefinition f)
+    {
+        return new FullerDefinition
+        {
+            widthPercent = f.widthPercent,
+            depthPercent = f.depthPercent,
+            offsetPercent = f.offsetPercent,
+            falloff = new AnimationCurve(f.falloff.keys)
+        };
+    }
+
+    private List<FullerDefinition> BlendFullerLists(
+    List<FullerDefinition> a,
+    List<FullerDefinition> b,
+    float blend)
+    {
+        List<FullerDefinition> result = new List<FullerDefinition>();
+
+        int count = Mathf.Max(a.Count, b.Count);
+
+        for (int i = 0; i < count; i++)
+        {
+            FullerDefinition fA = (i < a.Count) ? a[i] : null;
+            FullerDefinition fB = (i < b.Count) ? b[i] : null;
+
+            if (fA == null && fB != null)
+            {
+                result.Add(CloneFuller(fB));
+                continue;
+            }
+            if (fB == null && fA != null)
+            {
+                result.Add(CloneFuller(fA));
+                continue;
+            }
+
+            FullerDefinition blended = new FullerDefinition();
+            blended.widthPercent = Mathf.Lerp(fA.widthPercent, fB.widthPercent, blend);
+            blended.depthPercent = Mathf.Lerp(fA.depthPercent, fB.depthPercent, blend);
+            blended.offsetPercent = Mathf.Lerp(fA.offsetPercent, fB.offsetPercent, blend);
+
+            blended.falloff = BlendCurves(fA.falloff, fB.falloff, blend);
+
+            result.Add(blended);
+        }
+
+        return result;
+    }
     private void ApplyFuller(
      List<Vector3> vertices,
      List<Vector3> smoothLefts,
@@ -692,6 +954,42 @@ public class BladeGeneration : MonoBehaviour
             triangles.Add(finalRingStart + i + 1);
         }
     }
+
+    private void RecalculateNormalsSmooth(Mesh mesh)
+    {
+        Vector3[] vertices = mesh.vertices;
+        Vector3[] normals = new Vector3[vertices.Length];
+
+        // Recalculate normals PER SUBMESH
+        for (int sub = 0; sub < mesh.subMeshCount; sub++)
+        {
+            int[] triangles = mesh.GetTriangles(sub);
+
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int i0 = triangles[i];
+                int i1 = triangles[i + 1];
+                int i2 = triangles[i + 2];
+
+                Vector3 v0 = vertices[i0];
+                Vector3 v1 = vertices[i1];
+                Vector3 v2 = vertices[i2];
+
+                Vector3 faceNormal = Vector3.Cross(v1 - v0, v2 - v0);
+
+                normals[i0] += faceNormal;
+                normals[i1] += faceNormal;
+                normals[i2] += faceNormal;
+            }
+        }
+
+        for (int i = 0; i < normals.Length; i++)
+            normals[i] = normals[i].normalized;
+
+        mesh.normals = normals;
+    }
+
+
 
     void ApplyCurvatureSmoothingWithCenter(
        ref Vector3 leftOffset,

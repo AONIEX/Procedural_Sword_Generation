@@ -289,7 +289,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 28350889}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.02111825, y: 0.053537037, z: 0.12814993, w: 0.9900836}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -297,7 +297,7 @@ Transform:
   - {fileID: 1173572163}
   - {fileID: 926122427}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 1.61, y: 6.4, z: 14.84}
 --- !u!114 &28350893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -436,15 +436,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splineGen: {fileID: 28350893}
-  segmentSubdivisions: 3
+  segmentSubdivisions: 20
   tipSubdivisions: 2
-  widthSubdivisions: 12
+  widthSubdivisions: 20
   curvatureWindow: 5
   curvatureBlend: 0.5
   baseWidth: 0.1
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
-  bladeThickness: 0.05
+  bladeThickness: 0.1
   taperTowardsTip:
     serializedVersion: 2
     m_Curve: []
@@ -462,35 +462,7 @@ MonoBehaviour:
   fullerNoiseStrength: 1
   profiles:
   - position: 0
-    fullerDepth: 0.2
-    fullerWidth: 0.2
-    fullerOffset: 0.5
-    fullerFalloff:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  - position: 0.5
-    fullerDepth: 0.5
+    fullerDepth: 0.9
     fullerWidth: 0.1
     fullerOffset: 0.5
     fullerFalloff:
@@ -517,6 +489,68 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    numberOfFullers: 3
+    spacingPercent: 0.2
+  - position: 0.3
+    fullerDepth: 0.9
+    fullerWidth: 0.1
+    fullerOffset: 0.5
+    fullerFalloff:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    numberOfFullers: 3
+    spacingPercent: 0.2
+  - position: 0.6
+    fullerDepth: 0
+    fullerWidth: 0
+    fullerOffset: 0.5
+    fullerFalloff:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    numberOfFullers: 3
+    spacingPercent: 0
   - position: 1
     fullerDepth: 0
     fullerWidth: 0
@@ -545,6 +579,8 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    numberOfFullers: 3
+    spacingPercent: 0
   sharpSide: 2
 --- !u!1 &525139034
 GameObject:
@@ -626,7 +662,7 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -685,7 +721,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 705507993}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.99614173, y: -0.0017851933, z: -0.08522432, w: -0.020866174}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
