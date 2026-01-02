@@ -95,6 +95,17 @@ public class TipSettings
     [Tooltip("Curve allows user to control the tip leaning strength")]
     [Range(0, 1)]
     public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1); // To help force the tip to lean fully or partially left or right based on prefrences (for something like a katana witha tip to one side)
+    public void CopyFrom(TipSettings other)
+    {
+        tipLeanMode = other.tipLeanMode;
+        randomHeightOffset = other.randomHeightOffset;
+        heightOffset = other.heightOffset;
+
+        tipLeanStrengthCurve = other.tipLeanStrengthCurve != null
+            ? new AnimationCurve(other.tipLeanStrengthCurve.keys)
+            : new AnimationCurve();
+    }
+
 }
 
 [System.Serializable]
@@ -118,7 +129,20 @@ public class CoreSettings
     [Tooltip("Defines the minimum and maximum width of the blade in each segment (used for randomness)")]
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
     [Tooltip("Defines the minimum and maximum angle for a segment (Curvature of the blades edge)")]
-    public Vector2 minAndMaxAngle = new Vector2(-45f, 45f); 
+    public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
+
+    public void CopyFrom(CoreSettings other)
+    {
+        splinePointCount = other.splinePointCount;
+        heightSpacing = other.heightSpacing;
+        heightSpacingMode = other.heightSpacingMode;
+        totalBladeHeight = other.totalBladeHeight;
+
+        minAndMaxHeightSpacing = other.minAndMaxHeightSpacing;
+        minAndMaxWidth = other.minAndMaxWidth;
+        minAndMaxAngle = other.minAndMaxAngle;
+    }
+
 }
 
 [System.Serializable]
@@ -132,11 +156,28 @@ public class WidthSettings
     public AnimationCurve widthBiasCurve;
     public float noiseInfluence = 1;
     public float noiseFrequency = 0.123f; //Affects the noise
+    public void CopyFrom(WidthSettings other)
+    {
+        useRandomWidthCurve = other.useRandomWidthCurve;
+
+        userDefinedCurve = other.userDefinedCurve != null
+            ? new AnimationCurve(other.userDefinedCurve.keys)
+            : new AnimationCurve();
+
+        widthBiasCurve = other.widthBiasCurve != null
+            ? new AnimationCurve(other.widthBiasCurve.keys)
+            : new AnimationCurve();
+
+        noiseInfluence = other.noiseInfluence;
+        noiseFrequency = other.noiseFrequency;
+    }
+
 }
 
 [System.Serializable]
 public class CurvatureSettings
 {
+    [Range(0, 5)]
     public int straightSegmentThreshold = 0;
     public CurvatureMode curvatureMode = CurvatureMode.None;
     [Range(0, 2)]
@@ -148,6 +189,22 @@ public class CurvatureSettings
     public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1); // allows for customisation of blades curve, if randomness isnt wanted
 
     public Vector3 curvatureDirection = new Vector3(1, 0, 0); // direction of the curve made to randomly go left or right
+    public void CopyFrom(CurvatureSettings other)
+    {
+        straightSegmentThreshold = other.straightSegmentThreshold;
+        curvatureMode = other.curvatureMode;
+
+        curvature_Max = other.curvature_Max;
+        curvature_PeakFactor = other.curvature_PeakFactor;
+        curvature_StepSize = other.curvature_StepSize;
+
+        curvatureShape = other.curvatureShape != null
+            ? new AnimationCurve(other.curvatureShape.keys)
+            : new AnimationCurve();
+
+        curvatureDirection = other.curvatureDirection;
+    }
+
 }
 [System.Serializable]
 public class EdgeSettings
@@ -155,6 +212,15 @@ public class EdgeSettings
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
     [Tooltip("Defines edge collapse pattern across blade thirds. Use 'L', 'R', or 'N' for None.")]
     public string collapsePattern = "LRL"; // Example: Left, Right, Left
+
+    public void CopyFrom(EdgeSettings other)
+    {
+        edgeCollapseMode = other.edgeCollapseMode;
+        collapsePattern = other.collapsePattern;
+    }
+
+
+
 }
 #endregion
 
@@ -185,6 +251,11 @@ public class SplineAndLineGen : MonoBehaviour
 
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
+
+    [Header("Presets")]
+    public BladePresetCollection presetCollection;
+    public List<BladePreset> presets;
+
 
 
     void Start()
@@ -424,68 +495,53 @@ public class SplineAndLineGen : MonoBehaviour
             new Keyframe(1f, Random.Range(0.1f, 0.75f))
         );
     }
+    public void OnBladePresetChanged(BladePresets presetEnum)
+    {
+        bladePreset = presetEnum;   // update enum
+        LoadPreset();               // load JSON preset
+    }
+
 
     AnimationCurve GenerateCurvatureCurve()
     {
-        float randomValue = Random.value;
+        // Decide curve direction
+        curvatureSettings.curvatureDirection.x = 1;// (Random.value < 0.5f) ? -1f : 1f;
 
-        //Decides if the curve is left or right
-        if (randomValue < 0.5f) 
-        {
-            curvatureSettings.curvatureDirection.x = -1f;
-        }
-        else
-        {
-            curvatureSettings.curvatureDirection.x = 1f;
-        }
-
+        int keyCount = 12; // more keys = smoother curve
         AnimationCurve curve = new AnimationCurve();
 
-        int keyCount = 5; // 0, 0.25, 0.5, 0.75, 1
-        float[] values = new float[keyCount];
-
-        //Generate smooth-ish values
-        values[0] = 0f;
-
-
-        values[0] = 0f;
-
-        for (int i = 1; i < keyCount - 1; i++)
-        {
-            float t = i / (float)(keyCount - 1);  //height
-            // scales down the peak to make sure the blade isnt always at the max curvature should create an almost bell shaped curve/baseline
-            float targetValue = Mathf.Sin(t * Mathf.PI) * curvatureSettings.curvature_Max * curvatureSettings.curvature_PeakFactor;  //Ideal value based on a peak in the middle and tapper at the end of the blade
-            //adds subtle variation to keep the blade organic
-            float variation = Random.Range(-curvatureSettings.curvature_StepSize, curvatureSettings.curvature_StepSize);
-            values[i] = Mathf.Clamp(targetValue + variation, -curvatureSettings.curvature_Max, curvatureSettings.curvature_Max);
-        }
-
-        //Simple version
-        //for (int i = 1; i < keyCount - 1; i++)
-        //{
-        //    float prev = values[i - 1];
-        //    float next = Random.Range(prev - curvatureStepSize, prev + curvatureStepSize); // small change
-        //    values[i] = Mathf.Clamp(next, -curvatureMax, curvatureMax);
-        //}
-
-        // Makes sure the tip is centered
-        if (tipSettings.tipLeanMode == TipLeanMode.ForcedCenterX)
-        {
-            values[keyCount - 1] = 0f;
-        }
-
-        //Keyframes
         for (int i = 0; i < keyCount; i++)
         {
-            float time = i / (float)(keyCount - 1);
-            curve.AddKey(new Keyframe(time, values[i]));
+            float t = i / (float)(keyCount - 1);
+
+            // Base bell-shaped curve
+            float baseValue = Mathf.Sin(t * Mathf.PI)
+                              * curvatureSettings.curvature_Max
+                              * curvatureSettings.curvature_PeakFactor;
+
+            // Smooth noise (Perlin)
+            float noise = Mathf.PerlinNoise(t * 3f, Random.value * 10f) - 0.5f;
+            noise *= curvatureSettings.curvature_StepSize;
+
+            float finalValue = Mathf.Clamp(baseValue + noise,
+                                           -curvatureSettings.curvature_Max,
+                                           curvatureSettings.curvature_Max);
+
+            // Forced center tip
+            if (i == keyCount - 1 && tipSettings.tipLeanMode == TipLeanMode.ForcedCenterX)
+                finalValue = 0f;
+
+            curve.AddKey(t, finalValue);
         }
 
-
+        // Smooth tangents
+        for (int i = 0; i < curve.keys.Length; i++)
+        {
+            curve.SmoothTangents(i, 0.5f);
+        }
 
         return curve;
     }
-
     Vector3 GenerateCurvature(Vector3 pos, float heightRatio, int segmentIndex)
     {
         if (curvatureSettings.curvatureMode == CurvatureMode.None)//|| segmentIndex <= curvatureSettings.straightSegmentThreshold
@@ -675,15 +731,18 @@ public class SplineAndLineGen : MonoBehaviour
     public void ApplyPreset(BladePreset preset)
     {
         presetName = preset.presetName;
-        coreSettings = preset.coreSettings;
-        widthSettings = preset.widthSettings;
-        curvatureSettings = preset.curvatureSettings;
-        tipSettings = preset.tipSettings;
-        edgeSettings = preset.edgeSettings;
+
+        coreSettings.CopyFrom(preset.coreSettings);
+        widthSettings.CopyFrom(preset.widthSettings);
+        curvatureSettings.CopyFrom(preset.curvatureSettings);
+        tipSettings.CopyFrom(preset.tipSettings);
+        edgeSettings.CopyFrom(preset.edgeSettings);
+
         useSymmetry = preset.useSymmetry;
 
         GenerateLinesAndSplines();
     }
+
 
     [ContextMenu("Save Current Preset")]
     public void SavePreset()

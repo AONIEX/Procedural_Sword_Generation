@@ -28,7 +28,7 @@ public class BladeGeneration : MonoBehaviour
 
 
     [Header("3D Creation")]
-    [Range(0.01f, 1), DisplayName("Blade Thickness")]
+    [Range(0.01f, .2f), DisplayName("Blade Thickness")]
     public float bladeThickness = 0.1f;
 
     [Header("Blade Edges")]
