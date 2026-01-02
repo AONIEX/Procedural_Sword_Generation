@@ -438,7 +438,7 @@ MonoBehaviour:
   splineGen: {fileID: 28350893}
   segmentSubdivisions: 3
   tipSubdivisions: 2
-  widthSubdivisions: 5
+  widthSubdivisions: 12
   curvatureWindow: 5
   curvatureBlend: 0.5
   baseWidth: 0.1
@@ -457,6 +457,94 @@ MonoBehaviour:
   nonSharpBevelWidth: 0.005
   bladeMaterial: {fileID: 2100000, guid: 4af743c41b89b2d4694786b5cba886b6, type: 2}
   sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
+  useFullerNoise: 0
+  fullerNoiseScale: 0.123
+  fullerNoiseStrength: 1
+  profiles:
+  - position: 0
+    fullerDepth: 0.2
+    fullerWidth: 0.2
+    fullerOffset: 0.5
+    fullerFalloff:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  - position: 0.5
+    fullerDepth: 0.5
+    fullerWidth: 0.1
+    fullerOffset: 0.5
+    fullerFalloff:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  - position: 1
+    fullerDepth: 0
+    fullerWidth: 0
+    fullerOffset: 0.5
+    fullerFalloff:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
   sharpSide: 2
 --- !u!1 &525139034
 GameObject:
