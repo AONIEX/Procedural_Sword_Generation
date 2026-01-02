@@ -184,7 +184,7 @@ public class CurvatureSettings
     public float curvature_Max; // max curvature the blade can have
     [Range(0, 1)]
     public float curvature_PeakFactor = 0.3f; // controls the smoothness of the blades edges --- 0.3-0.6 for best smoothness 
-    [Range(0, 1)]
+    [Range(0, .2f)]
     public float curvature_StepSize = 0.3f; // allows to control how smoot or chaotic the curvature is
     public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1); // allows for customisation of blades curve, if randomness isnt wanted
 
@@ -505,7 +505,7 @@ public class SplineAndLineGen : MonoBehaviour
     AnimationCurve GenerateCurvatureCurve()
     {
         // Decide curve direction
-        curvatureSettings.curvatureDirection.x = 1;// (Random.value < 0.5f) ? -1f : 1f;
+        curvatureSettings.curvatureDirection.x = -1;// (Random.value < 0.5f) ? -1f : 1f;
 
         int keyCount = 12; // more keys = smoother curve
         AnimationCurve curve = new AnimationCurve();
