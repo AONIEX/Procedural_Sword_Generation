@@ -311,7 +311,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   presetName: random
-  bladePreset: 1
+  bladePreset: 5
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7
@@ -451,10 +451,11 @@ MonoBehaviour:
   useFullerNoise: 0
   fullerNoiseScale: 0.123
   fullerNoiseStrength: 1
-  profiles:
-  - position: 0
-    fullerDepth: 0.9
-    fullerWidth: 0.1
+  fuller:
+    start: 0.1
+    end: 0.8
+    fullerDepth: 0.3
+    fullerWidth: 0.3
     fullerOffset: 0.5
     fullerFalloff:
       serializedVersion: 2
@@ -464,84 +465,24 @@ MonoBehaviour:
         value: 1
         inSlope: 0
         outSlope: 0
-        tangentMode: 34
+        tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0
         inSlope: 0
         outSlope: 0
-        tangentMode: 34
+        tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    numberOfFullers: 3
-    spacingPercent: 0.2
-  - position: 0.3
-    fullerDepth: 0.9
-    fullerWidth: 0.1
-    fullerOffset: 0.5
-    fullerFalloff:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    numberOfFullers: 3
-    spacingPercent: 0.2
-  - position: 1
-    fullerDepth: 0
-    fullerWidth: 0
-    fullerOffset: 0.5
-    fullerFalloff:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    numberOfFullers: 3
-    spacingPercent: 0
+    numberOfFullers: 1
+    spacingPercent: 0.1
   sharpSide: 2
 --- !u!1 &127399959
 GameObject:
@@ -694,7 +635,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 499329958}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 46c0f37e2d64dd048be46dd6f113a2ab, type: 3}
   m_Name: 
