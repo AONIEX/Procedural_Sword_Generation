@@ -28,6 +28,9 @@ public class BladeGeneration : MonoBehaviour
 
     [Header("Blade Edges")]
     [Range(0f, 0.5f)] public float sideSharpness = 0.05f; // how much the sides extrude
+    [Range(0.001f, 0.01f)] public float edgeBevelWidth = 0.005f; // micro-bevel on the sharp edge
+    [Range(-0.1f, 0.1f)] public float nonSharpSideOffset = 0f;
+    [Range(0.001f, 0.01f)]  public float nonSharpBevelWidth = 0.05f;
 
     [Header("Rendering")]
     public Material bladeMaterial;
@@ -66,10 +69,7 @@ public class BladeGeneration : MonoBehaviour
     public void Generate3DBlade()
     {
         Mesh mesh3D = new Mesh();
-
         List<Vector3> vertices = new List<Vector3>();
-
-        // NEW: separate triangle lists
         List<int> trianglesFrontBack = new List<int>();
         List<int> trianglesSharp = new List<int>();
 
@@ -79,27 +79,24 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
         List<Vector3> smoothCenters = new List<Vector3>();
-
         GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters);
 
-        // --- Front face ---
+        // Front face
         List<int> frontTriangles = new List<int>();
         GenerateEdgeGeometry(segments, smoothLefts, smoothRights, vertices, frontTriangles);
         trianglesFrontBack.AddRange(frontTriangles);
 
         int frontVertexCount = vertices.Count;
 
-        // --- Blade thickness direction ---
+        // Thickness 
         Vector3 widthDir = (smoothRights[0] - smoothLefts[0]).normalized;
         Vector3 forwardDir = (smoothCenters[1] - smoothCenters[0]).normalized;
         Vector3 BladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
         float halfThickness = bladeThickness * 0.5f;
 
-        // Move front face forward
         for (int i = 0; i < frontVertexCount; i++)
             vertices[i] += BladeNormal * halfThickness;
 
-        // Duplicate back vertices
         for (int i = 0; i < frontVertexCount; i++)
             vertices.Add(vertices[i] - BladeNormal * bladeThickness);
 
@@ -115,14 +112,13 @@ public class BladeGeneration : MonoBehaviour
             trianglesFrontBack.Add(a);
         }
 
-        // --- Sharp ridge ---
+        // Sharp ridge / bevel vertices
         int ringCount = smoothLefts.Count;
-        List<Vector3> sharpEdgeVerts = new List<Vector3>();
-        int sharpStart = vertices.Count;
+        int sharpStartFront = vertices.Count;
 
-        // Direction along the blade tip
         Vector3 tipDir = (smoothCenters[ringCount - 1] - smoothCenters[ringCount - 2]).normalized;
 
+        // Front bevel/ridge vertices 
         for (int i = 0; i < ringCount; i++)
         {
             Vector3 center = smoothCenters[i];
@@ -132,66 +128,106 @@ public class BladeGeneration : MonoBehaviour
             Vector3 toLeft = (left - center).normalized;
             Vector3 toRight = (right - center).normalized;
 
-            Vector3 leftSharp = left  ;
-            Vector3 rightSharp = right ;
+            // Ridge offsets
+            Vector3 leftRidge = left + toLeft * ((sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
+            Vector3 rightRidge = right + toRight * ((sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
 
-            if (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both)
-                leftSharp = left + toLeft * sideSharpness;
-
-            if (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both)
-                rightSharp = right + toRight * sideSharpness;
-
-            // --- Extrude the tip forward if it's the last segment ---
             if (i == ringCount - 1)
             {
-                leftSharp += tipDir * sideSharpness;
-                rightSharp += tipDir * sideSharpness;
+                leftRidge += tipDir * sideSharpness;
+                rightRidge += tipDir * sideSharpness;
             }
 
-            sharpEdgeVerts.Add(leftSharp);
-            sharpEdgeVerts.Add(rightSharp);
+            // Bevel widths
+            float leftBevel = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
+            float rightBevel = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
+
+            vertices.Add(leftRidge + BladeNormal * leftBevel);
+            vertices.Add(rightRidge + BladeNormal * rightBevel);
         }
 
-        vertices.AddRange(sharpEdgeVerts);
+        int sharpStartBack = vertices.Count;
 
-        // --- Connect sharp ridge to front and back ---
+        // Back bevel/ridge vertices
+        for (int i = 0; i < ringCount; i++)
+        {
+            Vector3 center = smoothCenters[i];
+            Vector3 left = smoothLefts[i];
+            Vector3 right = smoothRights[i];
+
+            Vector3 toLeft = (left - center).normalized;
+            Vector3 toRight = (right - center).normalized;
+
+            Vector3 leftRidge = left + toLeft * ((sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
+            Vector3 rightRidge = right + toRight * ((sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
+
+            if (i == ringCount - 1)
+            {
+                leftRidge += tipDir * sideSharpness;
+                rightRidge += tipDir * sideSharpness;
+            }
+
+            float leftBevel = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
+            float rightBevel = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
+
+            vertices.Add(leftRidge - BladeNormal * leftBevel);
+            vertices.Add(rightRidge - BladeNormal * rightBevel);
+        }
+
+        //  Connect bevel/ridge to blade faces 
         for (int i = 0; i < ringCount - 1; i++)
         {
-            // Left side
             int frontA = i * widthSubdivisions;
             int frontB = (i + 1) * widthSubdivisions;
+
             int backA = frontA + frontVertexCount;
             int backB = frontB + frontVertexCount;
-            int sharpLeftA = sharpStart + i * 2;
-            int sharpLeftB = sharpStart + (i + 1) * 2;
 
-            // Correct winding
-            trianglesSharp.Add(frontA); trianglesSharp.Add(frontB); trianglesSharp.Add(sharpLeftA);
-            trianglesSharp.Add(frontB); trianglesSharp.Add(sharpLeftB); trianglesSharp.Add(sharpLeftA);
+            int sharpLeftFrontA = sharpStartFront + i * 2;
+            int sharpLeftFrontB = sharpStartFront + (i + 1) * 2;
 
-            trianglesSharp.Add(backB); trianglesSharp.Add(backA); trianglesSharp.Add(sharpLeftA);
-            trianglesSharp.Add(backB); trianglesSharp.Add(sharpLeftA); trianglesSharp.Add(sharpLeftB);
+            int sharpLeftBackA = sharpStartBack + i * 2;
+            int sharpLeftBackB = sharpStartBack + (i + 1) * 2;
 
-            // Right side
-            int frontARight = i * widthSubdivisions + (widthSubdivisions - 1);
-            int frontBRight = (i + 1) * widthSubdivisions + (widthSubdivisions - 1);
+            int frontARight = frontA + (widthSubdivisions - 1);
+            int frontBRight = frontB + (widthSubdivisions - 1);
+
             int backARight = frontARight + frontVertexCount;
             int backBRight = frontBRight + frontVertexCount;
-            int sharpRightA = sharpLeftA + 1;
-            int sharpRightB = sharpLeftB + 1;
 
-            // Correct winding
-            trianglesSharp.Add(frontARight); trianglesSharp.Add(sharpRightA); trianglesSharp.Add(frontBRight);
-            trianglesSharp.Add(frontBRight); trianglesSharp.Add(sharpRightA); trianglesSharp.Add(sharpRightB);
+            int sharpRightFrontA = sharpLeftFrontA + 1;
+            int sharpRightFrontB = sharpLeftFrontB + 1;
 
-            trianglesSharp.Add(backARight); trianglesSharp.Add(backBRight); trianglesSharp.Add(sharpRightA);
-            trianglesSharp.Add(backBRight); trianglesSharp.Add(sharpRightB); trianglesSharp.Add(sharpRightA);
+            int sharpRightBackA = sharpLeftBackA + 1;
+            int sharpRightBackB = sharpLeftBackB + 1;
+
+            //Figure out if side should be sharp or not
+            List<int> leftList = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? trianglesSharp : trianglesFrontBack;
+            List<int> rightList = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? trianglesSharp : trianglesFrontBack;
+
+            // LEFT SIDE
+            leftList.Add(frontA); leftList.Add(frontB); leftList.Add(sharpLeftFrontA);
+            leftList.Add(frontB); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftFrontA);
+
+            leftList.Add(backB); leftList.Add(backA); leftList.Add(sharpLeftBackA);
+            leftList.Add(backB); leftList.Add(sharpLeftBackA); leftList.Add(sharpLeftBackB);
+
+            leftList.Add(sharpLeftFrontA); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackA);
+            leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackB); leftList.Add(sharpLeftBackA);
+
+            // RIGHT SIDE
+            rightList.Add(frontARight); rightList.Add(sharpRightFrontA); rightList.Add(frontBRight);
+            rightList.Add(frontBRight); rightList.Add(sharpRightFrontA); rightList.Add(sharpRightFrontB);
+
+            rightList.Add(backARight); rightList.Add(backBRight); rightList.Add(sharpRightBackA);
+            rightList.Add(backBRight); rightList.Add(sharpRightBackB); rightList.Add(sharpRightBackA);
+
+            rightList.Add(sharpRightFrontA); rightList.Add(sharpRightBackA); rightList.Add(sharpRightFrontB);
+            rightList.Add(sharpRightFrontB); rightList.Add(sharpRightBackA); rightList.Add(sharpRightBackB);
         }
 
-        // --- Create Mesh ---
+        //  Final mesh
         mesh3D.SetVertices(vertices);
-
-        // NEW: assign submeshes
         mesh3D.subMeshCount = 2;
         mesh3D.SetTriangles(trianglesFrontBack, 0);
         mesh3D.SetTriangles(trianglesSharp, 1);
@@ -205,15 +241,8 @@ public class BladeGeneration : MonoBehaviour
 
         MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
         if (meshRenderer == null) meshRenderer = gameObject.AddComponent<MeshRenderer>();
-
-        // NEW: assign two materials
-        meshRenderer.materials = new Material[]
-        {
-        bladeMaterial != null ? bladeMaterial : new Material(Shader.Find("Standard")),
-        sharpEdgeMaterial != null ? sharpEdgeMaterial : new Material(Shader.Find("Standard"))
-        };
+        meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
     }
-
 
     public void GenerateSmoothSegments(List<Segment> segments, List<Vector3> smoothLefts, List<Vector3> smoothRights, List<Vector3> smoothCenters )
     {
