@@ -6,31 +6,43 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Detail")]
-    [Range(1, 50)] public int segmentSubdivisions = 3;
-    [Range(1, 20)] public int tipSubdivisions = 5;
-    [Range(2, 50)] public int widthSubdivisions = 5;
+    [Range(1, 50), DisplayName("Segment Subdivisions")] 
+    public int segmentSubdivisions = 3;
+    [Range(1, 20), DisplayName("Tip Subdivisions")]
+    public int tipSubdivisions = 5;
+    [Range(2, 50), DisplayName("Width Subdivisions")]
+    public int widthSubdivisions = 5;
 
     //https://meshlib.io/feature/mesh-smoothing/
     [Header("Curvature Smoothing")]
     // controls how many previous segments are averaged when applying curvature
-    [Range(1, 10)] public int curvatureWindow = 5;
-    [Range(0f, 1f)] public float curvatureBlend = 0.5f;
+    //[Range(1, 10), DisplayName("Curvature Window")]
+    private int curvatureWindow = 5;
+    //[Range(0f, 1f), DisplayName("Curvature Blend")]
+    private float curvatureBlend = 0.5f;
 
     [Header("Debug")]
-    public float baseWidth = 0f;
+    private float baseWidth = 0f;
     public GameObject guard;
     public GameObject handle;
 
 
     [Header("3D Creation")]
-    [Range(0.01f, 1)] public float bladeThickness = .1f;
-    public AnimationCurve taperTowardsTip; //Blade Curve
+    [Range(0.01f, 1), DisplayName("Blade Thickness")]
+    public float bladeThickness = 0.1f;
 
     [Header("Blade Edges")]
-    [Range(0f, 0.5f)] public float sideSharpness = 0.05f; // how much the sides extrude
-    [Range(0.001f, 0.01f)] public float edgeBevelWidth = 0.005f; // micro-bevel on the sharp edge
-    [Range(-0.1f, 0.1f)] public float nonSharpSideOffset = 0f;
-    [Range(0.001f, 0.01f)]  public float nonSharpBevelWidth = 0.05f;
+    [Range(0f, 0.15f), DisplayName("Side Sharpness")]
+    public float sideSharpness = 0.05f;
+
+    [Range(0.001f, 0.01f), DisplayName("Edge Bevel Width")]
+    public float edgeBevelWidth = 0.005f;
+
+    [Range(-0.1f, 0.1f), DisplayName("Non-Sharp Side Offset")]
+    public float nonSharpSideOffset = 0f;
+
+    [Range(0.001f, 0.01f), DisplayName("Non-Sharp Bevel Width")]
+    public float nonSharpBevelWidth = 0.05f;
 
     [Header("Rendering")]
     public Material bladeMaterial;
@@ -45,6 +57,7 @@ public class BladeGeneration : MonoBehaviour
     [System.Serializable]
     public class BladeSectionProfile
     {
+        [Range(0.0f, 0.95f)]
         public float position; // 0–1 along blade
 
         [Range(0.0f, 0.9f)]
@@ -63,14 +76,6 @@ public class BladeGeneration : MonoBehaviour
 
         [Range(0f, 1f)]
         public float spacingPercent = 0.1f; // percent of blade width
-    }
-    [System.Serializable]
-    public class FullerDefinition
-    {
-        [Range(0f, 1f)] public float widthPercent = 0.2f;
-        [Range(0f, 1f)] public float depthPercent = 0.2f;
-        [Range(0f, 1f)] public float offsetPercent = 0.5f; // 0 = left, 1 = right
-        public AnimationCurve falloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
     }
 
     public List<BladeSectionProfile> profiles;
@@ -105,6 +110,15 @@ public class BladeGeneration : MonoBehaviour
             Generate3DBlade();
             CalculateHandandGuardSize();
         }
+    }
+
+    public void Generate()
+    {
+        splineGen.GenerateLinesAndSplines();
+        SmoothSegmentCenters();
+        //GenerateBladeMesh2D();
+        Generate3DBlade();
+        CalculateHandandGuardSize();
     }
 
     public void Generate3DBlade()
@@ -388,259 +402,7 @@ public class BladeGeneration : MonoBehaviour
         // Should never hit this, but safe fallback
         return 0f;
     }
-    private AnimationCurve BlendCurves(AnimationCurve a, AnimationCurve b, float t)
-    {
-        AnimationCurve result = new AnimationCurve();
-
-        for (int i = 0; i < 20; i++)
-        {
-            float x = i / 19f;
-            float y = Mathf.Lerp(a.Evaluate(x), b.Evaluate(x), t);
-            result.AddKey(x, y);
-        }
-
-        return result;
-    }
-    private FullerDefinition CloneFuller(FullerDefinition f)
-    {
-        return new FullerDefinition
-        {
-            widthPercent = f.widthPercent,
-            depthPercent = f.depthPercent,
-            offsetPercent = f.offsetPercent,
-            falloff = new AnimationCurve(f.falloff.keys)
-        };
-    }
-
-    private List<FullerDefinition> BlendFullerLists(
-    List<FullerDefinition> a,
-    List<FullerDefinition> b,
-    float blend)
-    {
-        List<FullerDefinition> result = new List<FullerDefinition>();
-
-        int count = Mathf.Max(a.Count, b.Count);
-
-        for (int i = 0; i < count; i++)
-        {
-            FullerDefinition fA = (i < a.Count) ? a[i] : null;
-            FullerDefinition fB = (i < b.Count) ? b[i] : null;
-
-            if (fA == null && fB != null)
-            {
-                result.Add(CloneFuller(fB));
-                continue;
-            }
-            if (fB == null && fA != null)
-            {
-                result.Add(CloneFuller(fA));
-                continue;
-            }
-
-            FullerDefinition blended = new FullerDefinition();
-            blended.widthPercent = Mathf.Lerp(fA.widthPercent, fB.widthPercent, blend);
-            blended.depthPercent = Mathf.Lerp(fA.depthPercent, fB.depthPercent, blend);
-            blended.offsetPercent = Mathf.Lerp(fA.offsetPercent, fB.offsetPercent, blend);
-
-            blended.falloff = BlendCurves(fA.falloff, fB.falloff, blend);
-
-            result.Add(blended);
-        }
-
-        return result;
-    }
-    private void ApplyFuller(
-     List<Vector3> vertices,
-     List<Vector3> smoothLefts,
-     List<Vector3> smoothRights,
-     List<Vector3> smoothCenters,
-     Vector3 bladeNormal,
-     int frontVertexCount)
-    {
-        if (profiles == null || profiles.Count == 0) return;
-
-        int ringCount = smoothLefts.Count;
-
-        // Compute cumulative blade length
-        float totalLength = 0f;
-        List<float> cumulativeLengths = new List<float> { 0f };
-
-        for (int i = 1; i < ringCount; i++)
-        {
-            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
-            cumulativeLengths.Add(totalLength);
-        }
-
-        for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
-        {
-            float bladePosition = totalLength > 0 ? cumulativeLengths[ringIdx] / totalLength : 0f;
-
-            Vector3 left = smoothLefts[ringIdx];
-            Vector3 right = smoothRights[ringIdx];
-            float ringWidth = Vector3.Distance(left, right);
-
-            // Percentages to real values
-            float fullerDepthPercent = GetFullerDepthAtPosition(bladePosition);
-            float fullerWidthPercent = GetFullerWidthAtPosition(bladePosition);
-            float fullerOffsetPercent = GetFullerOffsetAtPosition(bladePosition);
-
-            float fullerDepth = fullerDepthPercent * (bladeThickness * 0.5f);
-            float fullerWidth = fullerWidthPercent * ringWidth;
-
-            if (fullerDepth <= 0f || fullerWidth <= 0f) continue;
-
-            int ringStartIdx = ringIdx * widthSubdivisions;
-
-            for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
-            {
-                int frontIdx = ringStartIdx + vertIdx;
-                int backIdx = frontIdx + frontVertexCount;
-
-                // Normalized width position (-1 to 1)
-                float widthT = vertIdx / (float)(widthSubdivisions - 1);
-                float widthPosition = (widthT * 2f) - 1f;
-
-                float offsetNormalized = fullerOffsetPercent * 2f - 1f;
-                widthPosition -= offsetNormalized;
-
-                // Falloff 
-                float depthMultiplier = GetFullerFalloff(widthPosition, fullerWidthPercent, bladePosition);
-                float actualDepth = fullerDepth * depthMultiplier;
-
-                if (useFullerNoise)
-                {
-                    float noiseValue = Mathf.PerlinNoise(
-                        bladePosition * fullerNoiseScale * 10f,
-                        widthPosition * fullerNoiseScale * 10f
-                    );
-                    actualDepth += (noiseValue - 0.5f) * fullerNoiseStrength * fullerDepth;
-                }
-
-                vertices[frontIdx] -= bladeNormal * actualDepth;
-                vertices[backIdx] += bladeNormal * actualDepth;
-            }
-        }
-    }
-   
-    private float GetFullerDepthAtPosition(float position)
-    {
-        if (profiles == null || profiles.Count == 0) return 0f;
-        if (profiles.Count == 1) return profiles[0].fullerDepth;
-
-        // Sort profiles by position (in case they're not ordered)
-        var sortedProfiles = new List<BladeSectionProfile>(profiles);
-        sortedProfiles.Sort((a, b) => a.position.CompareTo(b.position));
-
-        // Handle edges
-        if (position <= sortedProfiles[0].position)
-            return sortedProfiles[0].fullerDepth;
-        if (position >= sortedProfiles[sortedProfiles.Count - 1].position)
-            return sortedProfiles[sortedProfiles.Count - 1].fullerDepth;
-
-        // Find the two profiles to interpolate between
-        for (int i = 0; i < sortedProfiles.Count - 1; i++)
-        {
-            if (position >= sortedProfiles[i].position && position <= sortedProfiles[i + 1].position)
-            {
-                float t = (position - sortedProfiles[i].position) /
-                         (sortedProfiles[i + 1].position - sortedProfiles[i].position);
-
-                // Use smoothstep for better blending
-                t = t * t * (3f - 2f * t);
-
-                return Mathf.Lerp(sortedProfiles[i].fullerDepth, sortedProfiles[i + 1].fullerDepth, t);
-            }
-        }
-
-        return sortedProfiles[0].fullerDepth;
-    }
-
   
-    private float GetFullerWidthAtPosition(float position)
-    {
-        if (profiles == null || profiles.Count == 0) return 0f;
-        if (profiles.Count == 1) return profiles[0].fullerWidth;
-
-        var sortedProfiles = new List<BladeSectionProfile>(profiles);
-        sortedProfiles.Sort((a, b) => a.position.CompareTo(b.position));
-
-        if (position <= sortedProfiles[0].position)
-            return sortedProfiles[0].fullerWidth;
-        if (position >= sortedProfiles[sortedProfiles.Count - 1].position)
-            return sortedProfiles[sortedProfiles.Count - 1].fullerWidth;
-
-        for (int i = 0; i < sortedProfiles.Count - 1; i++)
-        {
-            if (position >= sortedProfiles[i].position && position <= sortedProfiles[i + 1].position)
-            {
-                float t = (position - sortedProfiles[i].position) /
-                         (sortedProfiles[i + 1].position - sortedProfiles[i].position);
-
-                // Use smoothstep for better blending
-                t = t * t * (3f - 2f * t);
-
-                return Mathf.Lerp(sortedProfiles[i].fullerWidth, sortedProfiles[i + 1].fullerWidth, t);
-            }
-        }
-
-        return sortedProfiles[0].fullerWidth;
-    }
-
-    private float GetFullerFalloff(float widthPosition, float fullerWidthPercent, float bladePosition)
-    {
-        if (profiles == null || profiles.Count == 0) return 0f;
-
-        var sorted = new List<BladeSectionProfile>(profiles);
-        sorted.Sort((a, b) => a.position.CompareTo(b.position));
-
-        BladeSectionProfile p0 = sorted[0];
-        BladeSectionProfile p1 = sorted[^1];
-
-        for (int i = 0; i < sorted.Count - 1; i++)
-        {
-            if (bladePosition >= sorted[i].position && bladePosition <= sorted[i + 1].position)
-            {
-                p0 = sorted[i];
-                p1 = sorted[i + 1];
-                break;
-            }
-        }
-
-        float t = Mathf.InverseLerp(p0.position, p1.position, bladePosition);
-        t = t * t * (3f - 2f * t); // smoothstep
-
-        float normalizedDist = Mathf.Abs(widthPosition) / fullerWidthPercent;
-        if (normalizedDist > 1f) return 0f;
-
-        float f0 = p0.fullerFalloff.Evaluate(normalizedDist);
-        float f1 = p1.fullerFalloff.Evaluate(normalizedDist);
-
-        return Mathf.Lerp(f0, f1, t);
-    }
-
-    private float GetFullerOffsetAtPosition(float position)
-    {
-        if (profiles == null || profiles.Count == 0) return 0f;
-        if (profiles.Count == 1) return profiles[0].fullerOffset;
-
-        var sorted = new List<BladeSectionProfile>(profiles);
-        sorted.Sort((a, b) => a.position.CompareTo(b.position));
-
-        if (position <= sorted[0].position) return sorted[0].fullerOffset;
-        if (position >= sorted[^1].position) return sorted[^1].fullerOffset;
-
-        for (int i = 0; i < sorted.Count - 1; i++)
-        {
-            if (position >= sorted[i].position && position <= sorted[i + 1].position)
-            {
-                float t = Mathf.InverseLerp(sorted[i].position, sorted[i + 1].position, position);
-                t = t * t * (3f - 2f * t);
-                return Mathf.Lerp(sorted[i].fullerOffset, sorted[i + 1].fullerOffset, t);
-            }
-        }
-
-        return 0f;
-    }
     private void GenerateFrontFace(
     List<Segment> segments,
     List<Vector3> smoothLefts,
