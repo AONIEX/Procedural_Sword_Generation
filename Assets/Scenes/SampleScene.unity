@@ -436,9 +436,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splineGen: {fileID: 28350893}
-  subDivisions: 7
+  segmentSubdivisions: 3
   tipSubdivisions: 2
-  spineResolution: 5
+  widthSubdivisions: 5
   curvatureWindow: 5
   curvatureBlend: 0.5
   baseWidth: 0.1
@@ -451,7 +451,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  bladeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
+  sideSharpness: 0.05
+  bladeMaterial: {fileID: 2100000, guid: 4af743c41b89b2d4694786b5cba886b6, type: 2}
+  sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
+  sharpSide: 2
 --- !u!1 &525139034
 GameObject:
   m_ObjectHideFlags: 0
