@@ -58,9 +58,10 @@ public enum EdgeCollapseMode //for edge collapsing and unique blade shapes
     Patterned,
     RandomPatterned
 }
-public enum HeightSpacingMode { 
-    Fixed, 
-    RandomUniform, 
+public enum HeightSpacingMode
+{
+    Fixed,
+    RandomUniform,
     RandomChaotic,
     SetHeight
 }
@@ -82,19 +83,21 @@ public enum BladePresets
 public class TipSettings
 {
     [Tooltip("Controls if and how blade tip leans. Centered (keeps it straight), RandomLean (tilts left or right), ForcedCenterX (locks X to 0), None (disables tip logic, Creating a flat tip)")]
-
+    [DisplayName("Tip Lean Mode", "Blade Tip", 0)]
     public TipLeanMode tipLeanMode = TipLeanMode.Centered;
 
     [Tooltip("Defines the random minimum and maximum the tip can be offset height wise")]
-    [Range(0, 1)]
+    [Range(0, 1), DisplayName("Random Height Offset", "Blade Tip", 1)]
     public float randomHeightOffset = 0.1f;
+
     [Tooltip("Defines the offset for the tip of the blade (Allows for shorter or longer tips)")]
-    [Range(-2, 1)]
+    [Range(-2, 1), DisplayName("Height Offset", "Blade Tip", 2)]
     public float heightOffset = 0f;
 
     [Tooltip("Curve allows user to control the tip leaning strength")]
-    [Range(0, 1)]
-    public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1); // To help force the tip to lean fully or partially left or right based on prefrences (for something like a katana witha tip to one side)
+    [DisplayName("Tip Lean Strength Curve", "Blade Tip", 3)]
+    public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
     public void CopyFrom(TipSettings other)
     {
         tipLeanMode = other.tipLeanMode;
@@ -105,30 +108,40 @@ public class TipSettings
             ? new AnimationCurve(other.tipLeanStrengthCurve.keys)
             : new AnimationCurve();
     }
-
 }
 
 [System.Serializable]
 public class CoreSettings
 {
-    [Header("Core Controls")]
     [Tooltip("Defines the amount of segments wanted (More allows for more randomness and detail but also more chaos)")]
-    [Range(3, 20)]
+    [Range(3, 20), DisplayName("Spline Point Count", "Blade Dimensions", 0)]
     public int splinePointCount = 5;
+
     [Tooltip("Defines spcaing between blade segments")]
-    [Range(0.25f, 2f)]
-    public float heightSpacing = 0.5f; // manual height spacing for specific sized blades
+    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Dimensions", 1)]
+    public float heightSpacing = 0.5f;
 
     [Tooltip("Fixed(User Defined), Random Uniformerd(Random but consistent through out segments), Rand Chaotic (Random and different between segments)")]
-
+    [DisplayName("Height Spacing Mode", "Blade Dimensions", 2)]
     public HeightSpacingMode heightSpacingMode = HeightSpacingMode.Fixed;
+
+    [Range(0.5f, 10f), DisplayName("Total Blade Height", "Blade Dimensions", 3)]
     public float totalBladeHeight = 3;
 
+
+    [Vector2Range(0.1f, 1f)]
     [Tooltip("Defines the minimum and maximum spacing between segments (Used for randomness)")]
-    public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f); 
+    [DisplayName("Min/Max Height Spacing", "Blade Dimensions", 4)]
+    public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
+
+    [Vector2Range(0.2f, 1f)]
     [Tooltip("Defines the minimum and maximum width of the blade in each segment (used for randomness)")]
+    [DisplayName("Min/Max Width", "Blade Dimensions", 5)]
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
+
+    [Vector2Range(-45f,45f)]
     [Tooltip("Defines the minimum and maximum angle for a segment (Curvature of the blades edge)")]
+    [DisplayName("Min/Max Angle", "Blade Dimensions", 6)]
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     public void CopyFrom(CoreSettings other)
@@ -142,20 +155,29 @@ public class CoreSettings
         minAndMaxWidth = other.minAndMaxWidth;
         minAndMaxAngle = other.minAndMaxAngle;
     }
-
 }
 
 [System.Serializable]
 public class WidthSettings
 {
     [Tooltip("Allows choice for defining your own width curve or a random one")]
-    public bool useRandomWidthCurve = true; 
+    [DisplayName("Use Random Width Curve", "Width Profile", 0)]
+    public bool useRandomWidthCurve = true;
+
     [Tooltip("Allows creating of own width curve")]
+    [DisplayName("User Defined Curve", "Width Profile", 1)]
     public AnimationCurve userDefinedCurve;
+
     [Tooltip("Allows the user to see the random width curve")]
+    [DisplayName("Width Bias Curve", "Width Profile", 2)]
     public AnimationCurve widthBiasCurve;
+
+    [Range(0f, 1f), DisplayName("Noise Influence", "Width Profile", 3)]
     public float noiseInfluence = 1;
-    public float noiseFrequency = 0.123f; //Affects the noise
+
+    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Width Profile", 4)]
+    public float noiseFrequency = 0.123f;
+
     public void CopyFrom(WidthSettings other)
     {
         useRandomWidthCurve = other.useRandomWidthCurve;
@@ -171,24 +193,32 @@ public class WidthSettings
         noiseInfluence = other.noiseInfluence;
         noiseFrequency = other.noiseFrequency;
     }
-
 }
 
 [System.Serializable]
 public class CurvatureSettings
 {
-    [Range(0, 5)]
+    [Range(0, 5), DisplayName("Straight Segment Threshold", "Curvature", 0)]
     public int straightSegmentThreshold = 0;
-    public CurvatureMode curvatureMode = CurvatureMode.None;
-    [Range(0, 2)]
-    public float curvature_Max; // max curvature the blade can have
-    [Range(0, 1)]
-    public float curvature_PeakFactor = 0.3f; // controls the smoothness of the blades edges --- 0.3-0.6 for best smoothness 
-    [Range(0, .2f)]
-    public float curvature_StepSize = 0.3f; // allows to control how smoot or chaotic the curvature is
-    public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1); // allows for customisation of blades curve, if randomness isnt wanted
 
-    public Vector3 curvatureDirection = new Vector3(1, 0, 0); // direction of the curve made to randomly go left or right
+    [DisplayName("Curvature Mode", "Curvature", 1)]
+    public CurvatureMode curvatureMode = CurvatureMode.None;
+
+    [Range(0, 2), DisplayName("Max Curvature", "Curvature", 2)]
+    public float curvature_Max;
+
+    [Range(0, 1), DisplayName("Peak Factor", "Curvature", 3)]
+    public float curvature_PeakFactor = 0.3f;
+
+    [Range(0, .2f), DisplayName("Step Size", "Curvature", 4)]
+    public float curvature_StepSize = 0.3f;
+
+    [DisplayName("Curvature Shape", "Curvature", 5)]
+    public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1);
+
+    [DisplayName("Curvature Direction", "Curvature", 6)]
+    public Vector3 curvatureDirection = new Vector3(1, 0, 0);
+
     public void CopyFrom(CurvatureSettings other)
     {
         straightSegmentThreshold = other.straightSegmentThreshold;
@@ -204,26 +234,25 @@ public class CurvatureSettings
 
         curvatureDirection = other.curvatureDirection;
     }
-
 }
+
 [System.Serializable]
 public class EdgeSettings
 {
+    [DisplayName("Edge Collapse Mode", "Blade Edges", 0)]
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
+
     [Tooltip("Defines edge collapse pattern across blade thirds. Use 'L', 'R', or 'N' for None.")]
-    public string collapsePattern = "LRL"; // Example: Left, Right, Left
+    [DisplayName("Collapse Pattern", "Blade Edges", 1)]
+    public string collapsePattern = "LRL";
 
     public void CopyFrom(EdgeSettings other)
     {
         edgeCollapseMode = other.edgeCollapseMode;
         collapsePattern = other.collapsePattern;
     }
-
-
-
 }
 #endregion
-
 public class SplineAndLineGen : MonoBehaviour
 {
     
@@ -232,6 +261,7 @@ public class SplineAndLineGen : MonoBehaviour
     public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
+    [DisplayName("Use Symmetry", "Blade Dimensions", 11)]
     public bool useSymmetry; // Stops the use of angles and make sure a straight blade is symmetri
 
     [Header("Core Controls")]
