@@ -440,20 +440,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splineGen: {fileID: 28350893}
+  baseProfiles:
+  - profile: 0
+    startHeight: 0
+    endHeight: 1
+    influence: 1
   meshQuality: 2
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
   holder: {fileID: 1362455596}
   HandleXPosition: 0
-  bladeThickness: 0.1
-  edgeSharpness: 0.05
+  bladeThickness: 0.15
+  edgeSharpness: 0.02
   spineThickness: 0.005
   bladeMaterial: {fileID: 2100000, guid: 4af743c41b89b2d4694786b5cba886b6, type: 2}
   sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
   fuller:
     start: 0.1
     end: 0.8
-    fullerDepth: 0.3
+    fullerDepth: 0.9
     fullerWidth: 0.3
     fullerCenter: 0.5
     fullerFalloff:

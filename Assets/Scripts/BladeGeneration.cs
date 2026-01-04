@@ -1,17 +1,36 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public class BladeProfileLayer
+{
+    public BladeBaseProfile profile;
+
+    [Range(0, 1f), DisplayName("Start Height", "Blade Profile", 2)]
+    public float startHeight;
+
+    [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2)]
+    public float endHeight;
+
+    [Range(0, 1f), DisplayName("Blend Strength", "Blade Profile", 2)]
+    public float influence = 1f; // blending strength
+}
+
 public class BladeGeneration : MonoBehaviour
 {
     public SplineAndLineGen splineGen;
 
-    public enum MeshQuality
+    [Header("Blade Base Profiles")]
+    [DisplayName("Blend Strength", "Blade Profile", 2)]
+    public List<BladeProfileLayer> baseProfiles = new List<BladeProfileLayer>()
     {
-        Low,
-        Medium,
-        High,
-        Ultra
-    }
+        new BladeProfileLayer
+        {
+            profile = BladeBaseProfile.Lenticular,
+            startHeight = 0f,
+            endHeight = 1f
+        }
+    };
 
     [Header("Mesh Quality")]
     [DisplayName("Mesh Quality", "General", 3)]
@@ -74,7 +93,7 @@ public class BladeGeneration : MonoBehaviour
         [DisplayName("Fuller Falloff", "Fuller", 15)]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
-        [Range(1, 7), DisplayName("Number of Fullers", "Fuller", 16)]
+        [Range(0, 7), DisplayName("Number of Fullers", "Fuller", 16)]
         public int numberOfFullers = 1;
 
         [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fuller", 17)]
@@ -475,25 +494,77 @@ public class BladeGeneration : MonoBehaviour
     }
 
     private void GenerateBackFace(
-        List<Vector3> vertices,
-        List<int> frontTriangles,
-        int frontVertexCount,
-        List<Vector3> smoothLefts,
-        List<Vector3> smoothRights,
-        List<Vector3> smoothCenters,
-        List<int> trianglesFrontBack)
+      List<Vector3> vertices,
+      List<int> frontTriangles,
+      int frontVertexCount,
+      List<Vector3> smoothLefts,
+      List<Vector3> smoothRights,
+      List<Vector3> smoothCenters,
+      List<int> trianglesFrontBack)
     {
-        Vector3 widthDir = (smoothRights[0] - smoothLefts[0]).normalized;
-        Vector3 forwardDir = (smoothCenters[1] - smoothCenters[0]).normalized;
-        Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+        int ringCount = smoothLefts.Count;
 
-        float halfThickness = bladeThickness * 0.5f;
+        for (int ring = 0; ring < ringCount; ring++)
+        {
+            float bladeT = ring / (float)(ringCount - 1);
 
-        for (int i = 0; i < frontVertexCount; i++)
-            vertices[i] += bladeNormal * halfThickness;
+            // Fade profile thickness near the tip
+            int tipProfileFadeRings = tipSubdivisions;
+            float profileTipFade = 1f;
 
-        for (int i = 0; i < frontVertexCount; i++)
-            vertices.Add(vertices[i] - bladeNormal * bladeThickness);
+            if (ring >= ringCount - tipProfileFadeRings)
+            {
+                float t = (ringCount - 1 - ring) / (float)(tipProfileFadeRings - 1);
+                profileTipFade = Mathf.Clamp01(t);
+                profileTipFade = Mathf.Pow(profileTipFade, 2.2f); // sharpen
+            }
+
+            BladeBaseProfile profile = GetProfileAtHeight(bladeT);
+
+            Vector3 left = smoothLefts[ring];
+            Vector3 right = smoothRights[ring];
+
+            Vector3 widthDir = (right - left).normalized;
+
+            Vector3 forwardDir =
+                ring < smoothCenters.Count - 1
+                    ? (smoothCenters[ring + 1] - smoothCenters[ring]).normalized
+                    : (smoothCenters[ring] - smoothCenters[ring - 1]).normalized;
+
+            Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+
+            int ringStart = ring * widthSubdivisions;
+
+            for (int v = 0; v < widthSubdivisions; v++)
+            {
+                int frontIndex = ringStart + v;
+
+                float widthT =
+                    (v / (float)(widthSubdivisions - 1)) * 2f - 1f;
+
+                float halfThickness;
+                float baseHalf = bladeThickness * 0.5f;
+
+
+                float shaped = EvaluateBladeProfile(profile, widthT, baseHalf);
+
+                int tipFadeRings = 4; // adjust for sharpness
+                float tipFade = 1f;
+
+                if (ring >= ringCount - tipFadeRings)
+                {
+                    float t = (ringCount - 1 - ring) / (float)(tipFadeRings - 1);
+                    tipFade = Mathf.Clamp01(t);
+                }
+
+                halfThickness = shaped * profileTipFade;
+
+
+
+                vertices[frontIndex] += bladeNormal * halfThickness;
+                vertices.Add(vertices[frontIndex] - bladeNormal * (halfThickness * 2f));
+            }
+        }
 
         for (int i = 0; i < frontTriangles.Count; i += 3)
         {
@@ -502,6 +573,7 @@ public class BladeGeneration : MonoBehaviour
             trianglesFrontBack.Add(frontTriangles[i] + frontVertexCount);
         }
     }
+
 
     private void GenerateBevelVertices(
         List<Vector3> vertices,
@@ -639,6 +711,8 @@ public class BladeGeneration : MonoBehaviour
                 Vector3 center = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
+
+
 
                 Vector3 leftOffset = left - center;
                 Vector3 rightOffset = right - center;
@@ -830,6 +904,46 @@ public class BladeGeneration : MonoBehaviour
         if (handle != null)
             handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
     }
+
+    BladeBaseProfile GetProfileAtHeight(float bladeT)
+    {
+        for (int i = 0; i < baseProfiles.Count; i++)
+        {
+            if (bladeT >= baseProfiles[i].startHeight &&
+                bladeT <= baseProfiles[i].endHeight)
+            {
+                return baseProfiles[i].profile;
+            }
+        }
+
+        return BladeBaseProfile.Lenticular;
+    }
+
+    float EvaluateBladeProfile(
+        BladeBaseProfile profile,
+        float widthT,
+        float halfThickness)
+    {
+        float x = Mathf.Abs(widthT);
+
+        switch (profile)
+        {
+            case BladeBaseProfile.Lenticular:
+                return Mathf.Cos(x * Mathf.PI * 0.5f) * halfThickness;
+
+            case BladeBaseProfile.Diamond:
+                return (1f - x) * halfThickness;
+
+            case BladeBaseProfile.HollowGround:
+                return Mathf.Pow(1f - x, 2.2f) * halfThickness;
+
+            case BladeBaseProfile.Flat:
+            default:
+                return halfThickness;
+        }
+    }
+
+
 
 
     //Used for degubbign
