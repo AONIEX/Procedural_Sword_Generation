@@ -313,7 +313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   presetName: random
-  bladePreset: 2
+  bladePreset: 5
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7
