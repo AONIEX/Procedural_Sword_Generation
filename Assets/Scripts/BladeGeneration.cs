@@ -4,16 +4,21 @@ using UnityEngine;
 [System.Serializable]
 public class BladeProfileLayer
 {
+    [DisplayName("Cross Section Type", "Profile", 2)]
+
     public BladeBaseProfile profile;
 
-    [Range(0, 1f), DisplayName("Start Height", "Blade Profile", 2)]
+    [Range(0, 1f), DisplayName("Start Height", "Profile", 2)]
     public float startHeight;
 
-    [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2)]
+    [Range(0, 1f), DisplayName("End Height", "Profile", 2)]
     public float endHeight;
 
-    [Range(0, 1f), DisplayName("Blend Strength", "Blade Profile", 2)]
-    public float influence = 1f; // blending strength
+    [DisplayName("Transition Curve", "Profile", 2)]
+    public AnimationCurve influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
+    [Range(0,2),DisplayName("Profile Scale", "Profile", 2)]
+    public float scale = 1;
 }
 
 public class BladeGeneration : MonoBehaviour
@@ -21,7 +26,7 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Blade Base Profiles")]
-    [DisplayName("Blend Strength", "Blade Profile", 2)]
+    [DisplayName("Cross section ", "Profile", 2)]
     public List<BladeProfileLayer> baseProfiles = new List<BladeProfileLayer>()
     {
         new BladeProfileLayer
@@ -31,6 +36,11 @@ public class BladeGeneration : MonoBehaviour
             endHeight = 1f
         }
     };
+
+
+    [Range(0.1f, 3f)]
+    [DisplayName("Profile Blend Strenght", "Profile", 3)]
+    public float profileOverlapBlendAmount = 0.5f;
 
     [Header("Mesh Quality")]
     [DisplayName("Mesh Quality", "General", 3)]
@@ -546,7 +556,8 @@ public class BladeGeneration : MonoBehaviour
                 float baseHalf = bladeThickness * 0.5f;
 
 
-                float shaped = EvaluateBladeProfile(profile, widthT, baseHalf);
+                //float shaped = EvaluateBladeProfile(profile, widthT, baseHalf);
+                float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
 
                 int tipFadeRings = 4; // adjust for sharpness
                 float tipFade = 1f;
@@ -687,8 +698,25 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-    public void GenerateSmoothSegments(List<Segment> segments, List<Vector3> smoothLefts, List<Vector3> smoothRights, List<Vector3> smoothCenters)
+    public void GenerateSmoothSegments(
+      List<Segment> segments,
+      List<Vector3> smoothLefts,
+      List<Vector3> smoothRights,
+      List<Vector3> smoothCenters)
     {
+        // Compute total number of rings across the whole blade
+        int totalRings = 0;
+        for (int i = 0; i < segments.Count - 1; i++)
+        {
+            bool isTipSegment = (i == segments.Count - 2);
+            int currentSubdivisions = isTipSegment ? tipSubdivisions : segmentSubdivisions;
+
+            // Each segment contributes its subdivisions, except the last ring of non-tip segments
+            totalRings += currentSubdivisions;
+        }
+
+        int ringIndex = 0;
+
         for (int i = 0; i < segments.Count - 1; i++)
         {
             Segment p0 = segments[Mathf.Max(i - 1, 0)];
@@ -712,8 +740,28 @@ public class BladeGeneration : MonoBehaviour
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
+                //
+                // Correct bladeT calculation
+                //
+                float bladeT = ringIndex / (float)(totalRings - 1);
+                ringIndex++;
 
+                //
+                // Width scaling
+                //
+                Vector3 widthDir = (right - left).normalized;
+                float rawWidth = Vector3.Distance(left, right);
+                float halfWidth = rawWidth * 0.5f;
 
+                float widthScale = BlendWidthScale(baseProfiles, bladeT);
+                float shapedHalfWidth = halfWidth * widthScale;
+
+                left = center - widthDir * shapedHalfWidth;
+                right = center + widthDir * shapedHalfWidth;
+
+                //
+                // Curvature smoothing
+                //
                 Vector3 leftOffset = left - center;
                 Vector3 rightOffset = right - center;
 
@@ -943,8 +991,101 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
+    List<BladeProfileLayer> GetActiveLayers(List<BladeProfileLayer> layers, float bladeT)
+    {
+        List<BladeProfileLayer> active = new List<BladeProfileLayer>();
+
+        foreach (var layer in layers)
+        {
+            if (bladeT >= layer.startHeight && bladeT <= layer.endHeight)
+                active.Add(layer);
+        }
+
+        return active;
+    }
+    float BlendThicknessAtOverlap(
+     List<BladeProfileLayer> layers,
+     float bladeT,
+     float widthT,
+     float halfThickness)
+    {
+        var active = GetActiveLayers(layers, bladeT);
+
+        if (active.Count == 0)
+            return halfThickness;
+
+        if (active.Count == 1)
+            return EvaluateBladeProfile(active[0].profile, widthT, halfThickness);
+
+        active.Sort((a, b) => a.startHeight.CompareTo(b.startHeight));
+
+        BladeProfileLayer lower = active[0];
+        BladeProfileLayer upper = active[1];
+
+        float overlapStart = upper.startHeight;
+        float overlapEnd = lower.endHeight;
+
+        float tLocal = Mathf.InverseLerp(overlapStart, overlapEnd, bladeT);
+
+        float blendAmount = upper.influenceCurve.Evaluate(tLocal);
+
+        float lowerShape = EvaluateBladeProfile(lower.profile, widthT, halfThickness);
+        float upperShape = EvaluateBladeProfile(upper.profile, widthT, halfThickness);
 
 
+        return Mathf.Lerp(lowerShape, upperShape, blendAmount) * lower.scale;
+    }
+    float GetWidthScale(BladeBaseProfile profile)
+    {
+        switch (profile)
+        {
+            case BladeBaseProfile.Lenticular:
+                return 1.0f;   // stays full width
+
+            case BladeBaseProfile.Diamond:
+                return 0.85f;  // slightly narrower
+
+            case BladeBaseProfile.HollowGround:
+                return 0.75f;  // noticeably narrower
+
+            case BladeBaseProfile.Hexagonal:
+                return 1.15f;  // slightly wider
+
+            case BladeBaseProfile.Triangular:
+                return 0.3f;   // fully converges to a point at the tip
+
+            case BladeBaseProfile.Flat:
+            default:
+                return 1.0f;
+        }
+    }
+    float BlendWidthScale(List<BladeProfileLayer> layers, float bladeT)
+    {
+        float totalScale = 1f;
+        float totalInfluence = 0f;
+
+        foreach (var layer in layers)
+        {
+            if (bladeT < layer.startHeight || bladeT > layer.endHeight)
+                continue;
+
+            float tLocal = Mathf.InverseLerp(layer.startHeight, layer.endHeight, bladeT);
+
+            float targetScale = GetWidthScale(layer.profile) * layer.scale;
+            float fade = Mathf.SmoothStep(1f, targetScale, tLocal);
+
+            float curveValue = layer.influenceCurve.Evaluate(tLocal);
+            float influenced = Mathf.Lerp(1f, fade, curveValue);
+
+            totalScale += (influenced - 1f) * curveValue;
+            totalInfluence += curveValue;
+        }
+
+        if (totalInfluence > 0f)
+            totalScale = Mathf.Lerp(1f, totalScale, Mathf.Clamp01(totalInfluence));
+
+        return Mathf.Max(0f, totalScale);
+    }
 
     //Used for degubbign
     void OnDrawGizmos()

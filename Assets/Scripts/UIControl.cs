@@ -15,6 +15,7 @@ public class UIControl : MonoBehaviour
     public GameObject dropdownRowPrefab;
     public GameObject toggleRowPrefab;
     public GameObject curveEditorPrefab;
+    public GameObject headerRowPrefab;
 
     public Transform uiParent;
     public TMP_Dropdown sectionDropdown; // Dropdown to switch between sections
@@ -155,14 +156,12 @@ public class UIControl : MonoBehaviour
 
         FieldInfo[] fields = obj.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance);
 
-        // Separate fields into enums, curves, and non-enums, then sort by order
         var nonEnumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
         var enumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
         var curveFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
 
         foreach (var field in fields)
         {
-            // Skip fields marked with HideInUI attribute
             if (field.GetCustomAttribute<HideInUIAttribute>() != null)
                 continue;
 
@@ -170,32 +169,24 @@ public class UIControl : MonoBehaviour
             int order = displayAttr?.Order ?? 0;
 
             if (field.FieldType.IsEnum)
-            {
                 enumFields.Add((field, displayAttr, order));
-            }
             else if (field.FieldType == typeof(AnimationCurve))
-            {
                 curveFields.Add((field, displayAttr, order));
-            }
             else
-            {
                 nonEnumFields.Add((field, displayAttr, order));
-            }
         }
 
-        // Sort each list by order
         nonEnumFields = nonEnumFields.OrderBy(x => x.order).ToList();
         enumFields = enumFields.OrderBy(x => x.order).ToList();
         curveFields = curveFields.OrderBy(x => x.order).ToList();
 
-        // Process non-enum fields first
         foreach (var (field, displayAttr, order) in nonEnumFields)
         {
             object value = field.GetValue(obj);
             string section = displayAttr?.Section ?? "General";
             string labelName = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
 
-            // FLOAT / INT with [Range]
+            // FLOAT / INT
             RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
             if (range != null &&
                 (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
@@ -215,16 +206,46 @@ public class UIControl : MonoBehaviour
             // BOOL
             if (field.FieldType == typeof(bool))
             {
-                Debug.Log($"Found bool field: {field.Name}, Section: {section}, Label: {labelName}");
                 GameObject toggle = CreateToggle(obj, field, labelName);
                 AddToSection(section, toggle);
                 continue;
             }
 
-            // NESTED CLASS
+            // LIST OF CLASSES → expand each element
+            if (field.FieldType.IsGenericType &&
+                field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+            {
+                Type elementType = field.FieldType.GetGenericArguments()[0];
+
+                if (elementType.IsClass && elementType != typeof(string))
+                {
+                    IList list = (IList)field.GetValue(obj);
+
+                    string sectionName = displayAttr?.Section ?? "General";
+                    string listTitle = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
+
+
+                    // Generate UI for each element
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        object element = list[i];
+
+                        // ✔ Create only the per‑element header
+                        GameObject layerHeader = CreateHeaderRow($"{listTitle} {i + 1}");
+                        AddToSection(sectionName, layerHeader);
+
+                        // ✔ Generate UI for the element
+                        GenerateForObject(element);
+                    }
+
+                    continue;
+                }
+            }
+            // NESTED CLASS (must come AFTER list)
             if (field.FieldType.IsClass &&
-                field.FieldType != typeof(string) &&
-                !field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)))
+              field.FieldType != typeof(string) &&
+              !field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) &&
+              !field.FieldType.IsGenericType)   // ← prevents recursion into List<T>
             {
                 if (value == null)
                 {
@@ -237,7 +258,7 @@ public class UIControl : MonoBehaviour
             }
         }
 
-        // Process enum fields last
+        // ENUMS
         foreach (var (field, displayAttr, order) in enumFields)
         {
             string section = displayAttr?.Section ?? "General";
@@ -247,7 +268,7 @@ public class UIControl : MonoBehaviour
             AddToSection(section, dropdown);
         }
 
-        // Process animation curve fields at the very end
+        // CURVES
         foreach (var (field, displayAttr, order) in curveFields)
         {
             string section = displayAttr?.Section ?? "General";
@@ -517,4 +538,13 @@ public class UIControl : MonoBehaviour
 
         pendingGenerate = true;
     }
+    GameObject CreateHeaderRow(string label)
+    {
+        GameObject row = Instantiate(headerRowPrefab, uiParent);
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
+        text.text = label;
+        return row;
+    }
+
+
 }

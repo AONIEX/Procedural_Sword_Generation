@@ -424,9 +424,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  presetCollection:
-    presets: []
-  presets: []
 --- !u!114 &28350894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -444,7 +441,88 @@ MonoBehaviour:
   - profile: 0
     startHeight: 0
     endHeight: 1
-    influence: 1
+    influenceCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    scale: 1
+  - profile: 1
+    startHeight: 0
+    endHeight: 0
+    influenceCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    scale: 0
+  - profile: 4
+    startHeight: 0
+    endHeight: 0
+    influenceCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    scale: 0
+  profileOverlapBlendAmount: 0.5
   meshQuality: 2
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
@@ -1068,6 +1146,7 @@ MonoBehaviour:
   dropdownRowPrefab: {fileID: 6461030533648725776, guid: 49767dabae7ce3647a3eff6c91565afd, type: 3}
   toggleRowPrefab: {fileID: 5340144560994068897, guid: 303c48006e630614d89192d723025a5c, type: 3}
   curveEditorPrefab: {fileID: 3226288411551448251, guid: fe544107fe94d6645903a2b6401dd8ce, type: 3}
+  headerRowPrefab: {fileID: 2171138229765442790, guid: b0b74239ff8a1a54b9329644d5fe5904, type: 3}
   uiParent: {fileID: 1428342025}
   sectionDropdown: {fileID: 1119054229}
   autoGenerate: 1

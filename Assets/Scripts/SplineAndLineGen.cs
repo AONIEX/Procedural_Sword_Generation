@@ -270,17 +270,13 @@ public class SplineAndLineGen : MonoBehaviour
     [Header("Edge Controls")]
     public EdgeSettings edgeSettings = new EdgeSettings();
     private SplineContainer splineContainer; // spline creation script
+    [HideInUI]
     public List<Segment> segments = new List<Segment>(); // sword segments
-
-
 
     [HideInUI]
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
-    [Header("Presets")]
-    public BladePresetCollection presetCollection;
-    public List<BladePreset> presets;
 
 
 
