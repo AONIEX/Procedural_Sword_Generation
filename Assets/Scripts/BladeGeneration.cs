@@ -5,14 +5,21 @@ public class BladeGeneration : MonoBehaviour
 {
     public SplineAndLineGen splineGen;
 
-    [Range(1, 50), DisplayName("Segment Subdivisions", "Mesh Quality", 0)]
-    public int segmentSubdivisions = 3;
+    public enum MeshQuality
+    {
+        Low,
+        Medium,
+        High,
+        Ultra
+    }
 
-    [Range(1, 20), DisplayName("Tip Subdivisions", "Mesh Quality", 1)]
-    public int tipSubdivisions = 5;
+    [Header("Mesh Quality")]
+    [DisplayName("Mesh Quality", "General", 3)]
+    public MeshQuality meshQuality = MeshQuality.Medium;
 
-    [Range(2, 50), DisplayName("Width Subdivisions", "Mesh Quality", 2)]
-    public int widthSubdivisions = 5;
+    private int segmentSubdivisions = 3;
+    private int tipSubdivisions = 5;
+    private int widthSubdivisions = 5;
 
     //[Range(1, 10), DisplayName("Curvature Window", "Curvature", 5)]
     private int curvatureWindow = 5;
@@ -32,17 +39,13 @@ public class BladeGeneration : MonoBehaviour
     [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Dimensions", 7)]
     public float bladeThickness = 0.1f;
 
-    [Range(0f, 0.15f), DisplayName("Side Sharpness", "Blade Edges", 0)]
-    public float sideSharpness = 0.05f;
+    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Blade Edges", 0)]
+    public float edgeSharpness = 0.05f;
 
-    [Range(0.001f, 0.01f), DisplayName("Edge Bevel Width", "Blade Edges", 1)]
-    public float edgeBevelWidth = 0.005f;
 
-    [Range(-0.1f, 0.1f), DisplayName("Non-Sharp Side Offset", "Blade Edges", 2)]
-    public float nonSharpSideOffset = 0f;
+    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Blade Edges", 2)]
+    public float spineThickness = 0.005f;
 
-    [Range(0.001f, 0.01f), DisplayName("Non-Sharp Bevel Width", "Blade Edges", 3)]
-    public float nonSharpBevelWidth = 0.05f;
 
     [DisplayName("Blade Material", "Rendering", 0)]
     public Material bladeMaterial;
@@ -62,11 +65,11 @@ public class BladeGeneration : MonoBehaviour
         [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fuller", 12)]
         public float fullerDepth = 0.3f;
 
-        [Range(0.0f, 0.9f), DisplayName("Fuller Width", "Fuller", 13)]
+        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fuller", 13)]
         public float fullerWidth = 0.3f;
 
-        [Range(0f, 1f), DisplayName("Fuller Offset", "Fuller", 14)]
-        public float fullerOffset = 0.5f;
+        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fuller", 14)]
+        public float fullerCenter = 0.5f;
 
         [DisplayName("Fuller Falloff", "Fuller", 15)]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
@@ -74,8 +77,8 @@ public class BladeGeneration : MonoBehaviour
         [Range(1, 7), DisplayName("Number of Fullers", "Fuller", 16)]
         public int numberOfFullers = 1;
 
-        [Range(0f, 1f), DisplayName("Fuller Spacing", "Fuller", 17)]
-        public float spacingPercent = 0.1f;
+        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fuller", 17)]
+        public float spacingMultiplier = 1.2f;
     }
 
     [DisplayName("Fuller Settings", "Fuller", 20)]
@@ -95,6 +98,7 @@ public class BladeGeneration : MonoBehaviour
     {
         HandleXPosition = holder.transform.localPosition.x;
         splineGen = GetComponent<SplineAndLineGen>();
+        ApplyMeshQualitySettings();
         splineGen.GenerateLinesAndSplines();
         SmoothSegmentCenters();
         Generate3DBlade();
@@ -104,6 +108,7 @@ public class BladeGeneration : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            ApplyMeshQualitySettings();
             splineGen.GenerateLinesAndSplines();
             SmoothSegmentCenters();
             Generate3DBlade();
@@ -116,8 +121,36 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
+    private void ApplyMeshQualitySettings()
+    {
+        switch (meshQuality)
+        {
+            case MeshQuality.Low:
+                segmentSubdivisions = 3;
+                tipSubdivisions = 2;
+                widthSubdivisions = 3;
+                break;
+            case MeshQuality.Medium:
+                segmentSubdivisions = 8;
+                tipSubdivisions = 7;
+                widthSubdivisions = 8;
+                break;
+            case MeshQuality.High:
+                segmentSubdivisions = 15;
+                tipSubdivisions = 12;
+                widthSubdivisions = 15;
+                break;
+            case MeshQuality.Ultra:
+                segmentSubdivisions = 30;
+                tipSubdivisions = 20;
+                widthSubdivisions = 30;
+                break;
+        }
+    }
+
     public void Generate()
     {
+        ApplyMeshQualitySettings();
         splineGen.GenerateLinesAndSplines();
         SmoothSegmentCenters();
         Generate3DBlade();
@@ -289,8 +322,9 @@ public class BladeGeneration : MonoBehaviour
             if (depth <= 0f || width <= 0f || count <= 0)
                 continue;
 
-            float baseOffset = fuller.fullerOffset * 2f - 1f;
-            float spacing = fuller.spacingPercent * 2f;
+            // NEW: Improved fuller positioning
+            float centerPos = fuller.fullerCenter * 2f - 1f;
+            float autoSpacing = fuller.fullerWidth * fuller.spacingMultiplier;
             float centerIndex = (count - 1) * 0.5f;
 
             for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
@@ -302,8 +336,10 @@ public class BladeGeneration : MonoBehaviour
 
                 for (int f = 0; f < count; f++)
                 {
-                    float offset = baseOffset + (f - centerIndex) * spacing;
-                    float dist = Mathf.Abs(widthPos - offset) / width;
+                    float relativePos = (f - centerIndex) * autoSpacing;
+                    float fullerPos = centerPos + relativePos;
+
+                    float dist = Mathf.Abs(widthPos - fullerPos) / width;
 
                     if (dist > 1f)
                         continue;
@@ -521,20 +557,58 @@ public class BladeGeneration : MonoBehaviour
             Vector3 left = smoothLefts[i];
             Vector3 right = smoothRights[i];
 
-            Vector3 toLeft = (left - center).normalized;
-            Vector3 toRight = (right - center).normalized;
+          
 
-            Vector3 leftRidge = left + toLeft * ((sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
-            Vector3 rightRidge = right + toRight * ((sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? sideSharpness : nonSharpSideOffset);
+            Vector3 leftOffset = left - center;
+            Vector3 rightOffset = right - center;
+
+            bool leftValid = leftOffset.sqrMagnitude > 1e-6f;
+            bool rightValid = rightOffset.sqrMagnitude > 1e-6f;
+
+            Vector3 widthDir;
+
+            // Normal rings: infer from opposite side
+            if (i < ringCount - 1)
+            {
+                if (leftValid && rightValid)
+                    widthDir = (right - left).normalized;
+                else if (rightValid)
+                    widthDir = rightOffset.normalized;
+                else if (leftValid)
+                    widthDir = -leftOffset.normalized;
+                else
+                    widthDir = Vector3.right;
+            }
+            else
+            {
+                // TIP: use blade direction, not width
+                widthDir = Vector3.Cross(bladeNormal, tipDir).normalized;
+                if (widthDir.sqrMagnitude < 1e-6f)
+                    widthDir = Vector3.right;
+            }
+
+            Vector3 toLeft = -widthDir;
+            Vector3 toRight = widthDir;
+
+            //Ensures sharp tip
+            if(i == ringCount - 1)
+            {
+                 toLeft = (left - center).normalized;
+                 toRight = (right - center).normalized;
+            }
+
+
+            Vector3 leftRidge = left + toLeft * ((sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness);
+            Vector3 rightRidge = right + toRight * ((sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness);
 
             if (i == ringCount - 1)
             {
-                leftRidge += tipDir * sideSharpness;
-                rightRidge += tipDir * sideSharpness;
+                leftRidge += tipDir * edgeSharpness;
+                rightRidge += tipDir * edgeSharpness;
             }
 
-            float leftBevel = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
-            float rightBevel = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeBevelWidth : nonSharpBevelWidth;
+            float leftBevel = spineThickness;
+            float rightBevel = spineThickness;
 
             vertices.Add(leftRidge + normalSign * bladeNormal * leftBevel);
             vertices.Add(rightRidge + normalSign * bladeNormal * rightBevel);

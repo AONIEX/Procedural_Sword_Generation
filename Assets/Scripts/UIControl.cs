@@ -14,6 +14,7 @@ public class UIControl : MonoBehaviour
     public GameObject sliderRowPrefab;
     public GameObject dropdownRowPrefab;
     public GameObject toggleRowPrefab;
+    public GameObject curveEditorPrefab;
 
     public Transform uiParent;
     public TMP_Dropdown sectionDropdown; // Dropdown to switch between sections
@@ -154,18 +155,27 @@ public class UIControl : MonoBehaviour
 
         FieldInfo[] fields = obj.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance);
 
-        // Separate fields into enums and non-enums, then sort by order
+        // Separate fields into enums, curves, and non-enums, then sort by order
         var nonEnumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
         var enumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
+        var curveFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
 
         foreach (var field in fields)
         {
+            // Skip fields marked with HideInUI attribute
+            if (field.GetCustomAttribute<HideInUIAttribute>() != null)
+                continue;
+
             DisplayNameAttribute displayAttr = field.GetCustomAttribute<DisplayNameAttribute>();
             int order = displayAttr?.Order ?? 0;
 
             if (field.FieldType.IsEnum)
             {
                 enumFields.Add((field, displayAttr, order));
+            }
+            else if (field.FieldType == typeof(AnimationCurve))
+            {
+                curveFields.Add((field, displayAttr, order));
             }
             else
             {
@@ -176,6 +186,7 @@ public class UIControl : MonoBehaviour
         // Sort each list by order
         nonEnumFields = nonEnumFields.OrderBy(x => x.order).ToList();
         enumFields = enumFields.OrderBy(x => x.order).ToList();
+        curveFields = curveFields.OrderBy(x => x.order).ToList();
 
         // Process non-enum fields first
         foreach (var (field, displayAttr, order) in nonEnumFields)
@@ -204,6 +215,7 @@ public class UIControl : MonoBehaviour
             // BOOL
             if (field.FieldType == typeof(bool))
             {
+                Debug.Log($"Found bool field: {field.Name}, Section: {section}, Label: {labelName}");
                 GameObject toggle = CreateToggle(obj, field, labelName);
                 AddToSection(section, toggle);
                 continue;
@@ -233,6 +245,16 @@ public class UIControl : MonoBehaviour
 
             GameObject dropdown = CreateEnumDropdown(obj, field, labelName);
             AddToSection(section, dropdown);
+        }
+
+        // Process animation curve fields at the very end
+        foreach (var (field, displayAttr, order) in curveFields)
+        {
+            string section = displayAttr?.Section ?? "General";
+            string labelName = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
+
+            GameObject curveEditor = CreateCurveEditor(obj, field, labelName);
+            AddToSection(section, curveEditor);
         }
     }
 
@@ -421,6 +443,34 @@ public class UIControl : MonoBehaviour
             if (!buildingUI)
                 RequestGenerate();
         });
+
+        return row;
+    }
+
+    GameObject CreateCurveEditor(object obj, FieldInfo field, string labelName)
+    {
+        GameObject row = Instantiate(curveEditorPrefab, uiParent);
+
+        RuntimeCurveEditor editor = row.GetComponent<RuntimeCurveEditor>();
+        if (editor == null)
+            editor = row.AddComponent<RuntimeCurveEditor>();
+
+        AnimationCurve currentCurve = (AnimationCurve)field.GetValue(obj);
+        if (currentCurve == null)
+        {
+            currentCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            field.SetValue(obj, currentCurve);
+        }
+
+        editor.Initialize(currentCurve, labelName);
+
+        editor.onCurveChanged = (newCurve) =>
+        {
+            field.SetValue(obj, newCurve);
+
+            if (!buildingUI)
+                RequestGenerate();
+        };
 
         return row;
     }

@@ -19,3 +19,10 @@ public class DisplayNameAttribute : Attribute
 
 
 }
+
+
+[AttributeUsage(AttributeTargets.Field)]
+public class HideInUIAttribute : Attribute
+{
+    // Simple marker attribute - no properties needed
+}

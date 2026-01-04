@@ -54,9 +54,7 @@ public enum EdgeCollapseMode //for edge collapsing and unique blade shapes
     LeftOnly,
     RightOnly,
     Alternating, // Alternates left/right collapse per segment
-    LooseAlternating,
-    Patterned,
-    RandomPatterned
+    LooseAlternating
 }
 public enum HeightSpacingMode
 {
@@ -86,10 +84,6 @@ public class TipSettings
     [DisplayName("Tip Lean Mode", "Blade Tip", 0)]
     public TipLeanMode tipLeanMode = TipLeanMode.Centered;
 
-    [Tooltip("Defines the random minimum and maximum the tip can be offset height wise")]
-    [Range(0, 1), DisplayName("Random Height Offset", "Blade Tip", 1)]
-    public float randomHeightOffset = 0.1f;
-
     [Tooltip("Defines the offset for the tip of the blade (Allows for shorter or longer tips)")]
     [Range(-2, 1), DisplayName("Height Offset", "Blade Tip", 2)]
     public float heightOffset = 0f;
@@ -101,7 +95,6 @@ public class TipSettings
     public void CopyFrom(TipSettings other)
     {
         tipLeanMode = other.tipLeanMode;
-        randomHeightOffset = other.randomHeightOffset;
         heightOffset = other.heightOffset;
 
         tipLeanStrengthCurve = other.tipLeanStrengthCurve != null
@@ -131,17 +124,17 @@ public class CoreSettings
 
     [Vector2Range(0.1f, 1f)]
     [Tooltip("Defines the minimum and maximum spacing between segments (Used for randomness)")]
-    [DisplayName("Min/Max Height Spacing", "Blade Dimensions", 4)]
+    [DisplayName("Height Spacing", "Blade Dimensions", 4)]
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
 
     [Vector2Range(0.2f, 1f)]
     [Tooltip("Defines the minimum and maximum width of the blade in each segment (used for randomness)")]
-    [DisplayName("Min/Max Width", "Blade Dimensions", 5)]
+    [DisplayName("Width", "Blade Dimensions", 5)]
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
 
     [Vector2Range(-45f,45f)]
     [Tooltip("Defines the minimum and maximum angle for a segment (Curvature of the blades edge)")]
-    [DisplayName("Min/Max Angle", "Blade Dimensions", 6)]
+    [DisplayName("Angle", "Blade Dimensions", 6)]
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     public void CopyFrom(CoreSettings other)
@@ -168,9 +161,10 @@ public class WidthSettings
     [DisplayName("User Defined Curve", "Width Profile", 1)]
     public AnimationCurve userDefinedCurve;
 
+    [HideInUI]
     [Tooltip("Allows the user to see the random width curve")]
     [DisplayName("Width Bias Curve", "Width Profile", 2)]
-    public AnimationCurve widthBiasCurve;
+    public AnimationCurve randomWidthBiasCurve;
 
     [Range(0f, 1f), DisplayName("Noise Influence", "Width Profile", 3)]
     public float noiseInfluence = 1;
@@ -186,8 +180,8 @@ public class WidthSettings
             ? new AnimationCurve(other.userDefinedCurve.keys)
             : new AnimationCurve();
 
-        widthBiasCurve = other.widthBiasCurve != null
-            ? new AnimationCurve(other.widthBiasCurve.keys)
+        randomWidthBiasCurve = other.randomWidthBiasCurve != null
+            ? new AnimationCurve(other.randomWidthBiasCurve.keys)
             : new AnimationCurve();
 
         noiseInfluence = other.noiseInfluence;
@@ -258,6 +252,7 @@ public class SplineAndLineGen : MonoBehaviour
     
     [Header("Blade Preset")]
     public string presetName;
+    [DisplayName("Sword Preset", "General",2)]
     public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
@@ -277,8 +272,9 @@ public class SplineAndLineGen : MonoBehaviour
     private SplineContainer splineContainer; // spline creation script
     public List<Segment> segments = new List<Segment>(); // sword segments
 
-    
 
+
+    [HideInUI]
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
@@ -322,7 +318,7 @@ public class SplineAndLineGen : MonoBehaviour
         spline.Clear();
         segments.Clear();
 
-        widthSettings.widthBiasCurve = GenerateRandomWidthCurve();
+        widthSettings.randomWidthBiasCurve = GenerateRandomWidthCurve();
 
         if (curvatureSettings.curvatureMode == CurvatureMode.RandomCurve)
             activeCurvatureCurve = GenerateCurvatureCurve();
@@ -334,8 +330,8 @@ public class SplineAndLineGen : MonoBehaviour
         Vector3 previousCenter = Vector3.zero;
         float seedOffset = Random.Range(0f, 1000f);
 
-        if (edgeSettings.edgeCollapseMode == EdgeCollapseMode.RandomPatterned)
-            edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount);
+        //if (edgeSettings.edgeCollapseMode == EdgeCollapseMode.RandomPatterned)
+        //    edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount);
 
         for (int i = 0; i < coreSettings.splinePointCount; i++)
         {
@@ -388,7 +384,7 @@ public class SplineAndLineGen : MonoBehaviour
             }
 
             float bias = widthSettings.useRandomWidthCurve
-                ? widthSettings.widthBiasCurve.Evaluate(heightRatio)
+                ? widthSettings.randomWidthBiasCurve.Evaluate(heightRatio)
                 : widthSettings.userDefinedCurve.Evaluate(heightRatio);
 
             //Width bades on noise
@@ -439,18 +435,18 @@ public class SplineAndLineGen : MonoBehaviour
                         collapseRightSide = !collapseLeftSide;
                     }
                     break;
-                case EdgeCollapseMode.Patterned:
-                case EdgeCollapseMode.RandomPatterned:
-                    int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
-                    segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
-                    char patternChar = edgeSettings.collapsePattern[segmentGroup];
-                    switch (patternChar)
-                    {
-                        case 'L': collapseLeftSide = true; break;
-                        case 'R': collapseRightSide = true; break;
-                        case 'B': collapseLeftSide = true; collapseRightSide = true; break;
-                    }
-                    break;
+                //case EdgeCollapseMode.Patterned:
+                //case EdgeCollapseMode.RandomPatterned:
+                //    int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);
+                //    segmentGroup = Mathf.Clamp(segmentGroup, 0, edgeSettings.collapsePattern.Length - 1);
+                //    char patternChar = edgeSettings.collapsePattern[segmentGroup];
+                //    switch (patternChar)
+                //    {
+                //        case 'L': collapseLeftSide = true; break;
+                //        case 'R': collapseRightSide = true; break;
+                //        case 'B': collapseLeftSide = true; collapseRightSide = true; break;
+                //    }
+                //    break;
             }
 
             Vector3 center = pos;

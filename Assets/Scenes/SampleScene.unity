@@ -135,6 +135,8 @@ GameObject:
   - component: {fileID: 28350893}
   - component: {fileID: 28350895}
   - component: {fileID: 28350890}
+  - component: {fileID: 28350897}
+  - component: {fileID: 28350896}
   m_Layer: 0
   m_Name: V3
   m_TagString: Untagged
@@ -311,7 +313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   presetName: random
-  bladePreset: 5
+  bladePreset: 2
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7
@@ -347,7 +349,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    widthBiasCurve:
+    randomWidthBiasCurve:
       serializedVersion: 2
       m_Curve: []
       m_PreInfinity: 2
@@ -357,17 +359,16 @@ MonoBehaviour:
     noiseFrequency: 0.123
   tipSettings:
     tipLeanMode: 0
-    randomHeightOffset: 0.1
     heightOffset: 0
     tipLeanStrengthCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0
+        value: 1
         inSlope: 0
         outSlope: 0
-        tangentMode: 0
+        tangentMode: 34
         weightedMode: 0
         inWeight: 0
         outWeight: 0
@@ -376,7 +377,7 @@ MonoBehaviour:
         value: 1
         inSlope: 0
         outSlope: 0
-        tangentMode: 0
+        tangentMode: 34
         weightedMode: 0
         inWeight: 0
         outWeight: 0
@@ -439,18 +440,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splineGen: {fileID: 28350893}
-  segmentSubdivisions: 20
-  tipSubdivisions: 2
-  widthSubdivisions: 20
+  meshQuality: 2
   guard: {fileID: 1173572162}
   handle: {fileID: 926122426}
   holder: {fileID: 1362455596}
   HandleXPosition: 0
   bladeThickness: 0.1
-  sideSharpness: 0.05
-  edgeBevelWidth: 0.005
-  nonSharpSideOffset: 0
-  nonSharpBevelWidth: 0.005
+  edgeSharpness: 0.05
+  spineThickness: 0.005
   bladeMaterial: {fileID: 2100000, guid: 4af743c41b89b2d4694786b5cba886b6, type: 2}
   sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
   fuller:
@@ -458,7 +455,7 @@ MonoBehaviour:
     end: 0.8
     fullerDepth: 0.3
     fullerWidth: 0.3
-    fullerOffset: 0.5
+    fullerCenter: 0.5
     fullerFalloff:
       serializedVersion: 2
       m_Curve:
@@ -484,7 +481,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     numberOfFullers: 1
-    spacingPercent: 0.1
+    spacingMultiplier: 1.2
   sharpSide: 2
 --- !u!114 &28350895
 MonoBehaviour:
@@ -505,6 +502,56 @@ MonoBehaviour:
   zoomSpeed: 5
   minZoom: 0
   maxZoom: 8
+--- !u!23 &28350896
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 28350889}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &28350897
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 28350889}
+  m_Mesh: {fileID: 0}
 --- !u!1 &127399959
 GameObject:
   m_ObjectHideFlags: 0
@@ -1015,6 +1062,7 @@ MonoBehaviour:
   sliderRowPrefab: {fileID: 5262284429567289594, guid: ea784764eb7e0074e8bc96d8797f6cf2, type: 3}
   dropdownRowPrefab: {fileID: 6461030533648725776, guid: 49767dabae7ce3647a3eff6c91565afd, type: 3}
   toggleRowPrefab: {fileID: 5340144560994068897, guid: 303c48006e630614d89192d723025a5c, type: 3}
+  curveEditorPrefab: {fileID: 3226288411551448251, guid: fe544107fe94d6645903a2b6401dd8ce, type: 3}
   uiParent: {fileID: 1428342025}
   sectionDropdown: {fileID: 1119054229}
   autoGenerate: 1
