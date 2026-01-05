@@ -132,10 +132,12 @@ public class UIControl : MonoBehaviour
     // ====================== CORE GENERATION ======================
 
     void GenerateForObject(
-        object obj,
-        string currentSection = "General",
-        string currentSubSection = "Basic"
-    )
+    object obj,
+    string currentSection = "General",
+    string currentSubSection = "Basic",
+    bool forceSection = false  // ⭐ NEW: Force fields to stay in current section
+)
+
     {
         if (obj == null) return;
 
@@ -154,8 +156,10 @@ public class UIControl : MonoBehaviour
         {
             object value = field.GetValue(obj);
 
-            string section = attr?.Section ?? currentSection;
-            string subSection = attr?.SubSection ?? currentSubSection;
+            // Then in the field processing loop, change this line:
+            string section = (forceSection ? currentSection : attr?.Section) ?? currentSection;
+            string subSection = (forceSection ? currentSubSection : attr?.SubSection) ?? currentSubSection;
+
             string label = attr?.DisplayName ?? PrettyFieldName(field.Name);
 
             // ---------- RANGE ----------
@@ -204,9 +208,10 @@ public class UIControl : MonoBehaviour
                 continue;
             }
 
-            // ---------- LIST ----------
+            // ---------- List ----------
+
             if (field.FieldType.IsGenericType &&
-                field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+            field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 IList list = (IList)value;
                 if (list == null) continue;
@@ -215,12 +220,11 @@ public class UIControl : MonoBehaviour
 
                 for (int i = 0; i < list.Count; i++)
                 {
-                    GameObject listHeader =
-                        CreateHeaderRow($"{label} {i + 1}");
-
+                    GameObject listHeader = CreateHeaderRow($"{label} {i + 1}");
                     AddToSection(section, subSection, listHeader);
 
-                    GenerateForObject(list[i], section, subSection);
+                    // ⭐ Pass forceSection=true to keep all fields together under the header
+                    GenerateForObject(list[i], section, subSection, forceSection: true);
                 }
                 continue;
             }

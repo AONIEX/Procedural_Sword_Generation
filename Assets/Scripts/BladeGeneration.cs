@@ -69,7 +69,7 @@ public class BladeGeneration : MonoBehaviour
     [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0, "Edge")]
     public float edgeSharpness = 0.05f;
 
-    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Edge & Spine", 2, "Spine")]
+    [Range(0.001f, 0.1f), DisplayName("Bevel Thickness", "Edge & Spine", 2, "Spine")]
     public float spineThickness = 0.005f;
 
     [DisplayName("Blade Material", "Rendering", 0, "Materials")]
