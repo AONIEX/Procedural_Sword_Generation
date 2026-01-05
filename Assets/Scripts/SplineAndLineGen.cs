@@ -16,12 +16,12 @@ public class BladePreset
     public EdgeSettings edgeSettings;
     public bool useSymmetry;
 }
+
 [System.Serializable]
 public class BladePresetCollection
 {
     public List<BladePreset> presets = new List<BladePreset>();
 }
-
 
 public struct Segment //Points for creating the mesh
 {
@@ -32,30 +32,32 @@ public struct Segment //Points for creating the mesh
 
 public enum CurvatureMode
 {
-    None,               // No curvature applied
-    UserDefinedCurve,   // Uses curvatureShape
-    RandomCurve,         // Uses activeCurvatureCurve
-    SickleCurve //Used for extremely curved blades like a shotel
-}
-public enum TipLeanMode
-{
-    Centered,       // Tip is centered (X = 0)
-    RandomLean,     // Tip leans left or right randomly
-    ForcedCenterX,  // Tip X is forced to 0 regardless of curvature
-    ForcedLeft,     // Tip leans explicitly to the left
-    ForcedRight,    // Tip leans explicitly to the right
-    None            // No special tip logic
+    None,
+    UserDefinedCurve,
+    RandomCurve,
+    SickleCurve
 }
 
-public enum EdgeCollapseMode //for edge collapsing and unique blade shapes
+public enum TipLeanMode
+{
+    Centered,
+    RandomLean,
+    ForcedCenterX,
+    ForcedLeft,
+    ForcedRight,
+    None
+}
+
+public enum EdgeCollapseMode
 {
     None,
     Random,
     LeftOnly,
     RightOnly,
-    Alternating, // Alternates left/right collapse per segment
+    Alternating,
     LooseAlternating
 }
+
 public enum HeightSpacingMode
 {
     Fixed,
@@ -80,11 +82,11 @@ public enum BladePresets
 [System.Serializable]
 public class TipSettings
 {
-    [Tooltip("Controls if and how blade tip leans. Centered (keeps it straight), RandomLean (tilts left or right), ForcedCenterX (locks X to 0), None (disables tip logic, Creating a flat tip)")]
+    [Tooltip("Controls if and how blade tip leans.")]
     [DisplayName("Tip Lean Mode", "Blade Tip", 0)]
     public TipLeanMode tipLeanMode = TipLeanMode.Centered;
 
-    [Tooltip("Defines the offset for the tip of the blade (Allows for shorter or longer tips)")]
+    [Tooltip("Defines the offset for the tip of the blade")]
     [Range(-2, 1), DisplayName("Height Offset", "Blade Tip", 2)]
     public float heightOffset = 0f;
 
@@ -106,35 +108,30 @@ public class TipSettings
 [System.Serializable]
 public class CoreSettings
 {
-    [Tooltip("Defines the amount of segments wanted (More allows for more randomness and detail but also more chaos)")]
-    [Range(3, 20), DisplayName("Spline Point Count", "Blade Dimensions", 0)]
+    [Tooltip("Defines the amount of segments wanted")]
+    [Range(3, 20), DisplayName("Spline Point Count", "Blade Geometry", 0)]
     public int splinePointCount = 5;
 
-    [Tooltip("Defines spcaing between blade segments")]
-    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Dimensions", 1)]
+    [Tooltip("Defines spacing between blade segments")]
+    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Geometry", 1)]
     public float heightSpacing = 0.5f;
 
-    [Tooltip("Fixed(User Defined), Random Uniformerd(Random but consistent through out segments), Rand Chaotic (Random and different between segments)")]
-    [DisplayName("Height Spacing Mode", "Blade Dimensions", 2)]
+    [DisplayName("Height Spacing Mode", "Blade Geometry", 2)]
     public HeightSpacingMode heightSpacingMode = HeightSpacingMode.Fixed;
 
-    [Range(0.5f, 10f), DisplayName("Total Blade Height", "Blade Dimensions", 3)]
+    [Range(0.5f, 10f), DisplayName("Total Blade Height", "Blade Geometry", 3)]
     public float totalBladeHeight = 3;
 
-
     [Vector2Range(0.1f, 1f)]
-    [Tooltip("Defines the minimum and maximum spacing between segments (Used for randomness)")]
-    [DisplayName("Height Spacing", "Blade Dimensions", 4)]
+    [DisplayName("Height Spacing Range", "Blade Geometry", 4)]
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
 
     [Vector2Range(0.2f, 1f)]
-    [Tooltip("Defines the minimum and maximum width of the blade in each segment (used for randomness)")]
-    [DisplayName("Width", "Blade Dimensions", 5)]
+    [DisplayName("Blade Width Range", "Blade Geometry", 5)]
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
 
-    [Vector2Range(-45f,45f)]
-    [Tooltip("Defines the minimum and maximum angle for a segment (Curvature of the blades edge)")]
-    [DisplayName("Angle", "Blade Dimensions", 6)]
+    [Vector2Range(-45f, 45f)]
+    [DisplayName("Segment Angle Range", "Curvature & Flow", 6)]
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     public void CopyFrom(CoreSettings other)
@@ -153,23 +150,20 @@ public class CoreSettings
 [System.Serializable]
 public class WidthSettings
 {
-    [Tooltip("Allows choice for defining your own width curve or a random one")]
-    [DisplayName("Use Random Width Curve", "Width Profile", 0)]
+    [DisplayName("Use Random Width Curve", "Blade Profile", 0)]
     public bool useRandomWidthCurve = true;
 
-    [Tooltip("Allows creating of own width curve")]
-    [DisplayName("User Defined Curve", "Width Profile", 1)]
+    [DisplayName("User Defined Curve", "Blade Profile", 1)]
     public AnimationCurve userDefinedCurve;
 
     [HideInUI]
-    [Tooltip("Allows the user to see the random width curve")]
-    [DisplayName("Width Bias Curve", "Width Profile", 2)]
+    [DisplayName("Width Bias Curve", "Blade Profile", 2)]
     public AnimationCurve randomWidthBiasCurve;
 
-    [Range(0f, 1f), DisplayName("Noise Influence", "Width Profile", 3)]
+    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Profile", 3)]
     public float noiseInfluence = 1;
 
-    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Width Profile", 4)]
+    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Profile", 4)]
     public float noiseFrequency = 0.123f;
 
     public void CopyFrom(WidthSettings other)
@@ -192,25 +186,25 @@ public class WidthSettings
 [System.Serializable]
 public class CurvatureSettings
 {
-    [Range(0, 5), DisplayName("Straight Segment Threshold", "Curvature", 0)]
+    [Range(0, 5), DisplayName("Straight Segment Threshold", "Curvature & Flow", 0)]
     public int straightSegmentThreshold = 0;
 
-    [DisplayName("Curvature Mode", "Curvature", 1)]
+    [DisplayName("Curvature Mode", "Curvature & Flow", 1)]
     public CurvatureMode curvatureMode = CurvatureMode.None;
 
-    [Range(0, 2), DisplayName("Max Curvature", "Curvature", 2)]
+    [Range(0, 2), DisplayName("Max Curvature", "Curvature & Flow", 2)]
     public float curvature_Max;
 
-    [Range(0, 1), DisplayName("Peak Factor", "Curvature", 3)]
+    [Range(0, 1), DisplayName("Peak Factor", "Curvature & Flow", 3)]
     public float curvature_PeakFactor = 0.3f;
 
-    [Range(0, .2f), DisplayName("Step Size", "Curvature", 4)]
+    [Range(0, .2f), DisplayName("Step Size", "Curvature & Flow", 4)]
     public float curvature_StepSize = 0.3f;
 
-    [DisplayName("Curvature Shape", "Curvature", 5)]
+    [DisplayName("Curvature Shape", "Curvature & Flow", 5)]
     public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1);
 
-    [DisplayName("Curvature Direction", "Curvature", 6)]
+    [DisplayName("Curvature Direction", "Curvature & Flow", 6)]
     public Vector3 curvatureDirection = new Vector3(1, 0, 0);
 
     public void CopyFrom(CurvatureSettings other)
@@ -233,15 +227,13 @@ public class CurvatureSettings
 [System.Serializable]
 public class EdgeSettings
 {
-    [DisplayName("Edge Collapse Mode", "Blade Edge", 0)]
+    [DisplayName("Edge Collapse Mode", "Edge & Spine", 0)]
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
 
-    [Tooltip("Defines edge collapse pattern across blade thirds. Use 'L', 'R', or 'N' for None.")]
-    [DisplayName("Collapse Pattern", "Blade Edge", 1)]
+    [DisplayName("Collapse Pattern", "Edge & Spine", 1)]
     public string collapsePattern = "LRL";
 
-    [Tooltip("Offset the spine/ridge position. -1 = left edge, 0 = center, 1 = right edge. Creates thick-back blades like kukris.")]
-    [Range(-1f, 1f), DisplayName("Spine Offset", "Blade Edge", 2)]
+    [Range(-1f, 1f), DisplayName("Spine Offset", "Edge & Spine", 2)]
     public float spineOffset = 0f;
 
     public void CopyFrom(EdgeSettings other)
@@ -252,40 +244,45 @@ public class EdgeSettings
     }
 }
 #endregion
+
 public class SplineAndLineGen : MonoBehaviour
 {
-    
     [Header("Blade Preset")]
     public string presetName;
-    [DisplayName("Sword Preset", "General",2)]
+
+    [DisplayName("Sword Preset", "General", 2)]
     public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
-    [DisplayName("Use Symmetry", "Blade Dimensions", 11)]
-    public bool useSymmetry; // Stops the use of angles and make sure a straight blade is symmetri
+    [DisplayName("Use Symmetry", "Blade Geometry", 11)]
+    public bool useSymmetry;
 
     [Header("Core Controls")]
     public CoreSettings coreSettings = new CoreSettings();
+
     [Header("Width Control")]
     public WidthSettings widthSettings = new WidthSettings();
+
     [Header("Tip Control")]
     public TipSettings tipSettings = new TipSettings();
+
     [Header("Curvature Control")]
     public CurvatureSettings curvatureSettings = new CurvatureSettings();
+
     [Header("Edge Controls")]
     public EdgeSettings edgeSettings = new EdgeSettings();
-    private SplineContainer splineContainer; // spline creation script
+
+    private SplineContainer splineContainer;
+
     [HideInUI]
-    public List<Segment> segments = new List<Segment>(); // sword segments
+    public List<Segment> segments = new List<Segment>();
 
     [HideInUI]
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
 
-
-
-    void Start()
+void Start()
     {
         LoadPreset();
 
@@ -327,7 +324,7 @@ public class SplineAndLineGen : MonoBehaviour
         Vector3 pos = Vector3.zero;
         float totalHeight = 0f;
         float uniformStepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
-        bool alternatingStartsLeft = Random.value < 0.5f;
+        bool alternatingStartsLeft = true; // Random.value < 0.5f;
         Vector3 previousCenter = Vector3.zero;
         float seedOffset = Random.Range(0f, 1000f);
 

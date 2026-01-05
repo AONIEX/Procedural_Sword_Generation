@@ -4,20 +4,19 @@ using UnityEngine;
 [System.Serializable]
 public class BladeProfileLayer
 {
-    [DisplayName("Cross Section Type", "Profile", 2)]
-
+    [DisplayName("Cross Section Type", "Blade Profile", 2)]
     public BladeBaseProfile profile;
 
-    [Range(0, 1f), DisplayName("Start Height", "Profile", 2)]
+    [Range(0, 1f), DisplayName("Start Height", "Blade Profile", 2)]
     public float startHeight;
 
-    [Range(0, 1f), DisplayName("End Height", "Profile", 2)]
+    [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2)]
     public float endHeight;
 
-    [DisplayName("Transition Curve", "Profile", 2)]
+    [DisplayName("Transition Curve", "Blade Profile", 2)]
     public AnimationCurve influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-    [Range(0,2),DisplayName("Profile Scale", "Profile", 2)]
+    [Range(0, 2), DisplayName("Profile Scale", "Blade Profile", 2)]
     public float scale = 1;
 }
 
@@ -26,7 +25,7 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Blade Base Profiles")]
-    [DisplayName("Cross section ", "Profile", 2)]
+    [DisplayName("Cross section ", "Blade Profile", 2)]
     public List<BladeProfileLayer> baseProfiles = new List<BladeProfileLayer>()
     {
         new BladeProfileLayer
@@ -37,9 +36,8 @@ public class BladeGeneration : MonoBehaviour
         }
     };
 
-
     [Range(0.1f, 3f)]
-    [DisplayName("Profile Blend Strenght", "Profile", 3)]
+    [DisplayName("Profile Blend Strenght", "Blade Profile", 3)]
     public float profileOverlapBlendAmount = 0.5f;
 
     [Header("Mesh Quality")]
@@ -50,11 +48,12 @@ public class BladeGeneration : MonoBehaviour
     private int tipSubdivisions = 5;
     private int widthSubdivisions = 5;
 
-    //[Range(1, 10), DisplayName("Curvature Window", "Curvature", 5)]
-    private int curvatureWindow = 5;
+    //[Range(1, 10), DisplayName("Curvature Window", "Curvature & Flow", 5)]
+    private const int curvatureWindow = 5;
+    private const float curvatureBlend = 0.5f;
+    private const int smoothWindow = 5;
 
-    //[Range(0f, 1f), DisplayName("Curvature Blend", "Curvature", 6)]
-    private float curvatureBlend = 0.5f;
+    private const float COLLAPSE_THRESHOLD = 1e-6f;
 
     private float baseWidth = 0f;
 
@@ -65,16 +64,14 @@ public class BladeGeneration : MonoBehaviour
     [Range(-2, 2), DisplayName("Handle X Position", "General", 2)]
     public float HandleXPosition;
 
-    [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Dimensions", 7)]
+    [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7)]
     public float bladeThickness = 0.1f;
 
-    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Blade Edge", 0)]
+    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0)]
     public float edgeSharpness = 0.05f;
 
-
-    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Blade Edge", 2)]
+    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Edge & Spine", 2)]
     public float spineThickness = 0.005f;
-
 
     [DisplayName("Blade Material", "Rendering", 0)]
     public Material bladeMaterial;
@@ -85,32 +82,32 @@ public class BladeGeneration : MonoBehaviour
     [System.Serializable]
     public class FullerSettings
     {
-        [Range(0f, 1f), DisplayName("Fuller Start", "Fuller", 10)]
+        [Range(0f, 1f), DisplayName("Fuller Start", "Fullers", 10)]
         public float start = 0.1f;
 
-        [Range(0f, 1f), DisplayName("Fuller End", "Fuller", 11)]
+        [Range(0f, 1f), DisplayName("Fuller End", "Fullers", 11)]
         public float end = 0.8f;
 
-        [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fuller", 12)]
+        [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fullers", 12)]
         public float fullerDepth = 0.3f;
 
-        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fuller", 13)]
+        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fullers", 13)]
         public float fullerWidth = 0.3f;
 
-        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fuller", 14)]
+        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fullers", 14)]
         public float fullerCenter = 0.5f;
 
-        [DisplayName("Fuller Falloff", "Fuller", 15)]
+        [DisplayName("Fuller Falloff", "Fullers", 15)]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
-        [Range(0, 7), DisplayName("Number of Fullers", "Fuller", 16)]
+        [Range(0, 7), DisplayName("Number of Fullers", "Fullers", 16)]
         public int numberOfFullers = 1;
 
-        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fuller", 17)]
+        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fullers", 17)]
         public float spacingMultiplier = 1.2f;
     }
 
-    [DisplayName("Fuller Settings", "Fuller", 20)]
+    [DisplayName("Fuller Settings", "Fullers", 20)]
     public FullerSettings fuller;
 
     public enum SharpSide
@@ -120,28 +117,21 @@ public class BladeGeneration : MonoBehaviour
         Both
     }
 
-    [DisplayName("Sharp Edge", "Blade Edge", 6)]
+    [DisplayName("Sharp Edge", "Edge & Spine", 6)]
     public SharpSide sharpSide = SharpSide.Both;
 
     void Start()
     {
         HandleXPosition = holder.transform.localPosition.x;
         splineGen = GetComponent<SplineAndLineGen>();
-        ApplyMeshQualitySettings();
-        splineGen.GenerateLinesAndSplines();
-        SmoothSegmentCenters();
-        Generate3DBlade();
+        RegenerateBlade(true);
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            ApplyMeshQualitySettings();
-            splineGen.GenerateLinesAndSplines();
-            SmoothSegmentCenters();
-            Generate3DBlade();
-            CalculateHandandGuardSize();
+            RegenerateBlade(true);
         }
 
         if (handle.transform.localPosition.x != HandleXPosition)
@@ -179,11 +169,7 @@ public class BladeGeneration : MonoBehaviour
 
     public void Generate()
     {
-        ApplyMeshQualitySettings();
-        splineGen.GenerateLinesAndSplines();
-        SmoothSegmentCenters();
-        Generate3DBlade();
-        CalculateHandandGuardSize();
+        RegenerateBlade(true);
     }
 
     public void Generate3DBlade()
@@ -380,29 +366,8 @@ public class BladeGeneration : MonoBehaviour
                 depthMap[ringIdx, vertIdx] = maxDepth;
             }
         }
+        float[,] smoothedDepth = SmoothDepthMap(depthMap, ringCount);
 
-        int smoothWindow = 5;
-        float[,] smoothedDepth = new float[ringCount, widthSubdivisions];
-
-        for (int r = 0; r < ringCount; r++)
-        {
-            for (int v = 0; v < widthSubdivisions; v++)
-            {
-                float sum = 0f;
-                float weightSum = 0f;
-
-                for (int k = Mathf.Max(0, r - smoothWindow);
-                     k <= Mathf.Min(ringCount - 1, r + smoothWindow);
-                     k++)
-                {
-                    float w = 1f - Mathf.Abs(k - r) / (smoothWindow + 1f);
-                    sum += depthMap[k, v] * w;
-                    weightSum += w;
-                }
-
-                smoothedDepth[r, v] = sum / weightSum;
-            }
-        }
 
         for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
         {
@@ -410,10 +375,7 @@ public class BladeGeneration : MonoBehaviour
             Vector3 right = smoothRights[ringIdx];
             Vector3 widthDir = (right - left).normalized;
 
-            Vector3 forwardDir =
-                ringIdx < smoothCenters.Count - 1
-                    ? (smoothCenters[ringIdx + 1] - smoothCenters[ringIdx]).normalized
-                    : (smoothCenters[ringIdx] - smoothCenters[ringIdx - 1]).normalized;
+            Vector3 forwardDir = GetForwardDir(smoothCenters, ringIdx);
 
             Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
             int ringStart = ringIdx * widthSubdivisions;
@@ -536,10 +498,7 @@ public class BladeGeneration : MonoBehaviour
 
             Vector3 widthDir = (right - left).normalized;
 
-            Vector3 forwardDir =
-                ring < smoothCenters.Count - 1
-                    ? (smoothCenters[ring + 1] - smoothCenters[ring]).normalized
-                    : (smoothCenters[ring] - smoothCenters[ring - 1]).normalized;
+            Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
 
             Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
 
@@ -650,8 +609,8 @@ public class BladeGeneration : MonoBehaviour
             Vector3 leftOffset = left - center;
             Vector3 rightOffset = right - center;
 
-            bool leftValid = leftOffset.sqrMagnitude > 1e-6f;
-            bool rightValid = rightOffset.sqrMagnitude > 1e-6f;
+            bool leftValid = leftOffset.sqrMagnitude > COLLAPSE_THRESHOLD ;
+            bool rightValid = rightOffset.sqrMagnitude > COLLAPSE_THRESHOLD ;
 
             Vector3 widthDir;
 
@@ -669,7 +628,7 @@ public class BladeGeneration : MonoBehaviour
             else
             {
                 widthDir = Vector3.Cross(bladeNormal, tipDir).normalized;
-                if (widthDir.sqrMagnitude < 1e-6f)
+                if (widthDir.sqrMagnitude < COLLAPSE_THRESHOLD )
                     widthDir = Vector3.right;
             }
 
@@ -730,6 +689,19 @@ public class BladeGeneration : MonoBehaviour
             int currentSubdivisions = isTipSegment ? tipSubdivisions : segmentSubdivisions;
             bool isLastSegment = (i == segments.Count - 2);
 
+            bool p1LeftCollapsed = false;
+            bool p1RightCollapsed = false;
+            bool p2LeftCollapsed = false;
+            bool p2RightCollapsed = false;
+
+            if (!isTipSegment)
+            {
+                p1LeftCollapsed = Vector3.Distance(p1.left, p1.center) < 0.001f;
+                p1RightCollapsed = Vector3.Distance(p1.right, p1.center) < 0.001f;
+                p2LeftCollapsed = Vector3.Distance(p2.left, p2.center) < 0.001f;
+                p2RightCollapsed = Vector3.Distance(p2.right, p2.center) < 0.001f;
+            }
+
             for (int j = 0; j <= currentSubdivisions; j++)
             {
                 if (!isLastSegment && j == currentSubdivisions)
@@ -744,22 +716,108 @@ public class BladeGeneration : MonoBehaviour
                 float bladeT = ringIndex / (float)(totalRings - 1);
                 ringIndex++;
 
-                // Width scaling
+                // Calculate collapse blend factors for smooth transitions
+                float leftCollapseBlend = 0f;
+                float rightCollapseBlend = 0f;
+
+                if (p1LeftCollapsed && p2LeftCollapsed)
+                {
+                    leftCollapseBlend = 1f; // Fully collapsed throughout
+                }
+                else if (p1LeftCollapsed && !p2LeftCollapsed)
+                {
+                    leftCollapseBlend = 1f - t; // Fade out collapse
+                }
+                else if (!p1LeftCollapsed && p2LeftCollapsed)
+                {
+                    leftCollapseBlend = t; // Fade in collapse
+                }
+
+                if (p1RightCollapsed && p2RightCollapsed)
+                {
+                    rightCollapseBlend = 1f;
+                }
+                else if (p1RightCollapsed && !p2RightCollapsed)
+                {
+                    rightCollapseBlend = 1f - t;
+                }
+                else if (!p1RightCollapsed && p2RightCollapsed)
+                {
+                    rightCollapseBlend = t;
+                }
+
+                // Width scaling with edge collapse awareness
                 Vector3 widthDir = (right - left).normalized;
                 float rawWidth = Vector3.Distance(left, right);
-                float halfWidth = rawWidth * 0.5f;
 
                 float widthScale = BlendWidthScale(baseProfiles, bladeT);
-                float shapedHalfWidth = halfWidth * widthScale;
 
-                left = center - widthDir * shapedHalfWidth;
-                right = center + widthDir * shapedHalfWidth;
+                // Calculate the full width (what it should be without collapse)
+                float fullWidth = rawWidth * widthScale;
 
-                // moving the spine
-                float spineOffset = splineGen.edgeSettings.spineOffset;
-                if (Mathf.Abs(spineOffset) > 0.001f)
+                // Apply width scaling BASED ON COLLAPSE STATE
+                if (leftCollapseBlend > 0.99f && rightCollapseBlend < 0.01f)
                 {
-                    float offsetT = (spineOffset + 1f) * 0.5f; 
+                    // Left fully collapsed - right should be full width
+                    left = center;
+                    right = center + widthDir * fullWidth;
+                }
+                else if (rightCollapseBlend > 0.99f && leftCollapseBlend < 0.01f)
+                {
+                    // Right fully collapsed - left should be full width
+                    right = center;
+                    left = center - widthDir * fullWidth;
+                }
+                else if (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
+                {
+                    // No collapse - symmetric width
+                    float halfWidth = fullWidth * 0.5f;
+                    left = center - widthDir * halfWidth;
+                    right = center + widthDir * halfWidth;
+                }
+                else
+                {
+                    // Transitioning between collapse states - blend smoothly
+                    float halfWidth = fullWidth * 0.5f;
+
+                    // Start with symmetric positions
+                    Vector3 symmetricLeft = center - widthDir * halfWidth;
+                    Vector3 symmetricRight = center + widthDir * halfWidth;
+
+                    // Calculate collapsed positions (non-collapsed side gets FULL width)
+                    Vector3 leftCollapsedPos = center;
+                    Vector3 leftCollapsedRightPos = center + widthDir * fullWidth;
+
+                    Vector3 rightCollapsedPos = center;
+                    Vector3 rightCollapsedLeftPos = center - widthDir * fullWidth;
+
+                    // Blend between states
+                    if (leftCollapseBlend > 0f)
+                    {
+                        left = Vector3.Lerp(symmetricLeft, leftCollapsedPos, leftCollapseBlend);
+                        right = Vector3.Lerp(symmetricRight, leftCollapsedRightPos, leftCollapseBlend);
+                    }
+
+                    if (rightCollapseBlend > 0f)
+                    {
+                        right = Vector3.Lerp(
+                            leftCollapseBlend > 0f ? right : symmetricRight,
+                            rightCollapsedPos,
+                            rightCollapseBlend
+                        );
+                        left = Vector3.Lerp(
+                            leftCollapseBlend > 0f ? left : symmetricLeft,
+                            rightCollapsedLeftPos,
+                            rightCollapseBlend
+                        );
+                    }
+                }
+
+                // Apply spine offset ONLY if no edge collapse is active at this ring
+                float spineOffset = splineGen.edgeSettings.spineOffset;
+                if (Mathf.Abs(spineOffset) > 0.001f && leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
+                {
+                    float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                 }
 
@@ -794,7 +852,6 @@ public class BladeGeneration : MonoBehaviour
             }
         }
     }
-
     public void GenerateEdgeGeometry(
         List<Segment> segments,
         List<Vector3> smoothLefts,
@@ -955,20 +1012,6 @@ public class BladeGeneration : MonoBehaviour
             handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
     }
 
-    BladeBaseProfile GetProfileAtHeight(float bladeT)
-    {
-        for (int i = 0; i < baseProfiles.Count; i++)
-        {
-            if (bladeT >= baseProfiles[i].startHeight &&
-                bladeT <= baseProfiles[i].endHeight)
-            {
-                return baseProfiles[i].profile;
-            }
-        }
-
-        return BladeBaseProfile.Lenticular;
-    }
-
     float EvaluateBladeProfile(
         BladeBaseProfile profile,
         float widthT,
@@ -1108,4 +1151,52 @@ public class BladeGeneration : MonoBehaviour
             var verts = mf.mesh.vertices;
         }
     }
+
+    private Vector3 GetForwardDir(List<Vector3> smoothCenters, int index)
+    {
+        if (index < smoothCenters.Count - 1)
+            return (smoothCenters[index + 1] - smoothCenters[index]).normalized;
+
+        return (smoothCenters[index] - smoothCenters[index - 1]).normalized;
+    }
+    private void RegenerateBlade(bool recalcHandle = false)
+    {
+        ApplyMeshQualitySettings();
+        splineGen.GenerateLinesAndSplines();
+        SmoothSegmentCenters();
+        Generate3DBlade();
+
+        if (recalcHandle)
+            CalculateHandandGuardSize();
+    }
+
+    private float[,] SmoothDepthMap(float[,] depthMap, int ringCount)
+    {
+       
+        float[,] smoothed = new float[ringCount, widthSubdivisions];
+
+        for (int r = 0; r < ringCount; r++)
+        {
+            for (int v = 0; v < widthSubdivisions; v++)
+            {
+                float sum = 0f;
+                float weightSum = 0f;
+
+                for (int k = Mathf.Max(0, r - smoothWindow);
+                     k <= Mathf.Min(ringCount - 1, r + smoothWindow);
+                     k++)
+                {
+                    float w = 1f - Mathf.Abs(k - r) / (smoothWindow + 1f);
+                    sum += depthMap[k, v] * w;
+                    weightSum += w;
+                }
+
+                smoothed[r, v] = sum / weightSum;
+            }
+        }
+
+        return smoothed;
+    }
+
+
 }
