@@ -389,7 +389,7 @@ MonoBehaviour:
     curvatureMode: 2
     curvature_Max: 0
     curvature_PeakFactor: 0.3
-    curvature_StepSize: 0.2
+    curvature_StepSize: 0
     curvatureShape:
       serializedVersion: 2
       m_Curve:
@@ -418,6 +418,7 @@ MonoBehaviour:
   edgeSettings:
     edgeCollapseMode: 0
     collapsePattern: LRL
+    spineOffset: 0
   activeCurvatureCurve:
     serializedVersion: 2
     m_Curve: []

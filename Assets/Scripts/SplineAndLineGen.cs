@@ -150,20 +150,20 @@ public class CoreSettings
 [System.Serializable]
 public class WidthSettings
 {
-    [DisplayName("Use Random Width Curve", "Blade Profile", 0)]
+    [DisplayName("Use Random Width Curve", "Blade Geometry", 0)]
     public bool useRandomWidthCurve = true;
 
-    [DisplayName("User Defined Curve", "Blade Profile", 1)]
+    [DisplayName("User Defined Curve", "Blade Geometry", 1)]
     public AnimationCurve userDefinedCurve;
 
     [HideInUI]
-    [DisplayName("Width Bias Curve", "Blade Profile", 2)]
+    [DisplayName("Width Bias Curve", "Blade Geometry", 2)]
     public AnimationCurve randomWidthBiasCurve;
 
-    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Profile", 3)]
+    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Geometry", 3)]
     public float noiseInfluence = 1;
 
-    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Profile", 4)]
+    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Geometry", 4)]
     public float noiseFrequency = 0.123f;
 
     public void CopyFrom(WidthSettings other)
@@ -254,7 +254,7 @@ public class SplineAndLineGen : MonoBehaviour
     public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
-    [DisplayName("Use Symmetry", "Blade Geometry", 11)]
+    [DisplayName("Use Symmetry", "Curvature & Flow", 11)]
     public bool useSymmetry;
 
     [Header("Core Controls")]
