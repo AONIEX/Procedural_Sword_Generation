@@ -68,11 +68,11 @@ public class BladeGeneration : MonoBehaviour
     [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Dimensions", 7)]
     public float bladeThickness = 0.1f;
 
-    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Blade Edges", 0)]
+    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Blade Edge", 0)]
     public float edgeSharpness = 0.05f;
 
 
-    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Blade Edges", 2)]
+    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Blade Edge", 2)]
     public float spineThickness = 0.005f;
 
 
@@ -120,7 +120,7 @@ public class BladeGeneration : MonoBehaviour
         Both
     }
 
-    [DisplayName("Sharp Side", "General", 3)]
+    [DisplayName("Sharp Edge", "Blade Edge", 6)]
     public SharpSide sharpSide = SharpSide.Both;
 
     void Start()
@@ -755,12 +755,11 @@ public class BladeGeneration : MonoBehaviour
                 left = center - widthDir * shapedHalfWidth;
                 right = center + widthDir * shapedHalfWidth;
 
-                // *** SPINE OFFSET: Move the center/spine independently ***
+                // moving the spine
                 float spineOffset = splineGen.edgeSettings.spineOffset;
                 if (Mathf.Abs(spineOffset) > 0.001f)
                 {
-                    // -1 = spine at left edge, 0 = centered, 1 = spine at right edge
-                    float offsetT = (spineOffset + 1f) * 0.5f; // Convert -1..1 to 0..1
+                    float offsetT = (spineOffset + 1f) * 0.5f; 
                     center = Vector3.Lerp(left, right, offsetT);
                 }
 

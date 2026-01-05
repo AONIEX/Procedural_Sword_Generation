@@ -233,15 +233,15 @@ public class CurvatureSettings
 [System.Serializable]
 public class EdgeSettings
 {
-    [DisplayName("Edge Collapse Mode", "Blade Edges", 0)]
+    [DisplayName("Edge Collapse Mode", "Blade Edge", 0)]
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
 
     [Tooltip("Defines edge collapse pattern across blade thirds. Use 'L', 'R', or 'N' for None.")]
-    [DisplayName("Collapse Pattern", "Blade Edges", 1)]
+    [DisplayName("Collapse Pattern", "Blade Edge", 1)]
     public string collapsePattern = "LRL";
 
     [Tooltip("Offset the spine/ridge position. -1 = left edge, 0 = center, 1 = right edge. Creates thick-back blades like kukris.")]
-    [Range(-1f, 1f), DisplayName("Spine Offset", "Blade Edges", 3)]
+    [Range(-1f, 1f), DisplayName("Spine Offset", "Blade Edge", 2)]
     public float spineOffset = 0f;
 
     public void CopyFrom(EdgeSettings other)
