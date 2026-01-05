@@ -240,10 +240,15 @@ public class EdgeSettings
     [DisplayName("Collapse Pattern", "Blade Edges", 1)]
     public string collapsePattern = "LRL";
 
+    [Tooltip("Offset the spine/ridge position. -1 = left edge, 0 = center, 1 = right edge. Creates thick-back blades like kukris.")]
+    [Range(-1f, 1f), DisplayName("Spine Offset", "Blade Edges", 3)]
+    public float spineOffset = 0f;
+
     public void CopyFrom(EdgeSettings other)
     {
         edgeCollapseMode = other.edgeCollapseMode;
         collapsePattern = other.collapsePattern;
+        spineOffset = other.spineOffset;
     }
 }
 #endregion

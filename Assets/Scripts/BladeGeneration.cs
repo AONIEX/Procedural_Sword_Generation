@@ -504,15 +504,16 @@ public class BladeGeneration : MonoBehaviour
     }
 
     private void GenerateBackFace(
-      List<Vector3> vertices,
-      List<int> frontTriangles,
-      int frontVertexCount,
-      List<Vector3> smoothLefts,
-      List<Vector3> smoothRights,
-      List<Vector3> smoothCenters,
-      List<int> trianglesFrontBack)
+     List<Vector3> vertices,
+     List<int> frontTriangles,
+     int frontVertexCount,
+     List<Vector3> smoothLefts,
+     List<Vector3> smoothRights,
+     List<Vector3> smoothCenters,
+     List<int> trianglesFrontBack)
     {
         int ringCount = smoothLefts.Count;
+        float spineOffset = splineGen.edgeSettings.spineOffset;
 
         for (int ring = 0; ring < ringCount; ring++)
         {
@@ -526,13 +527,12 @@ public class BladeGeneration : MonoBehaviour
             {
                 float t = (ringCount - 1 - ring) / (float)(tipProfileFadeRings - 1);
                 profileTipFade = Mathf.Clamp01(t);
-                profileTipFade = Mathf.Pow(profileTipFade, 2.2f); // sharpen
+                profileTipFade = Mathf.Pow(profileTipFade, 2.2f);
             }
-
-            BladeBaseProfile profile = GetProfileAtHeight(bladeT);
 
             Vector3 left = smoothLefts[ring];
             Vector3 right = smoothRights[ring];
+            Vector3 center = smoothCenters[ring]; // This is the spine position (offset)
 
             Vector3 widthDir = (right - left).normalized;
 
@@ -549,29 +549,39 @@ public class BladeGeneration : MonoBehaviour
             {
                 int frontIndex = ringStart + v;
 
-                float widthT =
-                    (v / (float)(widthSubdivisions - 1)) * 2f - 1f;
+                // Standard t from left (0) to right (1)
+                float t = v / (float)(widthSubdivisions - 1);
 
-                float halfThickness;
-                float baseHalf = bladeThickness * 0.5f;
+                // Get the actual vertex position
+                Vector3 vertexPos = Vector3.Lerp(left, right, t);
 
+                // Calculate where the spine is in the 0-1 range
+                float spineT = (spineOffset + 1f) * 0.5f; // Convert -1..1 to 0..1
 
-                //float shaped = EvaluateBladeProfile(profile, widthT, baseHalf);
-                float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
-
-                int tipFadeRings = 4; // adjust for sharpness
-                float tipFade = 1f;
-
-                if (ring >= ringCount - tipFadeRings)
+                // Calculate widthT RELATIVE TO THE SPINE
+                // At spine: widthT = 0, At edges: widthT = ±1
+                float widthT;
+                if (t < spineT) // Left of spine
                 {
-                    float t = (ringCount - 1 - ring) / (float)(tipFadeRings - 1);
-                    tipFade = Mathf.Clamp01(t);
+                    // Map from 0..spineT to -1..0
+                    widthT = (t / Mathf.Max(spineT, 0.0001f)) - 1f;
+                }
+                else // Right of spine
+                {
+                    // Map from spineT..1 to 0..1
+                    widthT = (t - spineT) / Mathf.Max(1f - spineT, 0.0001f);
                 }
 
-                halfThickness = shaped * profileTipFade;
+                float baseHalf = bladeThickness * 0.5f;
 
+                // Use the blend function with profiles
+                // widthT is now relative to spine, so spine = 0 (thickest)
+                float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
 
+                // Apply tip fade
+                float halfThickness = shaped * profileTipFade;
 
+                // Apply thickness perpendicular to blade normal from the offset spine
                 vertices[frontIndex] += bladeNormal * halfThickness;
                 vertices.Add(vertices[frontIndex] - bladeNormal * (halfThickness * 2f));
             }
@@ -584,8 +594,6 @@ public class BladeGeneration : MonoBehaviour
             trianglesFrontBack.Add(frontTriangles[i] + frontVertexCount);
         }
     }
-
-
     private void GenerateBevelVertices(
         List<Vector3> vertices,
         List<Vector3> smoothLefts,
@@ -622,25 +630,22 @@ public class BladeGeneration : MonoBehaviour
             -1f
         );
     }
-
     private void AddBevelVertices(
-        List<Vector3> vertices,
-        List<Vector3> smoothLefts,
-        List<Vector3> smoothRights,
-        List<Vector3> smoothCenters,
-        Vector3 tipDir,
-        Vector3 bladeNormal,
-        float normalSign)
+    List<Vector3> vertices,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights,
+    List<Vector3> smoothCenters,
+    Vector3 tipDir,
+    Vector3 bladeNormal,
+    float normalSign)
     {
         int ringCount = smoothLefts.Count;
 
         for (int i = 0; i < ringCount; i++)
         {
-            Vector3 center = smoothCenters[i];
+            Vector3 center = smoothCenters[i]; // Already offset spine
             Vector3 left = smoothLefts[i];
             Vector3 right = smoothRights[i];
-
-          
 
             Vector3 leftOffset = left - center;
             Vector3 rightOffset = right - center;
@@ -650,7 +655,6 @@ public class BladeGeneration : MonoBehaviour
 
             Vector3 widthDir;
 
-            // Normal rings: infer from opposite side
             if (i < ringCount - 1)
             {
                 if (leftValid && rightValid)
@@ -664,7 +668,6 @@ public class BladeGeneration : MonoBehaviour
             }
             else
             {
-                // TIP: use blade direction, not width
                 widthDir = Vector3.Cross(bladeNormal, tipDir).normalized;
                 if (widthDir.sqrMagnitude < 1e-6f)
                     widthDir = Vector3.right;
@@ -673,16 +676,18 @@ public class BladeGeneration : MonoBehaviour
             Vector3 toLeft = -widthDir;
             Vector3 toRight = widthDir;
 
-            //Ensures sharp tip
-            if(i == ringCount - 1)
+            if (i == ringCount - 1)
             {
-                 toLeft = (left - center).normalized;
-                 toRight = (right - center).normalized;
+                toLeft = (left - center).normalized;
+                toRight = (right - center).normalized;
             }
 
+            // Just use normal sharp/spine thickness based on SharpSide setting
+            float leftThickness = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness;
+            float rightThickness = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness;
 
-            Vector3 leftRidge = left + toLeft * ((sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness);
-            Vector3 rightRidge = right + toRight * ((sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness);
+            Vector3 leftRidge = left + toLeft * leftThickness;
+            Vector3 rightRidge = right + toRight * rightThickness;
 
             if (i == ringCount - 1)
             {
@@ -697,12 +702,11 @@ public class BladeGeneration : MonoBehaviour
             vertices.Add(rightRidge + normalSign * bladeNormal * rightBevel);
         }
     }
-
     public void GenerateSmoothSegments(
-      List<Segment> segments,
-      List<Vector3> smoothLefts,
-      List<Vector3> smoothRights,
-      List<Vector3> smoothCenters)
+     List<Segment> segments,
+     List<Vector3> smoothLefts,
+     List<Vector3> smoothRights,
+     List<Vector3> smoothCenters)
     {
         // Compute total number of rings across the whole blade
         int totalRings = 0;
@@ -710,8 +714,6 @@ public class BladeGeneration : MonoBehaviour
         {
             bool isTipSegment = (i == segments.Count - 2);
             int currentSubdivisions = isTipSegment ? tipSubdivisions : segmentSubdivisions;
-
-            // Each segment contributes its subdivisions, except the last ring of non-tip segments
             totalRings += currentSubdivisions;
         }
 
@@ -726,7 +728,6 @@ public class BladeGeneration : MonoBehaviour
 
             bool isTipSegment = (i == segments.Count - 2);
             int currentSubdivisions = isTipSegment ? tipSubdivisions : segmentSubdivisions;
-
             bool isLastSegment = (i == segments.Count - 2);
 
             for (int j = 0; j <= currentSubdivisions; j++)
@@ -740,15 +741,10 @@ public class BladeGeneration : MonoBehaviour
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
-                //
-                // Correct bladeT calculation
-                //
                 float bladeT = ringIndex / (float)(totalRings - 1);
                 ringIndex++;
 
-                //
                 // Width scaling
-                //
                 Vector3 widthDir = (right - left).normalized;
                 float rawWidth = Vector3.Distance(left, right);
                 float halfWidth = rawWidth * 0.5f;
@@ -759,9 +755,16 @@ public class BladeGeneration : MonoBehaviour
                 left = center - widthDir * shapedHalfWidth;
                 right = center + widthDir * shapedHalfWidth;
 
-                //
-                // Curvature smoothing
-                //
+                // *** SPINE OFFSET: Move the center/spine independently ***
+                float spineOffset = splineGen.edgeSettings.spineOffset;
+                if (Mathf.Abs(spineOffset) > 0.001f)
+                {
+                    // -1 = spine at left edge, 0 = centered, 1 = spine at right edge
+                    float offsetT = (spineOffset + 1f) * 0.5f; // Convert -1..1 to 0..1
+                    center = Vector3.Lerp(left, right, offsetT);
+                }
+
+                // Curvature smoothing (now uses the offset center)
                 Vector3 leftOffset = left - center;
                 Vector3 rightOffset = right - center;
 
