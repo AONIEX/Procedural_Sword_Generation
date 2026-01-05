@@ -18,7 +18,7 @@ public class UIControl : MonoBehaviour
     public GameObject headerRowPrefab;
 
     public Transform uiParent;
-    public TMP_Dropdown sectionDropdown; // Dropdown to switch between sections
+    public TMP_Dropdown sectionDropdown;
 
     private bool buildingUI = false;
 
@@ -28,27 +28,23 @@ public class UIControl : MonoBehaviour
 
     private float lastGenerateTime = 0f;
     private bool pendingGenerate = false;
-    public List<BladePreset> presets;
 
-    // Store all sections and their UI elements
-    private Dictionary<string, List<GameObject>> sectionUIElements = new Dictionary<string, List<GameObject>>();
-    private string currentSection = "";
+    // Section -> SubSection -> UI elements
+    private Dictionary<string, Dictionary<string, List<GameObject>>> sectionUIElements
+        = new Dictionary<string, Dictionary<string, List<GameObject>>>();
 
     IEnumerator Start()
     {
         yield return null;
         yield return null;
-
         RefreshUI();
     }
 
     void Update()
     {
-        if (!pendingGenerate)
-            return;
+        if (!pendingGenerate) return;
 
         float interval = 1f / maxGenerateRate;
-
         if (Time.time - lastGenerateTime >= interval)
         {
             pendingGenerate = false;
@@ -57,17 +53,16 @@ public class UIControl : MonoBehaviour
         }
     }
 
+    // ====================== UI BUILD ======================
+
     public void RefreshUI()
     {
-        // Clear existing UI
         foreach (Transform child in uiParent)
             Destroy(child.gameObject);
 
         sectionUIElements.Clear();
-
         buildingUI = true;
 
-        // Generate all UI elements organized by section
         if (bladeGen != null)
             GenerateForObject(bladeGen);
 
@@ -76,18 +71,12 @@ public class UIControl : MonoBehaviour
 
         buildingUI = false;
 
-        // Setup section dropdown
         SetupSectionDropdown();
 
-        // Explicitly show General section after everything is set up
         if (sectionUIElements.ContainsKey("General"))
-        {
             ShowSection("General");
-        }
         else if (sectionUIElements.Count > 0)
-        {
             ShowSection(sectionUIElements.Keys.First());
-        }
     }
 
     void SetupSectionDropdown()
@@ -95,157 +84,151 @@ public class UIControl : MonoBehaviour
         if (sectionDropdown == null) return;
 
         sectionDropdown.ClearOptions();
+        var names = sectionUIElements.Keys
+            .OrderBy(s => s == "General" ? "" : s)
+            .ToList();
 
-        List<string> sectionNames = sectionUIElements.Keys.OrderBy(s => s == "General" ? "" : s).ToList();
-        sectionDropdown.AddOptions(sectionNames);
-
+        sectionDropdown.AddOptions(names);
         sectionDropdown.onValueChanged.RemoveAllListeners();
-        sectionDropdown.onValueChanged.AddListener(index =>
+
+        sectionDropdown.onValueChanged.AddListener(i =>
         {
-            if (index >= 0 && index < sectionNames.Count)
-            {
-                ShowSection(sectionNames[index]);
-            }
+            if (i >= 0 && i < names.Count)
+                ShowSection(names[i]);
         });
 
-        // Set to first section
-        if (sectionNames.Count > 0)
-        {
+        if (names.Count > 0)
             sectionDropdown.value = 0;
+    }
+
+  void ShowSection(string section)
+  {
+        // Hide everything first
+        foreach (var sec in sectionUIElements.Values)
+            foreach (var sub in sec.Values)
+                foreach (var go in sub)
+                    if (go != null) go.SetActive(false);
+
+        if (!sectionUIElements.ContainsKey(section))
+            return;
+
+        int siblingIndex = 0;
+
+        // IMPORTANT: deterministic subsection order
+        foreach (var subPair in sectionUIElements[section]
+            .OrderBy(s => s.Key)) // alphabetical, or customize
+        {
+            foreach (var go in subPair.Value)
+            {
+                if (go == null) continue;
+
+                go.SetActive(true);
+                go.transform.SetSiblingIndex(siblingIndex++);
+            }
         }
     }
 
-    void ShowSection(string sectionName)
-    {
-        currentSection = sectionName;
 
-        Debug.Log($"ShowSection called for: {sectionName}");
+    // ====================== CORE GENERATION ======================
 
-        // Hide all UI elements
-        foreach (var kvp in sectionUIElements)
-        {
-            foreach (var element in kvp.Value)
-            {
-                if (element != null)
-                    element.SetActive(false);
-            }
-        }
-
-        // Show only the selected section
-        if (sectionUIElements.ContainsKey(sectionName))
-        {
-            Debug.Log($"Found section {sectionName} with {sectionUIElements[sectionName].Count} elements");
-            foreach (var element in sectionUIElements[sectionName])
-            {
-                if (element != null)
-                {
-                    element.SetActive(true);
-                    Debug.Log($"Activated element: {element.name}");
-                }
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"Section {sectionName} not found in sectionUIElements!");
-        }
-    }
-
-    void GenerateForObject(object obj)
+    void GenerateForObject(
+        object obj,
+        string currentSection = "General",
+        string currentSubSection = "Basic"
+    )
     {
         if (obj == null) return;
 
-        FieldInfo[] fields = obj.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance);
+        var fields = obj.GetType()
+            .GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => f.GetCustomAttribute<HideInUIAttribute>() == null)
+            .Select(f =>
+            {
+                var a = f.GetCustomAttribute<DisplayNameAttribute>();
+                return (field: f, attr: a, order: a?.Order ?? 0);
+            })
+            .OrderBy(x => x.order)
+            .ToList();
 
-        var nonEnumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
-        var enumFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
-        var curveFields = new List<(FieldInfo field, DisplayNameAttribute attr, int order)>();
-
-        foreach (var field in fields)
-        {
-            if (field.GetCustomAttribute<HideInUIAttribute>() != null)
-                continue;
-
-            DisplayNameAttribute displayAttr = field.GetCustomAttribute<DisplayNameAttribute>();
-            int order = displayAttr?.Order ?? 0;
-
-            if (field.FieldType.IsEnum)
-                enumFields.Add((field, displayAttr, order));
-            else if (field.FieldType == typeof(AnimationCurve))
-                curveFields.Add((field, displayAttr, order));
-            else
-                nonEnumFields.Add((field, displayAttr, order));
-        }
-
-        nonEnumFields = nonEnumFields.OrderBy(x => x.order).ToList();
-        enumFields = enumFields.OrderBy(x => x.order).ToList();
-        curveFields = curveFields.OrderBy(x => x.order).ToList();
-
-        foreach (var (field, displayAttr, order) in nonEnumFields)
+        foreach (var (field, attr, _) in fields)
         {
             object value = field.GetValue(obj);
-            string section = displayAttr?.Section ?? "General";
-            string labelName = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
 
-            // FLOAT / INT
+            string section = attr?.Section ?? currentSection;
+            string subSection = attr?.SubSection ?? currentSubSection;
+            string label = attr?.DisplayName ?? PrettyFieldName(field.Name);
+
+            // ---------- RANGE ----------
             RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
             if (range != null &&
                 (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
             {
-                GameObject slider = CreateSlider(obj, field, labelName, range);
-                AddToSection(section, slider);
+                EnsureSubSectionExists(section, subSection);
+                AddToSection(section, subSection,
+                    CreateSlider(obj, field, label, range));
                 continue;
             }
 
-            // VECTOR2
+            // ---------- VECTOR2 ----------
             if (field.FieldType == typeof(Vector2))
             {
-                CreateVector2Sliders(obj, field, labelName, section);
+                EnsureSubSectionExists(section, subSection);
+                CreateVector2Sliders(obj, field, label, section, subSection);
                 continue;
             }
 
-            // BOOL
+            // ---------- BOOL ----------
             if (field.FieldType == typeof(bool))
             {
-                GameObject toggle = CreateToggle(obj, field, labelName);
-                AddToSection(section, toggle);
+                EnsureSubSectionExists(section, subSection);
+                AddToSection(section, subSection,
+                    CreateToggle(obj, field, label));
                 continue;
             }
 
-            // LIST OF CLASSES → expand each element
+            // ---------- ENUM ----------
+            if (field.FieldType.IsEnum)
+            {
+                EnsureSubSectionExists(section, subSection);
+                AddToSection(section, subSection,
+                    CreateEnumDropdown(obj, field, label));
+                continue;
+            }
+
+            // ---------- CURVE ----------
+            if (field.FieldType == typeof(AnimationCurve))
+            {
+                EnsureSubSectionExists(section, subSection);
+                AddToSection(section, subSection,
+                    CreateCurveEditor(obj, field, label));
+                continue;
+            }
+
+            // ---------- LIST ----------
             if (field.FieldType.IsGenericType &&
                 field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
             {
-                Type elementType = field.FieldType.GetGenericArguments()[0];
+                IList list = (IList)value;
+                if (list == null) continue;
 
-                if (elementType.IsClass && elementType != typeof(string))
+                EnsureSubSectionExists(section, subSection);
+
+                for (int i = 0; i < list.Count; i++)
                 {
-                    IList list = (IList)field.GetValue(obj);
+                    GameObject listHeader =
+                        CreateHeaderRow($"{label} {i + 1}");
 
-                    string sectionName = displayAttr?.Section ?? "General";
-                    string listTitle = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
+                    AddToSection(section, subSection, listHeader);
 
-
-                    // Generate UI for each element
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        object element = list[i];
-
-                        // ✔ Create only the per‑element header
-                        GameObject layerHeader = CreateHeaderRow($"{listTitle} {i + 1}");
-                        AddToSection(sectionName, layerHeader);
-
-                        // ✔ Generate UI for the element
-                        GenerateForObject(element);
-                    }
-
-                    continue;
+                    GenerateForObject(list[i], section, subSection);
                 }
+                continue;
             }
-            // NESTED CLASS (must come AFTER list)
+
+            // ---------- NESTED CLASS ----------
             if (field.FieldType.IsClass &&
-              field.FieldType != typeof(string) &&
-              !field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) &&
-              !field.FieldType.IsGenericType)   // ← prevents recursion into List<T>
+                field.FieldType != typeof(string) &&
+                !field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)))
             {
                 if (value == null)
                 {
@@ -253,213 +236,73 @@ public class UIControl : MonoBehaviour
                     field.SetValue(obj, value);
                 }
 
-                GenerateForObject(value);
-                continue;
+                GenerateForObject(value, section, subSection);
             }
-        }
-
-        // ENUMS
-        foreach (var (field, displayAttr, order) in enumFields)
-        {
-            string section = displayAttr?.Section ?? "General";
-            string labelName = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
-
-            GameObject dropdown = CreateEnumDropdown(obj, field, labelName);
-            AddToSection(section, dropdown);
-        }
-
-        // CURVES
-        foreach (var (field, displayAttr, order) in curveFields)
-        {
-            string section = displayAttr?.Section ?? "General";
-            string labelName = displayAttr?.DisplayName ?? PrettyFieldName(field.Name);
-
-            GameObject curveEditor = CreateCurveEditor(obj, field, labelName);
-            AddToSection(section, curveEditor);
         }
     }
 
-    void AddToSection(string sectionName, GameObject uiElement)
+    // ====================== SECTION MANAGEMENT ======================
+
+    void EnsureSubSectionExists(string section, string subSection)
     {
-        if (!sectionUIElements.ContainsKey(sectionName))
+        if (!sectionUIElements.ContainsKey(section))
+            sectionUIElements[section] = new Dictionary<string, List<GameObject>>();
+
+        var subs = sectionUIElements[section];
+
+        if (!subs.ContainsKey(subSection))
         {
-            sectionUIElements[sectionName] = new List<GameObject>();
+            subs[subSection] = new List<GameObject>();
+
+            GameObject header = CreateHeaderRow(subSection);
+            header.SetActive(false);
+            subs[subSection].Add(header);
         }
-
-        sectionUIElements[sectionName].Add(uiElement);
-
-        // Hide by default - will be shown when section is selected
-        uiElement.SetActive(false);
     }
 
-    GameObject CreateEnumDropdown(object obj, FieldInfo field, string labelName)
+    void AddToSection(string section, string subSection, GameObject element)
     {
-        GameObject row = Instantiate(dropdownRowPrefab, uiParent);
+        element.SetActive(false);
+        sectionUIElements[section][subSection].Add(element);
+    }
 
-        TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>();
-
-        TMP_Text titleText = null;
-        TMP_Text valueLabel = null;
-
-        foreach (var t in texts)
-        {
-            if (t.gameObject.name.ToLower().Contains("title"))
-                titleText = t;
-            else
-                valueLabel = t;
-        }
-
-        if (titleText == null)
-            titleText = texts.Length > 0 ? texts[0] : row.AddComponent<TextMeshProUGUI>();
-
-        if (valueLabel == null)
-            valueLabel = texts.Length > 1 ? texts[1] : row.AddComponent<TextMeshProUGUI>();
-
-        titleText.text = labelName;
-
-        TMP_Dropdown dropdown = row.GetComponentInChildren<TMP_Dropdown>();
-        dropdown.ClearOptions();
-        dropdown.AddOptions(new List<string>(Enum.GetNames(field.FieldType)));
-
-        object currentValue = field.GetValue(obj);
-        int index = Array.IndexOf(Enum.GetValues(field.FieldType), currentValue);
-        dropdown.value = index;
-
-        dropdown.onValueChanged.AddListener(i =>
-        {
-            Array values = Enum.GetValues(field.FieldType);
-            object newValue = values.GetValue(i);
-            field.SetValue(obj, newValue);
-
-            if (field.Name == "bladePreset")
-            {
-                if (bladeGen != null && bladeGen.splineGen != null)
-                {
-                    bladeGen.splineGen.bladePreset = (BladePresets)newValue;
-                    bladeGen.splineGen.LoadPreset();
-                    RefreshUI();
-                }
-                return;
-            }
-
-            if (!buildingUI)
-                RequestGenerate();
-        });
-
+    GameObject CreateHeaderRow(string label)
+    {
+        GameObject row = Instantiate(headerRowPrefab, uiParent);
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
+        if (text != null) text.text = label;
         return row;
     }
 
-    GameObject CreateSlider(object obj, FieldInfo field, string labelName, RangeAttribute range)
+    // ====================== UI ELEMENTS ======================
+
+    GameObject CreateSlider(object obj, FieldInfo field, string label, RangeAttribute range)
     {
         GameObject row = Instantiate(sliderRowPrefab, uiParent);
-
-        TMP_Text labelTMP = row.GetComponentInChildren<TMP_Text>();
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
         Slider slider = row.GetComponentInChildren<Slider>();
 
-        float startValue =
-            field.FieldType == typeof(int)
-                ? (int)field.GetValue(obj)
-                : (float)field.GetValue(obj);
-
+        float value = Convert.ToSingle(field.GetValue(obj));
         slider.minValue = range.min;
         slider.maxValue = range.max;
         slider.wholeNumbers = field.FieldType == typeof(int);
-        slider.value = startValue;
+        slider.value = value;
 
-        UpdateLabel(labelTMP, labelName, startValue, field.FieldType == typeof(int));
+        UpdateLabel(text, label, value, slider.wholeNumbers);
 
-        slider.onValueChanged.AddListener(value =>
+        slider.onValueChanged.AddListener(v =>
         {
             if (field.FieldType == typeof(int))
-                field.SetValue(obj, Mathf.RoundToInt(value));
+            {
+                int iv = Mathf.RoundToInt(v);
+                field.SetValue(obj, iv);
+                UpdateLabel(text, label, iv, true);
+            }
             else
-                field.SetValue(obj, value);
-
-            if (!buildingUI)
-                RequestGenerate();
-
-            UpdateLabel(labelTMP, labelName, value, field.FieldType == typeof(int));
-        });
-
-        return row;
-    }
-
-    void CreateVector2Sliders(object obj, FieldInfo field, string labelName, string section)
-    {
-        Vector2 currentValue = (Vector2)field.GetValue(obj);
-
-        // Get Vector2Range attribute if it exists, otherwise use defaults
-        Vector2RangeAttribute v2Range = field.GetCustomAttribute<Vector2RangeAttribute>();
-        float minX = v2Range?.MinX ?? 0f;
-        float maxX = v2Range?.MaxX ?? 2f;
-        float minY = v2Range?.MinY ?? 0f;
-        float maxY = v2Range?.MaxY ?? 2f;
-
-        // Create X slider (Min)
-        GameObject xRow = Instantiate(sliderRowPrefab, uiParent);
-        TMP_Text xLabel = xRow.GetComponentInChildren<TMP_Text>();
-        Slider xSlider = xRow.GetComponentInChildren<Slider>();
-
-        xSlider.minValue = minX;
-        xSlider.maxValue = maxX;
-        xSlider.value = currentValue.x;
-        UpdateLabel(xLabel, $"{labelName} (Min)", currentValue.x, false);
-
-        xSlider.onValueChanged.AddListener(value =>
-        {
-            Vector2 vec = (Vector2)field.GetValue(obj);
-            vec.x = value;
-            field.SetValue(obj, vec);
-
-            if (!buildingUI)
-                RequestGenerate();
-
-            UpdateLabel(xLabel, $"{labelName} (Min)", value, false);
-        });
-
-        AddToSection(section, xRow);
-
-        // Create Y slider (Max)
-        GameObject yRow = Instantiate(sliderRowPrefab, uiParent);
-        TMP_Text yLabel = yRow.GetComponentInChildren<TMP_Text>();
-        Slider ySlider = yRow.GetComponentInChildren<Slider>();
-
-        ySlider.minValue = minY;
-        ySlider.maxValue = maxY;
-        ySlider.value = currentValue.y;
-        UpdateLabel(yLabel, $"{labelName} (Max)", currentValue.y, false);
-
-        ySlider.onValueChanged.AddListener(value =>
-        {
-            Vector2 vec = (Vector2)field.GetValue(obj);
-            vec.y = value;
-            field.SetValue(obj, vec);
-
-            if (!buildingUI)
-                RequestGenerate();
-
-            UpdateLabel(yLabel, $"{labelName} (Max)", value, false);
-        });
-
-        AddToSection(section, yRow);
-    }
-
-    GameObject CreateToggle(object obj, FieldInfo field, string labelName)
-    {
-        GameObject row = Instantiate(toggleRowPrefab, uiParent);
-
-        TMP_Text label = row.GetComponentInChildren<TMP_Text>();
-        Toggle toggle = row.GetComponentInChildren<Toggle>();
-
-        if (label != null)
-            label.text = labelName;
-
-        bool currentValue = (bool)field.GetValue(obj);
-        toggle.isOn = currentValue;
-
-        toggle.onValueChanged.AddListener(value =>
-        {
-            field.SetValue(obj, value);
+            {
+                field.SetValue(obj, v);
+                UpdateLabel(text, label, v, false);
+            }
 
             if (!buildingUI)
                 RequestGenerate();
@@ -468,83 +311,138 @@ public class UIControl : MonoBehaviour
         return row;
     }
 
-    GameObject CreateCurveEditor(object obj, FieldInfo field, string labelName)
+    void CreateVector2Sliders(object obj, FieldInfo field, string label,
+                          string section, string subSection)
     {
-        GameObject row = Instantiate(curveEditorPrefab, uiParent);
+        Vector2 v = (Vector2)field.GetValue(obj);
 
-        RuntimeCurveEditor editor = row.GetComponent<RuntimeCurveEditor>();
-        if (editor == null)
-            editor = row.AddComponent<RuntimeCurveEditor>();
+        // ⭐ Get the attribute
+        Vector2RangeAttribute range = field.GetCustomAttribute<Vector2RangeAttribute>();
 
-        AnimationCurve currentCurve = (AnimationCurve)field.GetValue(obj);
-        if (currentCurve == null)
+        GameObject minRow = Instantiate(sliderRowPrefab, uiParent);
+        GameObject maxRow = Instantiate(sliderRowPrefab, uiParent);
+
+        Slider minSlider = minRow.GetComponentInChildren<Slider>();
+        Slider maxSlider = maxRow.GetComponentInChildren<Slider>();
+
+        TMP_Text minText = minRow.GetComponentInChildren<TMP_Text>();
+        TMP_Text maxText = maxRow.GetComponentInChildren<TMP_Text>();
+
+        // ⭐ Apply attribute min/max to sliders
+        if (range != null)
         {
-            currentCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-            field.SetValue(obj, currentCurve);
+            minSlider.minValue = range.MinX;
+            minSlider.maxValue = range.MaxX;
+
+            maxSlider.minValue = range.MinY;
+            maxSlider.maxValue = range.MaxY;
         }
 
-        editor.Initialize(currentCurve, labelName);
+        // Set initial values
+        minSlider.value = v.x;
+        maxSlider.value = v.y;
 
-        editor.onCurveChanged = (newCurve) =>
+        UpdateLabel(minText, $"{label} Min", v.x, false);
+        UpdateLabel(maxText, $"{label} Max", v.y, false);
+
+        // Min slider logic
+        minSlider.onValueChanged.AddListener(val =>
         {
-            field.SetValue(obj, newCurve);
+            Vector2 nv = (Vector2)field.GetValue(obj);
+            nv.x = val;
+            field.SetValue(obj, nv);
+            UpdateLabel(minText, $"{label} Min", val, false);
+            if (!buildingUI) RequestGenerate();
+        });
 
-            if (!buildingUI)
-                RequestGenerate();
+        // Max slider logic
+        maxSlider.onValueChanged.AddListener(val =>
+        {
+            Vector2 nv = (Vector2)field.GetValue(obj);
+            nv.y = val;
+            field.SetValue(obj, nv);
+            UpdateLabel(maxText, $"{label} Max", val, false);
+            if (!buildingUI) RequestGenerate();
+        });
+
+        AddToSection(section, subSection, minRow);
+        AddToSection(section, subSection, maxRow);
+    }
+    GameObject CreateToggle(object obj, FieldInfo field, string label)
+    {
+        GameObject row = Instantiate(toggleRowPrefab, uiParent);
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
+        Toggle toggle = row.GetComponentInChildren<Toggle>();
+
+        if (text != null) text.text = label;
+        toggle.isOn = (bool)field.GetValue(obj);
+
+        toggle.onValueChanged.AddListener(v =>
+        {
+            field.SetValue(obj, v);
+            if (!buildingUI) RequestGenerate();
+        });
+
+        return row;
+    }
+
+    GameObject CreateEnumDropdown(object obj, FieldInfo field, string label)
+    {
+        GameObject row = Instantiate(dropdownRowPrefab, uiParent);
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
+        TMP_Dropdown dd = row.GetComponentInChildren<TMP_Dropdown>();
+
+        if (text != null) text.text = label;
+
+        dd.ClearOptions();
+        dd.AddOptions(Enum.GetNames(field.FieldType).ToList());
+        dd.value = Array.IndexOf(Enum.GetValues(field.FieldType), field.GetValue(obj));
+
+        dd.onValueChanged.AddListener(i =>
+        {
+            field.SetValue(obj, Enum.GetValues(field.FieldType).GetValue(i));
+            if (!buildingUI) RequestGenerate();
+        });
+
+        return row;
+    }
+
+    GameObject CreateCurveEditor(object obj, FieldInfo field, string label)
+    {
+        GameObject row = Instantiate(curveEditorPrefab, uiParent);
+        RuntimeCurveEditor editor = row.GetComponent<RuntimeCurveEditor>();
+
+        AnimationCurve curve = (AnimationCurve)field.GetValue(obj)
+            ?? AnimationCurve.Linear(0, 0, 1, 1);
+
+        editor.Initialize(curve, label);
+        editor.onCurveChanged = c =>
+        {
+            field.SetValue(obj, c);
+            if (!buildingUI) RequestGenerate();
         };
 
         return row;
     }
 
-    void UpdateLabel(TMP_Text labelTMP, string fieldName, float value, bool isInt)
-    {
-        string text = isInt
-            ? $"{fieldName}: {Mathf.RoundToInt(value)}"
-            : $"{fieldName}: {value:F3}";
+    // ====================== UTILS ======================
 
-        labelTMP.text = text;
+    void UpdateLabel(TMP_Text t, string name, float v, bool isInt)
+    {
+        if (t == null) return;
+        t.text = isInt ? $"{name}: {(int)v}" : $"{name}: {v:F3}";
     }
 
     string PrettyFieldName(string raw)
     {
-        string withSpaces = raw.Replace("_", " ");
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        for (int i = 0; i < withSpaces.Length; i++)
-        {
-            char c = withSpaces[i];
-            if (i > 0 && char.IsUpper(c) && withSpaces[i - 1] != ' ')
-                sb.Append(' ');
-            sb.Append(c);
-        }
-
-        return sb.ToString();
+        return System.Text.RegularExpressions.Regex
+            .Replace(raw, "(\\B[A-Z])", " $1");
     }
 
-    public void GenerateBlade()
-    {
-        bladeGen.Generate();
-    }
-
-    public void ToggleAutoGenerate(bool state)
-    {
-        autoGenerate = state;
-    }
+    public void GenerateBlade() => bladeGen.Generate();
 
     void RequestGenerate()
     {
-        if (!autoGenerate)
-            return;
-
-        pendingGenerate = true;
+        if (autoGenerate) pendingGenerate = true;
     }
-    GameObject CreateHeaderRow(string label)
-    {
-        GameObject row = Instantiate(headerRowPrefab, uiParent);
-        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
-        text.text = label;
-        return row;
-    }
-
-
 }

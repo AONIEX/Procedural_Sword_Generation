@@ -4,19 +4,19 @@ using UnityEngine;
 [System.Serializable]
 public class BladeProfileLayer
 {
-    [DisplayName("Cross Section Type", "Blade Profile", 2)]
+    [DisplayName("Cross Section Type", "Blade Profile", 2, "")]
     public BladeBaseProfile profile;
 
-    [Range(0, 1f), DisplayName("Start Height", "Blade Profile", 2)]
+    [Range(0, 1f), DisplayName("Start Height", "Blade Profile", 2, "")]
     public float startHeight;
 
-    [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2)]
+    [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2, "")]
     public float endHeight;
 
-    [DisplayName("Transition Curve", "Blade Profile", 2)]
+    [DisplayName("Transition Curve", "Blade Profile", 2, "")]
     public AnimationCurve influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-    [Range(0, 2), DisplayName("Profile Scale", "Blade Profile", 2)]
+    [Range(0, 2), DisplayName("Profile Scale", "Blade Profile", 2, "")]
     public float scale = 1;
 }
 
@@ -25,7 +25,7 @@ public class BladeGeneration : MonoBehaviour
     public SplineAndLineGen splineGen;
 
     [Header("Blade Base Profiles")]
-    [DisplayName("Cross section ", "Blade Profile", 2)]
+    [DisplayName("Cross section ", "Blade Profile", 2, "Cross Sections")]
     public List<BladeProfileLayer> baseProfiles = new List<BladeProfileLayer>()
     {
         new BladeProfileLayer
@@ -37,18 +37,17 @@ public class BladeGeneration : MonoBehaviour
     };
 
     [Range(0.1f, 3f)]
-    [DisplayName("Profile Blend Strenght", "Blade Profile", 3)]
+    [DisplayName("Profile Blend Strenght", "Blade Profile", 3, "Blending")]
     public float profileOverlapBlendAmount = 0.5f;
 
     [Header("Mesh Quality")]
-    [DisplayName("Mesh Quality", "General", 3)]
+    [DisplayName("Mesh Quality", "General", 3, "Quality")]
     public MeshQuality meshQuality = MeshQuality.Medium;
 
     private int segmentSubdivisions = 3;
     private int tipSubdivisions = 5;
     private int widthSubdivisions = 5;
 
-    //[Range(1, 10), DisplayName("Curvature Window", "Curvature & Flow", 5)]
     private const int curvatureWindow = 5;
     private const float curvatureBlend = 0.5f;
     private const int smoothWindow = 5;
@@ -61,53 +60,53 @@ public class BladeGeneration : MonoBehaviour
     public GameObject handle;
     public GameObject holder;
 
-    [Range(-2, 2), DisplayName("Handle X Position", "General", 2)]
+    [Range(-2, 2), DisplayName("Handle X Position", "General", 2, "Position")]
     public float HandleXPosition;
 
-    [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7)]
+    [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7, "Width")]
     public float bladeThickness = 0.1f;
 
-    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0)]
+    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0, "Edge")]
     public float edgeSharpness = 0.05f;
 
-    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Edge & Spine", 2)]
+    [Range(0.001f, 0.1f), DisplayName("Spine Thickness", "Edge & Spine", 2, "Spine")]
     public float spineThickness = 0.005f;
 
-    [DisplayName("Blade Material", "Rendering", 0)]
+    [DisplayName("Blade Material", "Rendering", 0, "Materials")]
     public Material bladeMaterial;
 
-    [DisplayName("Sharp Edge Material", "Rendering", 1)]
+    [DisplayName("Sharp Edge Material", "Rendering", 1, "Materials")]
     public Material sharpEdgeMaterial;
 
     [System.Serializable]
     public class FullerSettings
     {
-        [Range(0f, 1f), DisplayName("Fuller Start", "Fullers", 10)]
+        [Range(0f, 1f), DisplayName("Fuller Start", "Fullers", 10, "Position")]
         public float start = 0.1f;
 
-        [Range(0f, 1f), DisplayName("Fuller End", "Fullers", 11)]
+        [Range(0f, 1f), DisplayName("Fuller End", "Fullers", 11, "Position")]
         public float end = 0.8f;
 
-        [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fullers", 12)]
+        [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fullers", 12, "Shape")]
         public float fullerDepth = 0.3f;
 
-        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fullers", 13)]
+        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fullers", 13, "Shape")]
         public float fullerWidth = 0.3f;
 
-        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fullers", 14)]
+        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fullers", 14, "Position")]
         public float fullerCenter = 0.5f;
 
-        [DisplayName("Fuller Falloff", "Fullers", 15)]
+        [DisplayName("Fuller Falloff", "Fullers", 15, "Shape")]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
-        [Range(0, 7), DisplayName("Number of Fullers", "Fullers", 16)]
+        [Range(0, 7), DisplayName("Number of Fullers", "Fullers", 16, "Count")]
         public int numberOfFullers = 1;
 
-        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fullers", 17)]
+        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fullers", 17, "Count")]
         public float spacingMultiplier = 1.2f;
     }
 
-    [DisplayName("Fuller Settings", "Fullers", 20)]
+    [DisplayName("Fuller Settings", "Fullers", 20, "General")]
     public FullerSettings fuller;
 
     public enum SharpSide
@@ -117,7 +116,7 @@ public class BladeGeneration : MonoBehaviour
         Both
     }
 
-    [DisplayName("Sharp Edge", "Edge & Spine", 6)]
+    [DisplayName("Sharp Edge", "Edge & Spine", 6, "Edge")]
     public SharpSide sharpSide = SharpSide.Both;
 
     void Start()

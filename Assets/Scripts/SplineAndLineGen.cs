@@ -83,15 +83,15 @@ public enum BladePresets
 public class TipSettings
 {
     [Tooltip("Controls if and how blade tip leans.")]
-    [DisplayName("Tip Lean Mode", "Blade Tip", 0)]
+    [DisplayName("Tip Lean Mode", "Blade Tip", 0, "Mode")]
     public TipLeanMode tipLeanMode = TipLeanMode.Centered;
 
     [Tooltip("Defines the offset for the tip of the blade")]
-    [Range(-2, 1), DisplayName("Height Offset", "Blade Tip", 2)]
+    [Range(-2, 1), DisplayName("Height Offset", "Blade Tip", 2, "Offset")]
     public float heightOffset = 0f;
 
     [Tooltip("Curve allows user to control the tip leaning strength")]
-    [DisplayName("Tip Lean Strength Curve", "Blade Tip", 3)]
+    [DisplayName("Tip Lean Strength Curve", "Blade Tip", 3, "Curve")]
     public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     public void CopyFrom(TipSettings other)
@@ -109,29 +109,29 @@ public class TipSettings
 public class CoreSettings
 {
     [Tooltip("Defines the amount of segments wanted")]
-    [Range(3, 20), DisplayName("Spline Point Count", "Blade Geometry", 0)]
+    [Range(3, 20), DisplayName("Spline Point Count", "Blade Geometry", 0, "Segments")]
     public int splinePointCount = 5;
 
     [Tooltip("Defines spacing between blade segments")]
-    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Geometry", 1)]
+    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Geometry", 1, "Spacing")]
     public float heightSpacing = 0.5f;
 
-    [DisplayName("Height Spacing Mode", "Blade Geometry", 2)]
+    [DisplayName("Height Spacing Mode", "Blade Geometry", 2, "Spacing")]
     public HeightSpacingMode heightSpacingMode = HeightSpacingMode.Fixed;
 
-    [Range(0.5f, 10f), DisplayName("Total Blade Height", "Blade Geometry", 3)]
+    [Range(0.5f, 10f), DisplayName("Total Blade Height", "Blade Geometry", 3, "Spacing")]
     public float totalBladeHeight = 3;
 
     [Vector2Range(0.1f, 1f)]
-    [DisplayName("Height Spacing Range", "Blade Geometry", 4)]
+    [DisplayName("Height Spacing Range", "Blade Geometry", 4, "Spacing")]
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
 
     [Vector2Range(0.2f, 1f)]
-    [DisplayName("Blade Width Range", "Blade Geometry", 5)]
+    [DisplayName("Blade Width Range", "Blade Geometry", 5, "Width")]
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
 
     [Vector2Range(-45f, 45f)]
-    [DisplayName("Segment Angle Range", "Curvature & Flow", 6)]
+    [DisplayName("Segment Angle Range", "Curvature & Flow", 6, "Angles")]
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     public void CopyFrom(CoreSettings other)
@@ -150,20 +150,20 @@ public class CoreSettings
 [System.Serializable]
 public class WidthSettings
 {
-    [DisplayName("Use Random Width Curve", "Blade Geometry", 0)]
+    [DisplayName("Use Random Width Curve", "Blade Geometry", 0, "Width")]
     public bool useRandomWidthCurve = true;
 
-    [DisplayName("User Defined Curve", "Blade Geometry", 1)]
+    [DisplayName("User Defined Curve", "Blade Geometry", 1, "Width")]
     public AnimationCurve userDefinedCurve;
 
     [HideInUI]
-    [DisplayName("Width Bias Curve", "Blade Geometry", 2)]
+    [DisplayName("Width Bias Curve", "Blade Geometry", 2, "Width")]
     public AnimationCurve randomWidthBiasCurve;
 
-    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Geometry", 3)]
+    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Geometry", 3, "Noise")]
     public float noiseInfluence = 1;
 
-    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Geometry", 4)]
+    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Geometry", 4, "Noise")]
     public float noiseFrequency = 0.123f;
 
     public void CopyFrom(WidthSettings other)
@@ -186,25 +186,25 @@ public class WidthSettings
 [System.Serializable]
 public class CurvatureSettings
 {
-    [Range(0, 5), DisplayName("Straight Segment Threshold", "Curvature & Flow", 0)]
+    [Range(0, 5), DisplayName("Straight Segment Threshold", "Curvature & Flow", 0, "Threshold")]
     public int straightSegmentThreshold = 0;
 
-    [DisplayName("Curvature Mode", "Curvature & Flow", 1)]
+    [DisplayName("Curvature Mode", "Curvature & Flow", 1, "Mode")]
     public CurvatureMode curvatureMode = CurvatureMode.None;
 
-    [Range(0, 2), DisplayName("Max Curvature", "Curvature & Flow", 2)]
+    [Range(0, 2), DisplayName("Max Curvature", "Curvature & Flow", 2, "Curvature")]
     public float curvature_Max;
 
-    [Range(0, 1), DisplayName("Peak Factor", "Curvature & Flow", 3)]
+    [Range(0, 1), DisplayName("Peak Factor", "Curvature & Flow", 3, "Curvature")]
     public float curvature_PeakFactor = 0.3f;
 
-    [Range(0, .2f), DisplayName("Step Size", "Curvature & Flow", 4)]
+    [Range(0, .2f), DisplayName("Step Size", "Curvature & Flow", 4, "Curvature")]
     public float curvature_StepSize = 0.3f;
 
-    [DisplayName("Curvature Shape", "Curvature & Flow", 5)]
+    [DisplayName("Curvature Shape", "Curvature & Flow", 5, "Shape")]
     public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1);
 
-    [DisplayName("Curvature Direction", "Curvature & Flow", 6)]
+    [DisplayName("Curvature Direction", "Curvature & Flow", 6, "Direction")]
     public Vector3 curvatureDirection = new Vector3(1, 0, 0);
 
     public void CopyFrom(CurvatureSettings other)
@@ -227,13 +227,13 @@ public class CurvatureSettings
 [System.Serializable]
 public class EdgeSettings
 {
-    [DisplayName("Edge Collapse Mode", "Edge & Spine", 0)]
+    [DisplayName("Edge Collapse Mode", "Edge & Spine", 0, "Collapse")]
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
 
-    [DisplayName("Collapse Pattern", "Edge & Spine", 1)]
+    [DisplayName("Collapse Pattern", "Edge & Spine", 1, "Collapse")]
     public string collapsePattern = "LRL";
 
-    [Range(-1f, 1f), DisplayName("Spine Offset", "Edge & Spine", 2)]
+    [Range(-1f, 1f), DisplayName("Spine Offset", "Edge & Spine", 2, "Spine")]
     public float spineOffset = 0f;
 
     public void CopyFrom(EdgeSettings other)
@@ -250,11 +250,11 @@ public class SplineAndLineGen : MonoBehaviour
     [Header("Blade Preset")]
     public string presetName;
 
-    [DisplayName("Sword Preset", "General", 2)]
+    [DisplayName("Sword Preset", "General", 2, "Presets")]
     public BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
-    [DisplayName("Use Symmetry", "Curvature & Flow", 11)]
+    [DisplayName("Don't Use Angles", "Curvature & Flow", 11, "Angles")]
     public bool useSymmetry;
 
     [Header("Core Controls")]
@@ -280,7 +280,6 @@ public class SplineAndLineGen : MonoBehaviour
     [HideInUI]
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
-
 
 void Start()
     {
@@ -397,9 +396,20 @@ void Start()
             float raw = Random.value;
             float biased = Mathf.Pow(raw, 2f);
             float mid = 0f;
-            float range = useSymmetry ? 0f : Mathf.Max(Mathf.Abs(coreSettings.minAndMaxAngle.x), Mathf.Abs(coreSettings.minAndMaxAngle.y));
-            float angle = i == 0 ? 0f : Mathf.Lerp(mid - range, mid + range, biased);
+            float minAngle = coreSettings.minAndMaxAngle.x;
+            float maxAngle = coreSettings.minAndMaxAngle.y;
 
+            float angle;
+
+            if (i == 0 || useSymmetry)
+            {
+                angle = 0f;
+            }
+            else
+            {
+                // true asymmetric range
+                angle = Mathf.Lerp(minAngle, maxAngle, biased);
+            }
             Vector3 dir = Quaternion.Euler(0, 0, angle) * Vector3.right;
             Vector3 left = pos - dir * width * 0.5f;
             Vector3 right = pos + dir * width * 0.5f;
