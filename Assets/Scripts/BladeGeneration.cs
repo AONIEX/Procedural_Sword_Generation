@@ -78,9 +78,20 @@ public class BladeGeneration : MonoBehaviour
     [DisplayName("Sharp Edge Material", "Rendering", 1, "Materials")]
     public Material sharpEdgeMaterial;
 
+
+    public enum FullerType
+    {
+        Basic,
+        Hollow
+    }
+
     [System.Serializable]
     public class FullerSettings
     {
+
+        [DisplayName("Fuller Type", "Fullers", 9, "General")]
+        public FullerType fullerType = FullerType.Basic;
+
         [Range(0f, 1f), DisplayName("Fuller Start", "Fullers", 10, "Position")]
         public float start = 0.1f;
 
@@ -109,29 +120,7 @@ public class BladeGeneration : MonoBehaviour
     [DisplayName("Fuller Settings", "Fullers", 20, "General")]
     public FullerSettings fuller;
 
-    [System.Serializable]
-    public class HoleSettings
-    {
-        [Range(0f, 1f)]
-        public float lengthPosition = 0.5f;
-
-        [Range(0f, 1f)]
-        public float widthPosition = 0.5f;
-
-        [Range(0.001f, 0.2f)]
-        public float radius = 0.03f;
-
-        [Range(0.001f, 0.05f)]
-        public float bevelDepth = 0.01f; // How far inward the bevel goes
-
-        public bool enabled = false;
-    }
-
-    [Header("Blade Hole")]
-    public HoleSettings hole;
-    private float[,] holeMask; // 0 = solid, 1 = fully hole
-
-
+    private float[,] holeMask;
 
     public enum SharpSide
     {
@@ -210,7 +199,6 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> smoothCenters = new List<Vector3>();
         GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters);
 
-        BuildHoleMask(smoothLefts.Count);
 
         // 1. Front face
         int frontVertexCount;
@@ -264,21 +252,21 @@ public class BladeGeneration : MonoBehaviour
             ringCount
         );
 
-        ApplyFullers(
-             vertices,
-             smoothLefts,
-             smoothRights,
-             smoothCenters,
-             bladeNormal,
-             frontVertexCount
-        );
-
-        // NEW: Generate hole geometry after everything else
-        if (hole.enabled)
+        if (fuller.fullerType == FullerType.Hollow)
         {
-            GenerateHoleGeometry(
+            ApplyHollowFuller(
                 vertices,
                 trianglesFrontBack,
+                frontVertexCount,
+                smoothCenters,
+                smoothLefts,
+                smoothRights
+            );
+        }
+        else
+        {
+            ApplyFullers(
+                vertices,
                 smoothLefts,
                 smoothRights,
                 smoothCenters,
@@ -286,6 +274,9 @@ public class BladeGeneration : MonoBehaviour
                 frontVertexCount
             );
         }
+
+
+
 
         // 5. Final mesh
         mesh3D.SetVertices(vertices);
@@ -306,6 +297,7 @@ public class BladeGeneration : MonoBehaviour
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
     }
+
 
     private void ApplyFullers(
         List<Vector3> vertices,
@@ -578,10 +570,9 @@ public class BladeGeneration : MonoBehaviour
                 // Apply tip fade
                 float halfThickness = shaped * profileTipFade;
 
-                float holeBlend = holeMask[ring, v]; // 0..1
 
-                vertices[frontIndex] += bladeNormal * halfThickness * (1f - holeBlend);
-                vertices.Add(vertices[frontIndex] - bladeNormal * (halfThickness * 2f * (1f - holeBlend)));
+                vertices[frontIndex] += bladeNormal * halfThickness;
+                vertices.Add(vertices[frontIndex] - bladeNormal * (halfThickness * 2f));
 
             }
         }
@@ -600,10 +591,10 @@ public class BladeGeneration : MonoBehaviour
             int vB = b % widthSubdivisions;
             int vC = c % widthSubdivisions;
 
-            if (holeMask[ringA, vA] > 0.5f &&
-                holeMask[ringB, vB] > 0.5f &&
-                holeMask[ringC, vC] > 0.5f)
-                continue;
+            //if (holeMask[ringA, vA] > 0.5f &&
+            //    holeMask[ringB, vB] > 0.5f &&
+            //    holeMask[ringC, vC] > 0.5f)
+            //    continue;
 
             trianglesFrontBack.Add(c + frontVertexCount);
             trianglesFrontBack.Add(b + frontVertexCount);
@@ -932,13 +923,13 @@ public class BladeGeneration : MonoBehaviour
                 float t = s / (float)(widthSubdivisions - 1);
                 Vector3 point = Vector3.Lerp(left, right, t);
 
-                if (holeMask[i, s] > 0.5f && IsHoleBoundary(i, s))
-                {
-                    point = ProjectVertexToHoleEdge(
-                        i, s, ringCount, point,
-                        smoothCenters, smoothLefts, smoothRights
-                    );
-                }
+                //if (holeMask[i, s] > 0.5f && IsHoleBoundary(i, s))
+                //{
+                //    point = ProjectVertexToHoleEdge(
+                //        i, s, ringCount, point,
+                //        smoothCenters, smoothLefts, smoothRights
+                //    );
+                //}
 
                 vertices.Add(point);
             }
@@ -958,25 +949,16 @@ public class BladeGeneration : MonoBehaviour
                 int c = baseB + j;
                 int d = baseB + j + 1;
 
-                bool hA = holeMask[i, j] > 0.5f;
-                bool hB = holeMask[i, j + 1] > 0.5f;
-                bool hC = holeMask[i + 1, j] > 0.5f;
-                bool hD = holeMask[i + 1, j + 1] > 0.5f;
+           
 
 
-                if (!(hA && hB && hC))
-                {
                     triangles.Add(a);
                     triangles.Add(b);
                     triangles.Add(c);
-                }
 
-                if (!(hB && hC && hD))
-                {
                     triangles.Add(b);
                     triangles.Add(d);
                     triangles.Add(c);
-                }
 
 
             }
@@ -1281,270 +1263,190 @@ public class BladeGeneration : MonoBehaviour
         return smoothed;
     }
 
-    bool IsInsideHole(int ringIdx, int vertIdx, int ringCount)
+
+    private void ApplyHollowFuller(
+     List<Vector3> vertices,
+     List<int> trianglesFrontBack,
+     int frontVertexCount,
+     List<Vector3> smoothCenters,
+     List<Vector3> smoothLefts,
+     List<Vector3> smoothRights)
     {
-        if (!hole.enabled)
-            return false;
+        int ringCount = smoothCenters.Count;
+        bool[,] holeMask = new bool[ringCount + 1, widthSubdivisions];
 
-        float ringT = ringIdx / (float)(ringCount - 1);
-        float widthT = vertIdx / (float)(widthSubdivisions - 1);
 
-        float dx = ringT - hole.lengthPosition;
-        float dy = widthT - hole.widthPosition;
+        // ----------------------------------------------------
+        // 1. Compute blade length
+        // ----------------------------------------------------
+        float totalLength = 0f;
+        float[] cumulative = new float[ringCount];
+        cumulative[0] = 0f;
 
-        float dist = Mathf.Sqrt(dx * dx + dy * dy);
-        return dist <= hole.radius;
-    }
-    void BuildHoleMask(int ringCount)
-    {
-        holeMask = new float[ringCount, widthSubdivisions];
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulative[i] = totalLength;
+        }
 
-        if (!hole.enabled) return;
-
-        float holeRing = hole.lengthPosition * (ringCount - 1);
-        float holeWidth = hole.widthPosition * (widthSubdivisions - 1);
-
-        float radius = hole.radius;
-        float feather = radius * 0.25f; // smoothing band
-
+        // ----------------------------------------------------
+        // 2. Build hole mask
+        // ----------------------------------------------------
         for (int r = 0; r < ringCount; r++)
         {
-            float dr = (r - holeRing) / (ringCount - 1);
+            float bladeT = totalLength > 0f ? cumulative[r] / totalLength : 0f;
+            if (bladeT < fuller.start || bladeT > fuller.end)
+                continue;
+
+            float center = fuller.fullerCenter * 2f - 1f;
+            float spacing = fuller.fullerWidth * fuller.spacingMultiplier;
+            float mid = (fuller.numberOfFullers - 1) * 0.5f;
 
             for (int v = 0; v < widthSubdivisions; v++)
             {
-                float dv = (v - holeWidth) / (widthSubdivisions - 1);
-                float dist = Mathf.Sqrt(dr * dr + dv * dv);
+                float t = v / (float)(widthSubdivisions - 1);
+                float pos = t * 2f - 1f;
 
-                holeMask[r, v] = Mathf.SmoothStep(
-                    1f, 0f,
-                    Mathf.InverseLerp(radius - feather, radius + feather, dist)
-                );
-            }
-        }
-    }
-
-
-    bool IsHoleBoundary(int r, int v)
-    {
-        if (holeMask[r, v] < 0.5f) return false;
-
-        for (int dr = -1; dr <= 1; dr++)
-            for (int dv = -1; dv <= 1; dv++)
-            {
-                int rr = r + dr;
-                int vv = v + dv;
-
-                if (rr < 0 || rr >= holeMask.GetLength(0) ||
-                    vv < 0 || vv >= holeMask.GetLength(1))
-                    continue;
-
-                if (holeMask[rr, vv] < 0.5f)
-                    return true;
-
-            }
-        return false;
-    }
-
-
-    Vector3 ProjectVertexToHoleEdge(
-    int ring,
-    int v,
-    int ringCount,
-    Vector3 originalPos,
-    List<Vector3> smoothCenters,
-    List<Vector3> smoothLefts,
-    List<Vector3> smoothRights)
-    {
-        float ringT = ring / (float)(ringCount - 1);
-        float widthT = v / (float)(widthSubdivisions - 1);
-
-        Vector2 holeCenterUV = new Vector2(
-            hole.lengthPosition,
-            hole.widthPosition
-        );
-
-        Vector2 uv = new Vector2(ringT, widthT);
-        Vector2 dir = (uv - holeCenterUV).normalized;
-
-        Vector2 projectedUV = holeCenterUV + dir * hole.radius;
-
-        // Convert projected UV back to world space
-        int projectedRing = Mathf.RoundToInt(projectedUV.x * (ringCount - 1));
-        float projectedWidthT = projectedUV.y;
-
-        projectedRing = Mathf.Clamp(projectedRing, 0, ringCount - 1);
-        projectedWidthT = Mathf.Clamp01(projectedWidthT);
-
-        return Vector3.Lerp(
-            smoothLefts[projectedRing],
-            smoothRights[projectedRing],
-            projectedWidthT
-        );
-    }
-
-   private void GenerateHoleGeometry(
-    List<Vector3> vertices,
-    List<int> triangles,
-    List<Vector3> smoothLefts,
-    List<Vector3> smoothRights,
-    List<Vector3> smoothCenters,
-    Vector3 bladeNormal,
-    int frontVertexCount)
-        {
-            int ringCount = smoothLefts.Count;
-    
-            // Find all boundary vertices
-            List<int> boundaryIndicesFront = new List<int>();
-            List<int> boundaryIndicesBack = new List<int>();
-    
-            for (int r = 0; r < ringCount; r++)
-            {
-                for (int v = 0; v < widthSubdivisions; v++)
+                for (int f = 0; f < fuller.numberOfFullers; f++)
                 {
-                    if (IsHoleBoundary(r, v))
+                    float offset = (f - mid) * spacing;
+                    float fp = center + offset;
+
+                    float d = Mathf.Abs(pos - fp) / fuller.fullerWidth;
+                    if (d <= 1f)
                     {
-                        int frontIdx = r * widthSubdivisions + v;
-                        int backIdx = frontIdx + frontVertexCount;
-                
-                        boundaryIndicesFront.Add(frontIdx);
-                        boundaryIndicesBack.Add(backIdx);
+                        holeMask[r, v] = true;
+                        break;
                     }
                 }
             }
-    
-            if (boundaryIndicesFront.Count < 3) return;
-    
-            // Calculate hole center for sorting
-            int centerRing = Mathf.RoundToInt(hole.lengthPosition * (ringCount - 1));
-            centerRing = Mathf.Clamp(centerRing, 0, ringCount - 1);
-    
-            Vector3 left = smoothLefts[centerRing];
-            Vector3 right = smoothRights[centerRing];
-            Vector3 holeCenter = Vector3.Lerp(left, right, hole.widthPosition);
-    
-            // Calculate hole orientation
-            Vector3 widthDir = (right - left).normalized;
-            Vector3 forwardDir = GetForwardDir(smoothCenters, centerRing);
-            Vector3 holeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
-    
-            // Get boundary vertex positions for sorting
-            List<Vector3> boundaryPosFront = new List<Vector3>();
-            List<Vector3> boundaryPosBack = new List<Vector3>();
-    
-            foreach (int idx in boundaryIndicesFront)
-                boundaryPosFront.Add(vertices[idx]);
-            foreach (int idx in boundaryIndicesBack)
-                boundaryPosBack.Add(vertices[idx]);
-    
-            // Sort boundary vertices in circular order
-            SortBoundaryVerticesCircular(boundaryPosFront, boundaryIndicesFront, holeCenter, holeNormal);
-            SortBoundaryVerticesCircular(boundaryPosBack, boundaryIndicesBack, holeCenter, holeNormal);
-    
-            int boundaryCount = boundaryIndicesFront.Count;
-            int middleVertexStart = vertices.Count;
-    
-            // Create middle vertices (at zero thickness - midpoint between front and back)
-            for (int i = 0; i < boundaryCount; i++)
-            {
-                    Vector3 thicknessDir = Vector3.Cross(widthDir, forwardDir).normalized;
-
-                    Vector3 frontPos = vertices[boundaryIndicesFront[i]];
-                Vector3 backPos = vertices[boundaryIndicesBack[i]];
-
-                    // Project both positions onto the thickness axis
-                    float frontD = Vector3.Dot(frontPos, thicknessDir);
-                    float backD = Vector3.Dot(backPos, thicknessDir);
-                    float midD = (frontD + backD) * 0.5f;
-
-                    // Midpoint along thickness axis
-                    Vector3 midAlongThickness = thicknessDir * midD;
-
-                    // Remove thickness component from front to get perpendicular plane
-                    Vector3 frontPerp = frontPos - thicknessDir * frontD;
-
-                    // Final midpoint: perpendicular base + mid-thickness offset
-                    Vector3 middlePos = frontPerp + midAlongThickness;    // Middle point is exactly halfway between front and back
-                vertices.Add(middlePos);
-            }
-    
-            // Connect front boundary vertices to their corresponding middle vertices
-            for (int i = 0; i < boundaryCount; i++)
-            {
-                int next = (i + 1) % boundaryCount;
-        
-                int frontCur = boundaryIndicesFront[i];
-                int frontNext = boundaryIndicesFront[next];
-                int midCur = middleVertexStart + i;
-                int midNext = middleVertexStart + next;
-        
-                // Triangle 1: front current -> middle current -> front next
-                triangles.Add(frontCur);
-                triangles.Add(midCur);
-                triangles.Add(frontNext);
-        
-                // Triangle 2: front next -> middle current -> middle next
-                triangles.Add(frontNext);
-                triangles.Add(midCur);
-                triangles.Add(midNext);
-            }
-    
-            // Connect back boundary vertices to their corresponding middle vertices (reversed winding)
-            for (int i = 0; i < boundaryCount; i++)
-            {
-                int next = (i + 1) % boundaryCount;
-        
-                int backCur = boundaryIndicesBack[i];
-                int backNext = boundaryIndicesBack[next];
-                int midCur = middleVertexStart + i;
-                int midNext = middleVertexStart + next;
-        
-                // Triangle 1: back current -> back next -> middle current (reversed)
-                triangles.Add(backCur);
-                triangles.Add(backNext);
-                triangles.Add(midCur);
-        
-                // Triangle 2: back next -> middle next -> middle current (reversed)
-                triangles.Add(backNext);
-                triangles.Add(midNext);
-                triangles.Add(midCur);
-            }
         }
 
-    private void SortBoundaryVerticesCircular(
-    List<Vector3> vertices,
-    List<int> indices,
-    Vector3 center,
-    Vector3 normal)
-    {
-        if (vertices.Count < 3) return;
+        // ----------------------------------------------------
+        // 3. Remove front/back triangles inside hole
+        // ----------------------------------------------------
+        List<int> newTriangles = new List<int>();
 
-        // Create a reference direction
-        Vector3 reference = (vertices[0] - center).normalized;
-        Vector3 tangent = Vector3.Cross(normal, reference).normalized;
-
-        // Calculate angles for each vertex with its index
-        List<System.Tuple<float, Vector3, int>> angleVertexIndexTriples =
-            new List<System.Tuple<float, Vector3, int>>();
-
-        for (int i = 0; i < vertices.Count; i++)
+        for (int i = 0; i < trianglesFrontBack.Count; i += 3)
         {
-            Vector3 dir = (vertices[i] - center).normalized;
-            float angle = Mathf.Atan2(Vector3.Dot(dir, tangent), Vector3.Dot(dir, reference));
-            angleVertexIndexTriples.Add(new System.Tuple<float, Vector3, int>(angle, vertices[i], indices[i]));
+            int a = trianglesFrontBack[i];
+            int b = trianglesFrontBack[i + 1];
+            int c = trianglesFrontBack[i + 2];
+
+            bool isBack = a >= frontVertexCount;
+
+            int fa = isBack ? a - frontVertexCount : a;
+            int fb = isBack ? b - frontVertexCount : b;
+            int fc = isBack ? c - frontVertexCount : c;
+
+            // Only check if inside holeMask
+            if (fa >= ringCount * widthSubdivisions || fb >= ringCount * widthSubdivisions || fc >= ringCount * widthSubdivisions)
+            {
+                newTriangles.Add(a);
+                newTriangles.Add(b);
+                newTriangles.Add(c);
+                continue;
+            }
+
+
+            int ra = fa / widthSubdivisions;
+            int rb = fb / widthSubdivisions;
+            int rc = fc / widthSubdivisions;
+
+            int va = fa % widthSubdivisions;
+            int vb = fb % widthSubdivisions;
+            int vc = fc % widthSubdivisions;
+
+            if (holeMask[ra, va] && holeMask[rb, vb] && holeMask[rc, vc])
+                continue;
+
+            newTriangles.Add(a);
+            newTriangles.Add(b);
+            newTriangles.Add(c);
         }
 
-        // Sort by angle
-        angleVertexIndexTriples.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+        trianglesFrontBack.Clear();
+        trianglesFrontBack.AddRange(newTriangles);
 
-        // Replace vertices and indices with sorted order
-        vertices.Clear();
-        indices.Clear();
-        foreach (var triple in angleVertexIndexTriples)
+        // ----------------------------------------------------
+        // 4. Build inner wall geometry
+        // ----------------------------------------------------
+        List<int> wallTris = new List<int>();
+
+        void AddWall(int a0, int a1, bool flip = false)
         {
-            vertices.Add(triple.Item2);
-            indices.Add(triple.Item3);
+            int b0 = a0 + frontVertexCount;
+            int b1 = a1 + frontVertexCount;
+
+            if (!flip)
+            {
+                wallTris.Add(a0); wallTris.Add(a1); wallTris.Add(b0);
+                wallTris.Add(a1); wallTris.Add(b1); wallTris.Add(b0);
+            }
+            else
+            {
+                wallTris.Add(a0); wallTris.Add(b0); wallTris.Add(a1);
+                wallTris.Add(a1); wallTris.Add(b0); wallTris.Add(b1);
+            }
         }
+
+        // --- Compute hole min/max and overall span in one pass ---
+        int[] holeMin = new int[ringCount];
+        int[] holeMax = new int[ringCount];
+        int holeStartR = ringCount;
+        int holeEndR = -1;
+
+        for (int r = 0; r < ringCount; r++)
+        {
+            int minV = widthSubdivisions;
+            int maxV = -1;
+
+            for (int v = 0; v < widthSubdivisions; v++)
+                if (holeMask[r, v])
+                {
+                    minV = Mathf.Min(minV, v);
+                    maxV = Mathf.Max(maxV, v);
+                }
+
+            holeMin[r] = (maxV >= minV) ? minV : -1;
+            holeMax[r] = (maxV >= minV) ? maxV : -1;
+
+            if (holeMin[r] >= 0)
+            {
+                holeStartR = Mathf.Min(holeStartR, r);
+                holeEndR = Mathf.Max(holeEndR, r);
+            }
+        }
+
+        // --- Build horizontal (top/bottom) caps ---
+        for (int r = holeStartR; r < holeEndR; r++)
+        {
+            // Skip if next ring is out of bounds
+            if (r + 1 >= ringCount) break;
+            if (holeMin[r] < 0 || holeMin[r + 1] < 0) continue;
+
+            int start = Mathf.Max(holeMin[r], holeMin[r + 1]);
+            int end = Mathf.Min(holeMax[r], holeMax[r + 1]);
+
+            for (int v = start; v < end; v++)
+            {
+                if (r == holeStartR) AddWall(r * widthSubdivisions + v, r * widthSubdivisions + v + 1, false);
+                if (r + 1 == holeEndR) AddWall((r + 1) * widthSubdivisions + v, (r + 1) * widthSubdivisions + v + 1, true);
+            }
+        }
+
+        // --- Build vertical (left/right) walls ---
+        for (int r = holeStartR; r < holeEndR; r++)
+        {
+            if (holeMin[r] < 0) continue;
+
+            AddWall(r * widthSubdivisions + holeMin[r], (r + 1) * widthSubdivisions + holeMin[r], true);  // LEFT
+            AddWall(r * widthSubdivisions + holeMax[r], (r + 1) * widthSubdivisions + holeMax[r], false); // RIGHT
+        }
+
+        trianglesFrontBack.AddRange(wallTris);
     }
+
+
 
 }
