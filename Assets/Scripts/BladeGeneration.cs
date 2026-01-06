@@ -121,6 +121,10 @@ public class BladeGeneration : MonoBehaviour
     public FullerSettings fuller;
 
     private float[,] holeMask;
+    private bool hollowHitsLeft;
+    private bool hollowHitsRight;
+    private int hollowStartRing;
+    private int hollowEndRing;
 
     public enum SharpSide
     {
@@ -434,7 +438,6 @@ public class BladeGeneration : MonoBehaviour
         GenerateEdgeGeometry(segments, smoothLefts, smoothRights, vertices, frontTriangles, smoothCenters);
         frontVertexCount = vertices.Count;
     }
-
     private void ConnectBevels(
         List<int> trianglesFrontBack,
         List<int> trianglesSharp,
@@ -445,7 +448,14 @@ public class BladeGeneration : MonoBehaviour
     {
         for (int i = 0; i < ringCount - 1; i++)
         {
-            int frontA = i * widthSubdivisions;
+            bool inHollowInterior =
+                i >= hollowStartRing &&
+                i < hollowEndRing;
+
+            bool leftBevelActive = !(inHollowInterior && hollowHitsLeft);
+            bool rightBevelActive = !(inHollowInterior && hollowHitsRight);
+
+          int frontA = i * widthSubdivisions;
             int frontB = (i + 1) * widthSubdivisions;
 
             int backA = frontA + frontVertexCount;
@@ -479,21 +489,27 @@ public class BladeGeneration : MonoBehaviour
                 ? trianglesSharp
                 : trianglesFrontBack;
 
-            leftList.Add(frontA); leftList.Add(frontB); leftList.Add(sharpLeftFrontA);
-            leftList.Add(frontB); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftFrontA);
-            leftList.Add(backB); leftList.Add(backA); leftList.Add(sharpLeftBackA);
-            leftList.Add(backB); leftList.Add(sharpLeftBackA); leftList.Add(sharpLeftBackB);
-            leftList.Add(sharpLeftFrontA); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackA);
-            leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackB); leftList.Add(sharpLeftBackA);
-
-            rightList.Add(frontARight); rightList.Add(sharpRightFrontA); rightList.Add(frontBRight);
-            rightList.Add(frontBRight); rightList.Add(sharpRightFrontA); rightList.Add(sharpRightFrontB);
-            rightList.Add(backARight); rightList.Add(backBRight); rightList.Add(sharpRightBackA);
-            rightList.Add(backBRight); rightList.Add(sharpRightBackB); rightList.Add(sharpRightBackA);
-            rightList.Add(sharpRightFrontA); rightList.Add(sharpRightBackA); rightList.Add(sharpRightFrontB);
-            rightList.Add(sharpRightFrontB); rightList.Add(sharpRightBackA); rightList.Add(sharpRightBackB);
+            if (leftBevelActive)
+            {
+                leftList.Add(frontA); leftList.Add(frontB); leftList.Add(sharpLeftFrontA);
+                leftList.Add(frontB); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftFrontA);
+                leftList.Add(backB); leftList.Add(backA); leftList.Add(sharpLeftBackA);
+                leftList.Add(backB); leftList.Add(sharpLeftBackA); leftList.Add(sharpLeftBackB);
+                leftList.Add(sharpLeftFrontA); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackA);
+                leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackB); leftList.Add(sharpLeftBackA);
+            }
+            if (rightBevelActive)
+            {
+                rightList.Add(frontARight); rightList.Add(sharpRightFrontA); rightList.Add(frontBRight);
+                rightList.Add(frontBRight); rightList.Add(sharpRightFrontA); rightList.Add(sharpRightFrontB);
+                rightList.Add(backARight); rightList.Add(backBRight); rightList.Add(sharpRightBackA);
+                rightList.Add(backBRight); rightList.Add(sharpRightBackB); rightList.Add(sharpRightBackA);
+                rightList.Add(sharpRightFrontA); rightList.Add(sharpRightBackA); rightList.Add(sharpRightFrontB);
+                rightList.Add(sharpRightFrontB); rightList.Add(sharpRightBackA); rightList.Add(sharpRightBackB);
+            }
         }
     }
+
 
     private void GenerateBackFace(
      List<Vector3> vertices,
@@ -638,6 +654,7 @@ public class BladeGeneration : MonoBehaviour
             -1f
         );
     }
+  
     private void AddBevelVertices(
     List<Vector3> vertices,
     List<Vector3> smoothLefts,
@@ -651,15 +668,15 @@ public class BladeGeneration : MonoBehaviour
 
         for (int i = 0; i < ringCount; i++)
         {
-            Vector3 center = smoothCenters[i]; // Already offset spine
+            Vector3 center = smoothCenters[i];
             Vector3 left = smoothLefts[i];
             Vector3 right = smoothRights[i];
 
             Vector3 leftOffset = left - center;
             Vector3 rightOffset = right - center;
 
-            bool leftValid = leftOffset.sqrMagnitude > COLLAPSE_THRESHOLD ;
-            bool rightValid = rightOffset.sqrMagnitude > COLLAPSE_THRESHOLD ;
+            bool leftValid = leftOffset.sqrMagnitude > COLLAPSE_THRESHOLD;
+            bool rightValid = rightOffset.sqrMagnitude > COLLAPSE_THRESHOLD;
 
             Vector3 widthDir;
 
@@ -677,7 +694,7 @@ public class BladeGeneration : MonoBehaviour
             else
             {
                 widthDir = Vector3.Cross(bladeNormal, tipDir).normalized;
-                if (widthDir.sqrMagnitude < COLLAPSE_THRESHOLD )
+                if (widthDir.sqrMagnitude < COLLAPSE_THRESHOLD)
                     widthDir = Vector3.right;
             }
 
@@ -690,12 +707,30 @@ public class BladeGeneration : MonoBehaviour
                 toRight = (right - center).normalized;
             }
 
-            // Just use normal sharp/spine thickness based on SharpSide setting
-            float leftThickness = (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness;
-            float rightThickness = (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both) ? edgeSharpness : spineThickness;
+            float leftThickness =
+                (sharpSide == SharpSide.Left || sharpSide == SharpSide.Both)
+                    ? edgeSharpness
+                    : spineThickness;
+
+            float rightThickness =
+                (sharpSide == SharpSide.Right || sharpSide == SharpSide.Both)
+                    ? edgeSharpness
+                    : spineThickness;
 
             Vector3 leftRidge = left + toLeft * leftThickness;
             Vector3 rightRidge = right + toRight * rightThickness;
+
+            bool inHollowInterior =
+                 i >= hollowStartRing &&
+                 i < hollowEndRing &&        // flatten all hollow rings except possibly the tip
+                 i < ringCount;
+
+
+            if (inHollowInterior && hollowHitsLeft)
+                leftRidge = left;
+
+            if (inHollowInterior && hollowHitsRight)
+                rightRidge = right;
 
             if (i == ringCount - 1)
             {
@@ -703,13 +738,13 @@ public class BladeGeneration : MonoBehaviour
                 rightRidge += tipDir * edgeSharpness;
             }
 
-            float leftBevel = spineThickness;
-            float rightBevel = spineThickness;
-
-            vertices.Add(leftRidge + normalSign * bladeNormal * leftBevel);
-            vertices.Add(rightRidge + normalSign * bladeNormal * rightBevel);
+            vertices.Add(leftRidge + normalSign * bladeNormal * spineThickness);
+            vertices.Add(rightRidge + normalSign * bladeNormal * spineThickness);
         }
     }
+
+
+
     public void GenerateSmoothSegments(
      List<Segment> segments,
      List<Vector3> smoothLefts,
@@ -923,14 +958,7 @@ public class BladeGeneration : MonoBehaviour
                 float t = s / (float)(widthSubdivisions - 1);
                 Vector3 point = Vector3.Lerp(left, right, t);
 
-                //if (holeMask[i, s] > 0.5f && IsHoleBoundary(i, s))
-                //{
-                //    point = ProjectVertexToHoleEdge(
-                //        i, s, ringCount, point,
-                //        smoothCenters, smoothLefts, smoothRights
-                //    );
-                //}
-
+             
                 vertices.Add(point);
             }
 
@@ -1273,12 +1301,16 @@ public class BladeGeneration : MonoBehaviour
      List<Vector3> smoothRights)
     {
         int ringCount = smoothCenters.Count;
-        bool[,] holeMask = new bool[ringCount + 1, widthSubdivisions];
 
+        bool[,] holeMask = new bool[ringCount, widthSubdivisions];
 
-        // ----------------------------------------------------
-        // 1. Compute blade length
-        // ----------------------------------------------------
+        // RESET hollow state
+        hollowHitsLeft = false;
+        hollowHitsRight = false;
+        hollowStartRing = ringCount;
+        hollowEndRing = -1;
+
+        // Compute blade length
         float totalLength = 0f;
         float[] cumulative = new float[ringCount];
         cumulative[0] = 0f;
@@ -1289,9 +1321,7 @@ public class BladeGeneration : MonoBehaviour
             cumulative[i] = totalLength;
         }
 
-        // ----------------------------------------------------
-        // 2. Build hole mask
-        // ----------------------------------------------------
+        // 2. Build hole mask + detect edge contact
         for (int r = 0; r < ringCount; r++)
         {
             float bladeT = totalLength > 0f ? cumulative[r] / totalLength : 0f;
@@ -1316,15 +1346,20 @@ public class BladeGeneration : MonoBehaviour
                     if (d <= 1f)
                     {
                         holeMask[r, v] = true;
+
+                        // NEW: detect edge contact
+                        if (v == 0) hollowHitsLeft = true;
+                        if (v == widthSubdivisions - 1) hollowHitsRight = true;
+
+                        hollowStartRing = Mathf.Min(hollowStartRing, r);
+                        hollowEndRing = Mathf.Max(hollowEndRing, r);
                         break;
                     }
                 }
             }
         }
 
-        // ----------------------------------------------------
-        // 3. Remove front/back triangles inside hole
-        // ----------------------------------------------------
+        //  Remove front/back triangles inside hole
         List<int> newTriangles = new List<int>();
 
         for (int i = 0; i < trianglesFrontBack.Count; i += 3)
@@ -1339,15 +1374,15 @@ public class BladeGeneration : MonoBehaviour
             int fb = isBack ? b - frontVertexCount : b;
             int fc = isBack ? c - frontVertexCount : c;
 
-            // Only check if inside holeMask
-            if (fa >= ringCount * widthSubdivisions || fb >= ringCount * widthSubdivisions || fc >= ringCount * widthSubdivisions)
+            if (fa >= ringCount * widthSubdivisions ||
+                fb >= ringCount * widthSubdivisions ||
+                fc >= ringCount * widthSubdivisions)
             {
                 newTriangles.Add(a);
                 newTriangles.Add(b);
                 newTriangles.Add(c);
                 continue;
             }
-
 
             int ra = fa / widthSubdivisions;
             int rb = fb / widthSubdivisions;
@@ -1368,9 +1403,7 @@ public class BladeGeneration : MonoBehaviour
         trianglesFrontBack.Clear();
         trianglesFrontBack.AddRange(newTriangles);
 
-        // ----------------------------------------------------
-        // 4. Build inner wall geometry
-        // ----------------------------------------------------
+        //  Build inner wall geometry
         List<int> wallTris = new List<int>();
 
         void AddWall(int a0, int a1, bool flip = false)
@@ -1440,8 +1473,24 @@ public class BladeGeneration : MonoBehaviour
         {
             if (holeMin[r] < 0) continue;
 
-            AddWall(r * widthSubdivisions + holeMin[r], (r + 1) * widthSubdivisions + holeMin[r], true);  // LEFT
-            AddWall(r * widthSubdivisions + holeMax[r], (r + 1) * widthSubdivisions + holeMax[r], false); // RIGHT
+               
+            if (holeStartR == 0 && r <= 1)
+            {
+
+            }
+            else { 
+                AddWall(r * widthSubdivisions + holeMin[r], (r + 1) * widthSubdivisions + holeMin[r], true);  // LEFT
+
+            }
+            if (holeEndR == widthSubdivisions -1 && r >= widthSubdivisions - 1)
+            {
+
+            }
+            else
+            {
+                AddWall(r * widthSubdivisions + holeMax[r], (r + 1) * widthSubdivisions + holeMax[r], false); // RIGHT
+
+            }
         }
 
         trianglesFrontBack.AddRange(wallTris);
