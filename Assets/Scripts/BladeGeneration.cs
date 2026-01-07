@@ -81,9 +81,12 @@ public class BladeGeneration : MonoBehaviour
 
     public enum FullerType
     {
+        None,
         Basic,
         Hollow
     }
+
+
 
     [System.Serializable]
     public class FullerSettings
@@ -104,21 +107,18 @@ public class BladeGeneration : MonoBehaviour
         [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fullers", 13, "Shape")]
         public float fullerWidth = 0.3f;
 
-        [Range(0f, 1f), DisplayName("Fuller Center Position", "Fullers", 14, "Position")]
+        [Range(0f, 1f), DisplayName("Fuller X Position", "Fullers", 14, "Position")]
         public float fullerCenter = 0.5f;
 
         [DisplayName("Fuller Falloff", "Fullers", 15, "Shape")]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
-        [Range(0, 7), DisplayName("Number of Fullers", "Fullers", 16, "Count")]
-        public int numberOfFullers = 1;
-
-        [Range(1.0f, 3f), DisplayName("Fuller Spacing Multiplier", "Fullers", 17, "Count")]
-        public float spacingMultiplier = 1.2f;
     }
+   
+
 
     [DisplayName("Fuller Settings", "Fullers", 20, "General")]
-    public FullerSettings fuller;
+    public List<FullerSettings> fullers;
 
     private float[,] holeMask;
     private bool hollowHitsLeft;
@@ -256,28 +256,17 @@ public class BladeGeneration : MonoBehaviour
             ringCount
         );
 
-        if (fuller.fullerType == FullerType.Hollow)
-        {
-            ApplyHollowFuller(
-                vertices,
-                trianglesFrontBack,
-                frontVertexCount,
-                smoothCenters,
-                smoothLefts,
-                smoothRights
-            );
-        }
-        else
-        {
-            ApplyFullers(
-                vertices,
-                smoothLefts,
-                smoothRights,
-                smoothCenters,
-                bladeNormal,
-                frontVertexCount
-            );
-        }
+
+        ApplyFullers(
+               vertices,
+               smoothLefts,
+               smoothRights,
+               smoothCenters,
+               bladeNormal,
+               frontVertexCount,
+               trianglesFrontBack
+           );
+        
 
 
 
@@ -302,14 +291,64 @@ public class BladeGeneration : MonoBehaviour
         meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
     }
 
+    private void ApplyFullers(List<Vector3> vertices,
+        List<Vector3> smoothLefts,
+        List<Vector3> smoothRights,
+        List<Vector3> smoothCenters,
+        Vector3 bladeNormal,
+        int frontVertexCount,
+        List<int> trianglesFrontBack)
+    {
+        bool hollowFullerExists = false;
+        for (int i = 0; i < fullers.Count; i++)
+        {
+            //Apply X Fullers can be different types
+            switch (fullers[i].fullerType)
+            {
+                case FullerType.Basic:
+                    ApplyGrooveFuller(
+                    vertices,
+                    smoothLefts,
+                    smoothRights,
+                    smoothCenters,
+                    bladeNormal,
+                    frontVertexCount,
+                    fullers[i]
+                );
+                    break;
+                case FullerType.Hollow:
 
-    private void ApplyFullers(
+                    hollowFullerExists = true;
+                    break;
+                case FullerType.None:
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (hollowFullerExists)
+        {
+            ApplyHollowFuller(
+                 vertices,
+                 trianglesFrontBack,
+                 frontVertexCount,
+                 smoothCenters,
+                 smoothLefts,
+                 smoothRights
+
+             );
+        }
+       
+    }
+
+    private void ApplyGrooveFuller(
         List<Vector3> vertices,
         List<Vector3> smoothLefts,
         List<Vector3> smoothRights,
         List<Vector3> smoothCenters,
         Vector3 bladeNormal,
-        int frontVertexCount)
+        int frontVertexCount,
+        FullerSettings fuller)
     {
         if (fuller == null)
             return;
@@ -366,38 +405,30 @@ public class BladeGeneration : MonoBehaviour
 
             float depth = fuller.fullerDepth * (bladeThickness * 0.5f) * lengthMask;
             float width = fuller.fullerWidth;
-            int count = fuller.numberOfFullers;
+            int count = 1;
 
-            if (depth <= 0f || width <= 0f || count <= 0)
+            if (depth <= 0f || width <= 0f)
                 continue;
 
-            // NEW: Improved fuller positioning
-            float centerPos = fuller.fullerCenter * 2f - 1f;
-            float autoSpacing = fuller.fullerWidth * fuller.spacingMultiplier;
-            float centerIndex = (count - 1) * 0.5f;
+            // FIXED: Fuller positioning - fullerCenter maps directly to blade position
+            // 0.0 = left edge, 0.5 = center, 1.0 = right edge
+            float centerPos = fuller.fullerCenter * 2f - 1f; // Convert 0-1 to -1 to 1
 
             for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
             {
                 float widthT = vertIdx / (float)(widthSubdivisions - 1);
-                float widthPos = widthT * 2f - 1f;
+                float widthPos = widthT * 2f - 1f; // -1 (left) to 1 (right)
 
-                float maxDepth = 0f;
+                // Calculate distance from this vertex to the fuller center
+                float dist = Mathf.Abs(widthPos - centerPos) / width;
 
-                for (int f = 0; f < count; f++)
-                {
-                    float relativePos = (f - centerIndex) * autoSpacing;
-                    float fullerPos = centerPos + relativePos;
+                if (dist > 1f)
+                    continue;
 
-                    float dist = Mathf.Abs(widthPos - fullerPos) / width;
+                float falloff = fuller.fullerFalloff.Evaluate(dist);
+                float fullerDepth = depth * falloff;
 
-                    if (dist > 1f)
-                        continue;
-
-                    float falloff = fuller.fullerFalloff.Evaluate(dist);
-                    maxDepth = Mathf.Max(maxDepth, depth * falloff);
-                }
-
-                depthMap[ringIdx, vertIdx] = maxDepth;
+                depthMap[ringIdx, vertIdx] = Mathf.Max(depthMap[ringIdx, vertIdx], fullerDepth);
             }
         }
         float[,] smoothedDepth = SmoothDepthMap(depthMap, ringCount);
@@ -1225,7 +1256,7 @@ public class BladeGeneration : MonoBehaviour
         return Mathf.Max(0f, totalScale);
     }
 
-    //Used for degubbign
+    //Used for degubbing
     void OnDrawGizmos()
     {
         if (splineGen?.segments == null || splineGen.segments.Count < 2) return;
@@ -1293,24 +1324,24 @@ public class BladeGeneration : MonoBehaviour
 
 
     private void ApplyHollowFuller(
-     List<Vector3> vertices,
-     List<int> trianglesFrontBack,
-     int frontVertexCount,
-     List<Vector3> smoothCenters,
-     List<Vector3> smoothLefts,
-     List<Vector3> smoothRights)
+      List<Vector3> vertices,
+      List<int> trianglesFrontBack,
+      int frontVertexCount,
+      List<Vector3> smoothCenters,
+      List<Vector3> smoothLefts,
+      List<Vector3> smoothRights)
     {
         int ringCount = smoothCenters.Count;
 
+        // --- Merge all hollow fullers into a single mask ---
         bool[,] holeMask = new bool[ringCount, widthSubdivisions];
 
-        // RESET hollow state
         hollowHitsLeft = false;
         hollowHitsRight = false;
         hollowStartRing = ringCount;
         hollowEndRing = -1;
 
-        // Compute blade length
+        // Compute blade length for mapping
         float totalLength = 0f;
         float[] cumulative = new float[ringCount];
         cumulative[0] = 0f;
@@ -1321,45 +1352,43 @@ public class BladeGeneration : MonoBehaviour
             cumulative[i] = totalLength;
         }
 
-        // 2. Build hole mask + detect edge contact
-        for (int r = 0; r < ringCount; r++)
+        // Build merged hole mask
+        foreach (var fuller in fullers)
         {
-            float bladeT = totalLength > 0f ? cumulative[r] / totalLength : 0f;
-            if (bladeT < fuller.start || bladeT > fuller.end)
-                continue;
+            if (fuller.fullerType != FullerType.Hollow) continue;
 
-            float center = fuller.fullerCenter * 2f - 1f;
-            float spacing = fuller.fullerWidth * fuller.spacingMultiplier;
-            float mid = (fuller.numberOfFullers - 1) * 0.5f;
-
-            for (int v = 0; v < widthSubdivisions; v++)
+            for (int r = 0; r < ringCount; r++)
             {
-                float t = v / (float)(widthSubdivisions - 1);
-                float pos = t * 2f - 1f;
+                float bladeT = totalLength > 0f ? cumulative[r] / totalLength : 0f;
+                if (bladeT < fuller.start || bladeT > fuller.end) continue;
 
-                for (int f = 0; f < fuller.numberOfFullers; f++)
+                float centerPos = fuller.fullerCenter * 2f - 1f;
+
+                for (int v = 0; v < widthSubdivisions; v++)
                 {
-                    float offset = (f - mid) * spacing;
-                    float fp = center + offset;
+                    float t = v / (float)(widthSubdivisions - 1);
+                    float widthPos = t * 2f - 1f;
 
-                    float d = Mathf.Abs(pos - fp) / fuller.fullerWidth;
-                    if (d <= 1f)
+                    float dist = Mathf.Abs(widthPos - centerPos) / fuller.fullerWidth;
+                    if (dist <= 1f)
                     {
                         holeMask[r, v] = true;
 
-                        // NEW: detect edge contact
                         if (v == 0) hollowHitsLeft = true;
                         if (v == widthSubdivisions - 1) hollowHitsRight = true;
 
                         hollowStartRing = Mathf.Min(hollowStartRing, r);
                         hollowEndRing = Mathf.Max(hollowEndRing, r);
-                        break;
                     }
                 }
             }
         }
 
-        //  Remove front/back triangles inside hole
+        // If no hollow was actually marked, bail early
+        if (hollowEndRing < 0 || hollowStartRing >= ringCount)
+            return;
+
+        // --- Remove front/back triangles inside holes ---
         List<int> newTriangles = new List<int>();
 
         for (int i = 0; i < trianglesFrontBack.Count; i += 3)
@@ -1369,20 +1398,9 @@ public class BladeGeneration : MonoBehaviour
             int c = trianglesFrontBack[i + 2];
 
             bool isBack = a >= frontVertexCount;
-
             int fa = isBack ? a - frontVertexCount : a;
             int fb = isBack ? b - frontVertexCount : b;
             int fc = isBack ? c - frontVertexCount : c;
-
-            if (fa >= ringCount * widthSubdivisions ||
-                fb >= ringCount * widthSubdivisions ||
-                fc >= ringCount * widthSubdivisions)
-            {
-                newTriangles.Add(a);
-                newTriangles.Add(b);
-                newTriangles.Add(c);
-                continue;
-            }
 
             int ra = fa / widthSubdivisions;
             int rb = fb / widthSubdivisions;
@@ -1392,18 +1410,29 @@ public class BladeGeneration : MonoBehaviour
             int vb = fb % widthSubdivisions;
             int vc = fc % widthSubdivisions;
 
-            if (holeMask[ra, va] && holeMask[rb, vb] && holeMask[rc, vc])
+            // Skip triangles that don't map to the grid
+            if (ra < 0 || ra >= ringCount || va < 0 || va >= widthSubdivisions ||
+                rb < 0 || rb >= ringCount || vb < 0 || vb >= widthSubdivisions ||
+                rc < 0 || rc >= ringCount || vc < 0 || vc >= widthSubdivisions)
+            {
+                newTriangles.Add(a);
+                newTriangles.Add(b);
+                newTriangles.Add(c);
                 continue;
+            }
 
-            newTriangles.Add(a);
-            newTriangles.Add(b);
-            newTriangles.Add(c);
+            if (!(holeMask[ra, va] && holeMask[rb, vb] && holeMask[rc, vc]))
+            {
+                newTriangles.Add(a);
+                newTriangles.Add(b);
+                newTriangles.Add(c);
+            }
         }
 
         trianglesFrontBack.Clear();
         trianglesFrontBack.AddRange(newTriangles);
 
-        //  Build inner wall geometry
+        // --- Build inner walls ---
         List<int> wallTris = new List<int>();
 
         void AddWall(int a0, int a1, bool flip = false)
@@ -1423,11 +1452,9 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // --- Compute hole min/max and overall span in one pass ---
+        // Compute per-ring hole ranges
         int[] holeMin = new int[ringCount];
         int[] holeMax = new int[ringCount];
-        int holeStartR = ringCount;
-        int holeEndR = -1;
 
         for (int r = 0; r < ringCount; r++)
         {
@@ -1435,67 +1462,83 @@ public class BladeGeneration : MonoBehaviour
             int maxV = -1;
 
             for (int v = 0; v < widthSubdivisions; v++)
+            {
                 if (holeMask[r, v])
                 {
                     minV = Mathf.Min(minV, v);
                     maxV = Mathf.Max(maxV, v);
                 }
-
-            holeMin[r] = (maxV >= minV) ? minV : -1;
-            holeMax[r] = (maxV >= minV) ? maxV : -1;
-
-            if (holeMin[r] >= 0)
-            {
-                holeStartR = Mathf.Min(holeStartR, r);
-                holeEndR = Mathf.Max(holeEndR, r);
             }
-        }
 
-        // --- Build horizontal (top/bottom) caps ---
-        for (int r = holeStartR; r < holeEndR; r++)
-        {
-            // Skip if next ring is out of bounds
-            if (r + 1 >= ringCount) break;
-            if (holeMin[r] < 0 || holeMin[r + 1] < 0) continue;
-
-            int start = Mathf.Max(holeMin[r], holeMin[r + 1]);
-            int end = Mathf.Min(holeMax[r], holeMax[r + 1]);
-
-            for (int v = start; v < end; v++)
+            if (maxV >= minV)
             {
-                if (r == holeStartR) AddWall(r * widthSubdivisions + v, r * widthSubdivisions + v + 1, false);
-                if (r + 1 == holeEndR) AddWall((r + 1) * widthSubdivisions + v, (r + 1) * widthSubdivisions + v + 1, true);
-            }
-        }
-
-        // --- Build vertical (left/right) walls ---
-        for (int r = holeStartR; r < holeEndR; r++)
-        {
-            if (holeMin[r] < 0) continue;
-
-               
-            if (holeStartR == 0 && r <= 1)
-            {
-
-            }
-            else { 
-                AddWall(r * widthSubdivisions + holeMin[r], (r + 1) * widthSubdivisions + holeMin[r], true);  // LEFT
-
-            }
-            if (holeEndR == widthSubdivisions -1 && r >= widthSubdivisions - 1)
-            {
-
+                holeMin[r] = minV;
+                holeMax[r] = Mathf.Clamp(maxV, 0, widthSubdivisions - 1);
             }
             else
             {
-                AddWall(r * widthSubdivisions + holeMax[r], (r + 1) * widthSubdivisions + holeMax[r], false); // RIGHT
+                holeMin[r] = -1;
+                holeMax[r] = -1;
+            }
+        }
+        // --- Build horizontal caps at ALL discontinuities ---
+        // --- Build vertical walls between ALL consecutive rings with holes ---
+        for (int r = hollowStartRing; r < hollowEndRing && r + 1 < ringCount; r++)
+        {
+            // Only build walls if BOTH this ring and next ring have holes
+            if (holeMin[r] < 0 || holeMin[r + 1] < 0) continue;
 
+            // Left wall
+            AddWall(r * widthSubdivisions + holeMin[r],
+                    (r + 1) * widthSubdivisions + holeMin[r + 1], true);
+
+            // Right wall
+            AddWall(r * widthSubdivisions + holeMax[r],
+                    (r + 1) * widthSubdivisions + holeMax[r + 1], false);
+        }
+
+        for (int r = hollowStartRing; r <= hollowEndRing; r++)
+        {
+            if (holeMin[r] < 0) continue;
+
+            bool startCap = r == 0 || holeMin[r - 1] < 0;
+            bool endCap = r == ringCount - 1 || holeMin[r + 1] < 0;
+
+            // Compute correct blade plane
+            Vector3 widthDir = (smoothRights[r] - smoothLefts[r]).normalized;
+            Vector3 forwardDir = GetForwardDir(smoothCenters, r);
+            Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+            Vector3 planePoint = smoothCenters[r];
+
+            for (int v = holeMin[r]; v < holeMax[r]; v++)
+            {
+                int a = r * widthSubdivisions + v;
+                int b = r * widthSubdivisions + v + 1;
+
+                // PROJECT FRONT + BACK VERTICES
+                vertices[a] = ProjectToPlane(vertices[a], planePoint, ringNormal);
+                vertices[b] = ProjectToPlane(vertices[b], planePoint, ringNormal);
+
+                vertices[a + frontVertexCount] =
+                    ProjectToPlane(vertices[a + frontVertexCount], planePoint, ringNormal);
+
+                vertices[b + frontVertexCount] =
+                    ProjectToPlane(vertices[b + frontVertexCount], planePoint, ringNormal);
+
+                if (startCap)
+                    AddWall(a, b, false);
+
+                if (endCap)
+                    AddWall(a, b, true);
             }
         }
 
         trianglesFrontBack.AddRange(wallTris);
     }
 
-
-
+    Vector3 ProjectToPlane(Vector3 p, Vector3 planePoint, Vector3 planeNormal)
+    {
+        float d = Vector3.Dot(p - planePoint, planeNormal);
+        return p - planeNormal * d;
+    }
 }
