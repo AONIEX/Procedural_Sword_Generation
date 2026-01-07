@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.8075693845748901,
+                    "value": 0.7062013149261475,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.5643064975738525,
+                    "value": 0.7122744917869568,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.10252046585083008,
+                    "value": 0.5941513776779175,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -175,5 +175,273 @@
         "collapsePattern": "NNN",
         "spineOffset": 0.0
     },
-    "useSymmetry": true
+    "useSymmetry": true,
+    "bladeGenerationData": {
+        "baseProfiles": [
+            {
+                "profile": 0,
+                "startHeight": 0.0,
+                "endHeight": 1.0,
+                "influenceCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 2.0,
+                            "outSlope": 2.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "scale": 1.0
+            },
+            {
+                "profile": 1,
+                "startHeight": 0.0,
+                "endHeight": 0.0,
+                "influenceCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 2.0,
+                            "outSlope": 2.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "scale": 0.0
+            },
+            {
+                "profile": 4,
+                "startHeight": 0.0,
+                "endHeight": 0.0,
+                "influenceCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 2.0,
+                            "outSlope": 2.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "scale": 0.0
+            }
+        ],
+        "profileOverlapBlendAmount": 0.5,
+        "meshQuality": 2,
+        "handleXPosition": 0.0,
+        "bladeThickness": 0.15000000596046449,
+        "edgeSharpness": 0.019999999552965165,
+        "spineThickness": 0.004999999888241291,
+        "sharpSide": 2,
+        "fullers": [
+            {
+                "fullerType": 2,
+                "start": 0.38999998569488528,
+                "end": 0.6499999761581421,
+                "fullerDepth": 0.8999999761581421,
+                "fullerWidth": 0.75,
+                "fullerCenter": 0.5,
+                "fullerFalloff": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": -3.2062623500823976,
+                            "outSlope": -3.2062623500823976,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.208762526512146,
+                            "value": 0.3306525945663452,
+                            "inSlope": -1.8120776414871216,
+                            "outSlope": -1.8120776414871216,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": -0.4178929924964905,
+                            "outSlope": -0.4178929924964905,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                }
+            },
+            {
+                "fullerType": 2,
+                "start": 0.0,
+                "end": 1.0,
+                "fullerDepth": 0.8999999761581421,
+                "fullerWidth": 0.24699999392032624,
+                "fullerCenter": 0.5,
+                "fullerFalloff": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": -3.2062623500823976,
+                            "outSlope": -3.2062623500823976,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.208762526512146,
+                            "value": 0.3306525945663452,
+                            "inSlope": -1.8120776414871216,
+                            "outSlope": -1.8120776414871216,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": -0.4178929924964905,
+                            "outSlope": -0.4178929924964905,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                }
+            },
+            {
+                "fullerType": 2,
+                "start": 0.05400000140070915,
+                "end": 0.19599999487400056,
+                "fullerDepth": 0.8999999761581421,
+                "fullerWidth": 0.6959999799728394,
+                "fullerCenter": 0.5,
+                "fullerFalloff": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": -3.2062623500823976,
+                            "outSlope": -3.2062623500823976,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.208762526512146,
+                            "value": 0.3306525945663452,
+                            "inSlope": -1.8120776414871216,
+                            "outSlope": -1.8120776414871216,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.3333333432674408
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": -0.4178929924964905,
+                            "outSlope": -0.4178929924964905,
+                            "tangentMode": 34,
+                            "weightedMode": 0,
+                            "inWeight": 0.3333333432674408,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                }
+            }
+        ]
+    }
 }

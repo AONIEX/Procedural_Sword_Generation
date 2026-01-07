@@ -15,6 +15,8 @@ public class BladePreset
     public TipSettings tipSettings;
     public EdgeSettings edgeSettings;
     public bool useSymmetry;
+
+    public BladeGenerationData bladeGenerationData;
 }
 
 [System.Serializable]
@@ -247,6 +249,8 @@ public class EdgeSettings
 
 public class SplineAndLineGen : MonoBehaviour
 {
+    public BladeGeneration bladeGeneration;
+
     [Header("Blade Preset")]
     public string presetName;
 
@@ -283,6 +287,7 @@ public class SplineAndLineGen : MonoBehaviour
 
 void Start()
     {
+        bladeGeneration = GetComponent<BladeGeneration>();
         LoadPreset();
 
         GenerateLinesAndSplines();
@@ -678,8 +683,10 @@ void Start()
             curvatureSettings = this.curvatureSettings,
             tipSettings = this.tipSettings,
             edgeSettings = this.edgeSettings,
-            useSymmetry = this.useSymmetry
+            useSymmetry = this.useSymmetry,
+            bladeGenerationData = bladeGeneration.GetData()
         };
+
 
         string folderPath = Path.Combine(Application.dataPath, "Presets");
         Directory.CreateDirectory(folderPath); // ensures folder exists
@@ -739,6 +746,7 @@ void Start()
                 Debug.LogWarning("Unknown blade preset.");
                 return;
         }
+        bladePreset = BladePresets.None;
 
         string folderPath = Path.Combine(Application.dataPath, "Presets");
         string filePath = Path.Combine(folderPath, chosenPreset + ".json");
@@ -774,7 +782,17 @@ void Start()
 
         useSymmetry = preset.useSymmetry;
 
-        GenerateLinesAndSplines();
+
+
+
+        if (preset.bladeGenerationData != null)
+        {
+            bladeGeneration.ApplyData(preset.bladeGenerationData);
+        }
+        else
+        {
+            GenerateLinesAndSplines();
+        }
     }
 
 

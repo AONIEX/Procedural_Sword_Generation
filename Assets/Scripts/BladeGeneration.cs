@@ -1,5 +1,30 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+
+
+
+//FOR SAVING DATA
+[Serializable]
+public class BladeGenerationData
+{
+    public List<BladeProfileLayer> baseProfiles;
+
+    public float profileOverlapBlendAmount;
+    public MeshQuality meshQuality;
+
+    public float handleXPosition;
+    public float bladeThickness;
+    public float edgeSharpness;
+    public float spineThickness;
+
+    public BladeGeneration.SharpSide sharpSide;
+
+    public List<BladeGeneration.FullerSettings> fullers;
+}
+
+
 
 [System.Serializable]
 public class BladeProfileLayer
@@ -1547,4 +1572,41 @@ public class BladeGeneration : MonoBehaviour
         float d = Vector3.Dot(p - planePoint, planeNormal);
         return p - planeNormal * d;
     }
+
+    //FOR SAVING DATA 
+    public BladeGenerationData GetData()
+    {
+        return new BladeGenerationData
+        {
+            baseProfiles = new List<BladeProfileLayer>(baseProfiles),
+            profileOverlapBlendAmount = profileOverlapBlendAmount,
+            meshQuality = meshQuality,
+            handleXPosition = HandleXPosition,
+            bladeThickness = bladeThickness,
+            edgeSharpness = edgeSharpness,
+            spineThickness = spineThickness,
+            sharpSide = sharpSide,
+            fullers = fullers != null
+                ? new List<FullerSettings>(fullers)
+                : new List<FullerSettings>()
+        };
+    }
+
+    public void ApplyData(BladeGenerationData data)
+    {
+        if (data == null) return;
+
+        baseProfiles = new List<BladeProfileLayer>(data.baseProfiles);
+        profileOverlapBlendAmount = data.profileOverlapBlendAmount;
+        meshQuality = data.meshQuality;
+        HandleXPosition = data.handleXPosition;
+        bladeThickness = data.bladeThickness;
+        edgeSharpness = data.edgeSharpness;
+        spineThickness = data.spineThickness;
+        sharpSide = data.sharpSide;
+        fullers = new List<FullerSettings>(data.fullers);
+
+        RegenerateBlade(true);
+    }
+
 }
