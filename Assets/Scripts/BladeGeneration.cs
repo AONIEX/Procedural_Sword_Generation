@@ -104,7 +104,7 @@ public class BladeGeneration : MonoBehaviour
         [Range(0.0f, 0.9f), DisplayName("Fuller Depth", "Fullers", 12, "Shape")]
         public float fullerDepth = 0.3f;
 
-        [Range(0.05f, 0.9f), DisplayName("Fuller Width", "Fullers", 13, "Shape")]
+        [Range(0.05f, 1.1f), DisplayName("Fuller Width", "Fullers", 13, "Shape")]
         public float fullerWidth = 0.3f;
 
         [Range(0f, 1f), DisplayName("Fuller X Position", "Fullers", 14, "Position")]
@@ -125,6 +125,9 @@ public class BladeGeneration : MonoBehaviour
     private bool hollowHitsRight;
     private int hollowStartRing;
     private int hollowEndRing;
+
+    bool[] hollowHitsLeftPerRing;
+    bool[] hollowHitsRightPerRing;
 
     public enum SharpSide
     {
@@ -232,6 +235,13 @@ public class BladeGeneration : MonoBehaviour
         Vector3 widthDir = (smoothRights[0] - smoothLefts[0]).normalized;
         Vector3 forwardDir = (smoothCenters[1] - smoothCenters[0]).normalized;
         Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+        int ringCount = smoothLefts.Count;
+
+        if (hollowHitsLeftPerRing == null || hollowHitsLeftPerRing.Length != ringCount)
+        {
+            hollowHitsLeftPerRing = new bool[ringCount];
+            hollowHitsRightPerRing = new bool[ringCount];
+        }
 
         // 3. Bevel / ridge vertices
         int sharpStartFront, sharpStartBack;
@@ -246,7 +256,6 @@ public class BladeGeneration : MonoBehaviour
         );
 
         // 4. Connect bevels to blade faces
-        int ringCount = smoothLefts.Count;
         ConnectBevels(
             trianglesFrontBack,
             trianglesSharp,
@@ -479,14 +488,13 @@ public class BladeGeneration : MonoBehaviour
     {
         for (int i = 0; i < ringCount - 1; i++)
         {
-            bool inHollowInterior =
-                i >= hollowStartRing &&
-                i < hollowEndRing;
+            bool leftBevelActive =
+      !(i < hollowHitsLeftPerRing.Length && hollowHitsLeftPerRing[i]);
 
-            bool leftBevelActive = !(inHollowInterior && hollowHitsLeft);
-            bool rightBevelActive = !(inHollowInterior && hollowHitsRight);
+            bool rightBevelActive =
+                !(i < hollowHitsRightPerRing.Length && hollowHitsRightPerRing[i]);
 
-          int frontA = i * widthSubdivisions;
+            int frontA = i * widthSubdivisions;
             int frontB = (i + 1) * widthSubdivisions;
 
             int backA = frontA + frontVertexCount;
@@ -751,18 +759,11 @@ public class BladeGeneration : MonoBehaviour
             Vector3 leftRidge = left + toLeft * leftThickness;
             Vector3 rightRidge = right + toRight * rightThickness;
 
-            bool inHollowInterior =
-                 i >= hollowStartRing &&
-                 i < hollowEndRing &&        // flatten all hollow rings except possibly the tip
-                 i < ringCount;
-
-
-            if (inHollowInterior && hollowHitsLeft)
+            if (i < hollowHitsLeftPerRing.Length && hollowHitsLeftPerRing[i])
                 leftRidge = left;
 
-            if (inHollowInterior && hollowHitsRight)
+            if (i < hollowHitsRightPerRing.Length && hollowHitsRightPerRing[i])
                 rightRidge = right;
-
             if (i == ringCount - 1)
             {
                 leftRidge += tipDir * edgeSharpness;
@@ -1331,8 +1332,10 @@ public class BladeGeneration : MonoBehaviour
       List<Vector3> smoothLefts,
       List<Vector3> smoothRights)
     {
-        int ringCount = smoothCenters.Count;
 
+        int ringCount = smoothCenters.Count;
+        hollowHitsLeftPerRing = new bool[ringCount];
+        hollowHitsRightPerRing = new bool[ringCount];
         // --- Merge all hollow fullers into a single mask ---
         bool[,] holeMask = new bool[ringCount, widthSubdivisions];
 
@@ -1374,8 +1377,11 @@ public class BladeGeneration : MonoBehaviour
                     {
                         holeMask[r, v] = true;
 
-                        if (v == 0) hollowHitsLeft = true;
-                        if (v == widthSubdivisions - 1) hollowHitsRight = true;
+                        if (v == 0)
+                            hollowHitsLeftPerRing[r] = true;
+
+                        if (v == widthSubdivisions - 1)
+                            hollowHitsRightPerRing[r] = true;
 
                         hollowStartRing = Mathf.Min(hollowStartRing, r);
                         hollowEndRing = Mathf.Max(hollowEndRing, r);
