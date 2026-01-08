@@ -312,6 +312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f38f0d1bd4380d4daf0594932f07430, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  bladeGeneration: {fileID: 0}
   presetName: random
   bladePreset: 5
   useSymmetry: 1
@@ -425,6 +426,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  uiControl: {fileID: 0}
 --- !u!114 &28350894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3354,7 +3356,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 499329960}
         m_TargetAssemblyTypeName: UIControl, Assembly-CSharp
-        m_MethodName: ToggleAutoGenerate
+        m_MethodName: AutoGenerateSwitch
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

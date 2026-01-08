@@ -43,6 +43,7 @@ public class UIControl : MonoBehaviour
     void Update()
     {
         if (!pendingGenerate) return;
+        if (!autoGenerate) return;
 
         float interval = 1f / maxGenerateRate;
         if (Time.time - lastGenerateTime >= interval)
@@ -101,8 +102,8 @@ public class UIControl : MonoBehaviour
             sectionDropdown.value = 0;
     }
 
-  void ShowSection(string section)
-  {
+    void ShowSection(string section)
+    {
         // Hide everything first
         foreach (var sec in sectionUIElements.Values)
             foreach (var sub in sec.Values)
@@ -448,5 +449,10 @@ public class UIControl : MonoBehaviour
     void RequestGenerate()
     {
         if (autoGenerate) pendingGenerate = true;
+    }
+
+    public void AutoGenerateSwitch(bool TorF)
+    {
+        autoGenerate = TorF;
     }
 }

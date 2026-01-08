@@ -33,7 +33,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.933408260345459,
+                    "value": 0.9905548691749573,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -44,7 +44,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.41133514046669009,
+                    "value": 0.7941231727600098,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -55,7 +55,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.18778648972511292,
+                    "value": 0.42996758222579958,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -72,14 +72,26 @@
         "noiseFrequency": 0.07999999821186066
     },
     "curvatureSettings": {
-        "straightSegmentThreshold": 1,
+        "straightSegmentThreshold": 4,
         "curvatureMode": 3,
-        "curvature_Max": 0.885149359703064,
+        "curvature_Max": 1.4448426961898804,
         "curvature_PeakFactor": 1.0,
         "curvature_StepSize": 0.0,
         "curvatureShape": {
             "serializedVersion": "2",
-            "m_Curve": [],
+            "m_Curve": [
+                {
+                    "serializedVersion": "3",
+                    "time": 1.0,
+                    "value": 1.0,
+                    "inSlope": 1.0,
+                    "outSlope": 0.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                }
+            ],
             "m_PreInfinity": 2,
             "m_PostInfinity": 2,
             "m_RotationOrder": 4
@@ -92,7 +104,7 @@
     },
     "tipSettings": {
         "tipLeanMode": 4,
-        "heightOffset": 0.12138092517852783,
+        "heightOffset": 0.09631979465484619,
         "tipLeanStrengthCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -125,15 +137,15 @@
         }
     },
     "edgeSettings": {
-        "edgeCollapseMode": 2,
+        "edgeCollapseMode": 0,
         "collapsePattern": "NNNNN",
-        "spineOffset": 0.0
+        "spineOffset": -0.23390179872512818
     },
-    "useSymmetry": false,
+    "useSymmetry": true,
     "bladeGenerationData": {
         "baseProfiles": [
             {
-                "profile": 0,
+                "profile": 1,
                 "startHeight": 0.0,
                 "endHeight": 1.0,
                 "influenceCurve": {
@@ -244,10 +256,10 @@
         "profileOverlapBlendAmount": 0.5,
         "meshQuality": 2,
         "handleXPosition": 0.05012154579162598,
-        "bladeThickness": 0.15000000596046449,
-        "edgeSharpness": 0.019999999552965165,
+        "bladeThickness": 0.09920991957187653,
+        "edgeSharpness": 0.08097313344478607,
         "spineThickness": 0.004999999888241291,
-        "sharpSide": 2,
+        "sharpSide": 1,
         "fullers": [
             {
                 "fullerType": 0,
