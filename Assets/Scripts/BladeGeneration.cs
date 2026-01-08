@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System.Reflection;
 
 
 
@@ -513,11 +513,24 @@ public class BladeGeneration : MonoBehaviour
     {
         for (int i = 0; i < ringCount - 1; i++)
         {
-            bool leftBevelActive =
-      !(i < hollowHitsLeftPerRing.Length && hollowHitsLeftPerRing[i]);
+            bool leftBevelActive = true;
+            bool rightBevelActive = true;
 
-            bool rightBevelActive =
-                !(i < hollowHitsRightPerRing.Length && hollowHitsRightPerRing[i]);
+            if (i + 1 < hollowHitsLeftPerRing.Length)
+            {
+                bool leftThis = hollowHitsLeftPerRing[i];
+                bool leftNext = hollowHitsLeftPerRing[i + 1];
+                leftBevelActive = !(leftThis && leftNext);
+            }
+
+            if (i + 1 < hollowHitsRightPerRing.Length)
+            {
+                bool rightThis = hollowHitsRightPerRing[i];
+                bool rightNext = hollowHitsRightPerRing[i + 1];
+                rightBevelActive = !(rightThis && rightNext);
+            }
+
+
 
             int frontA = i * widthSubdivisions;
             int frontB = (i + 1) * widthSubdivisions;
@@ -1402,15 +1415,16 @@ public class BladeGeneration : MonoBehaviour
                     {
                         holeMask[r, v] = true;
 
-                        if (v == 0)
-                            hollowHitsLeftPerRing[r] = true;
+                        //if (v == 0)
+                        //    hollowHitsLeftPerRing[r] = true;
 
-                        if (v == widthSubdivisions - 1)
-                            hollowHitsRightPerRing[r] = true;
+                        //if (v == widthSubdivisions - 1)
+                        //    hollowHitsRightPerRing[r] = true;
 
                         hollowStartRing = Mathf.Min(hollowStartRing, r);
                         hollowEndRing = Mathf.Max(hollowEndRing, r);
                     }
+                   
                 }
             }
         }
@@ -1541,6 +1555,7 @@ public class BladeGeneration : MonoBehaviour
             Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
             Vector3 planePoint = smoothCenters[r];
 
+
             for (int v = holeMin[r]; v < holeMax[r]; v++)
             {
                 int a = r * widthSubdivisions + v;
@@ -1564,6 +1579,24 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
+        for (int i = 0; i < ringCount; i++)
+        {
+            if (holeMin[i] >= 0)
+            {
+                hollowHitsLeftPerRing[i] = (holeMin[i] == 0);
+                hollowHitsRightPerRing[i] = (holeMax[i] == widthSubdivisions - 1);
+            }
+        }
+
+        // Additionally mark the ring BEFORE the hollow starts
+        if (hollowStartRing > 0)
+        {
+            if (holeMin[hollowStartRing] == 0)
+                hollowHitsLeftPerRing[hollowStartRing - 1] = true;
+
+            if (holeMax[hollowStartRing] == widthSubdivisions - 1)
+                hollowHitsRightPerRing[hollowStartRing - 1] = true;
+        }
         trianglesFrontBack.AddRange(wallTris);
     }
 
@@ -1592,11 +1625,58 @@ public class BladeGeneration : MonoBehaviour
         };
     }
 
+    void CopyFields(object src, object dst)
+    {
+        if (src == null || dst == null) return;
+
+        var fields = src.GetType()
+            .GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+        foreach (var f in fields)
+        {
+            if (f.FieldType == typeof(AnimationCurve))
+            {
+                AnimationCurve c = (AnimationCurve)f.GetValue(src);
+                f.SetValue(dst, c != null ? new AnimationCurve(c.keys) : null);
+            }
+            else
+            {
+                f.SetValue(dst, f.GetValue(src));
+            }
+        }
+    }
+
     public void ApplyData(BladeGenerationData data)
     {
         if (data == null) return;
 
-        baseProfiles = new List<BladeProfileLayer>(data.baseProfiles);
+        // ---------- Base profiles ----------
+        if (baseProfiles == null)
+            baseProfiles = new List<BladeProfileLayer>();
+
+        while (baseProfiles.Count < data.baseProfiles.Count)
+            baseProfiles.Add(new BladeProfileLayer());
+
+        while (baseProfiles.Count > data.baseProfiles.Count)
+            baseProfiles.RemoveAt(baseProfiles.Count - 1);
+
+        for (int i = 0; i < data.baseProfiles.Count; i++)
+            CopyFields(data.baseProfiles[i], baseProfiles[i]);
+
+        // ---------- Fullers ----------
+        if (fullers == null)
+            fullers = new List<FullerSettings>();
+
+        while (fullers.Count < data.fullers.Count)
+            fullers.Add(new FullerSettings());
+
+        while (fullers.Count > data.fullers.Count)
+            fullers.RemoveAt(fullers.Count - 1);
+
+        for (int i = 0; i < data.fullers.Count; i++)
+            CopyFields(data.fullers[i], fullers[i]);
+
+        // ---------- Simple fields ----------
         profileOverlapBlendAmount = data.profileOverlapBlendAmount;
         meshQuality = data.meshQuality;
         HandleXPosition = data.handleXPosition;
@@ -1604,9 +1684,9 @@ public class BladeGeneration : MonoBehaviour
         edgeSharpness = data.edgeSharpness;
         spineThickness = data.spineThickness;
         sharpSide = data.sharpSide;
-        fullers = new List<FullerSettings>(data.fullers);
 
         RegenerateBlade(true);
     }
+
 
 }

@@ -285,13 +285,17 @@ public class SplineAndLineGen : MonoBehaviour
     [Header("Testing")]
     public AnimationCurve activeCurvatureCurve;
 
-void Start()
+    public UIControl uiControl;
+
+    void Start()
     {
+        uiControl = GameObject.FindAnyObjectByType<UIControl>();
         bladeGeneration = GetComponent<BladeGeneration>();
         LoadPreset();
 
         GenerateLinesAndSplines();
         bladePreset = BladePresets.None;
+
     }
 
     void Update()
@@ -767,6 +771,8 @@ void Start()
 #endif
 
         Debug.Log("Loaded preset: " + presetName);
+
+        uiControl.RefreshUI();
     }
 
 
