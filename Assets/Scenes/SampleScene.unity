@@ -314,7 +314,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bladeGeneration: {fileID: 0}
   presetName: random
-  bladePreset: 5
+  bladePreset: 6
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7
@@ -1793,7 +1793,7 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.735849, g: 0.70389295, b: 0.6650409, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30

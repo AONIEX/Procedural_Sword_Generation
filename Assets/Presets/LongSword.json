@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.7700557708740234,
+                    "value": 0.7657434940338135,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.3134523928165436,
+                    "value": 0.755570113658905,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.393297404050827,
+                    "value": 0.487012654542923,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -309,7 +309,7 @@
             {
                 "fullerType": 1,
                 "start": 0.0,
-                "end": 0.878000020980835,
+                "end": 0.7861384749412537,
                 "fullerDepth": 0.8999999761581421,
                 "fullerWidth": 0.75,
                 "fullerCenter": 0.5,
