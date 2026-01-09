@@ -85,7 +85,7 @@ public class BladeGeneration : MonoBehaviour
     public GameObject handle;
     public GameObject holder;
 
-    [Range(-2, 2), DisplayName("Handle X Position", "General", 2, "Position")]
+    [Range(-0.5f, 0.5f), DisplayName("Handle X Position", "General", 2, "Position")]
     public float HandleXPosition;
 
     [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7, "Width")]
@@ -164,6 +164,9 @@ public class BladeGeneration : MonoBehaviour
     [DisplayName("Sharp Edge", "Edge & Spine", 6, "Edge")]
     public SharpSide sharpSide = SharpSide.Both;
 
+
+    private List<Vector2> uvs = new List<Vector2>();
+
     void Start()
     {
         HandleXPosition = holder.transform.localPosition.x;
@@ -222,6 +225,8 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> vertices = new List<Vector3>();
         List<int> trianglesFrontBack = new List<int>();
         List<int> trianglesSharp = new List<int>();
+
+        uvs.Clear();
 
         var segments = splineGen.segments;
         if (segments == null) return;
@@ -300,13 +305,15 @@ public class BladeGeneration : MonoBehaviour
                frontVertexCount,
                trianglesFrontBack
            );
-        
 
 
+        GenerateUVs(vertices, smoothLefts, smoothRights, smoothCenters,
+              frontVertexCount, sharpStartFront, sharpStartBack, ringCount);
 
 
         // 5. Final mesh
         mesh3D.SetVertices(vertices);
+        mesh3D.SetUVs(0, uvs); // Apply UVs
         mesh3D.subMeshCount = 2;
         mesh3D.SetTriangles(trianglesFrontBack, 0);
         mesh3D.SetTriangles(trianglesSharp, 1);
@@ -324,6 +331,92 @@ public class BladeGeneration : MonoBehaviour
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
     }
+
+    private void GenerateUVs(List<Vector3> vertices,
+                        List<Vector3> smoothLefts,
+                        List<Vector3> smoothRights,
+                        List<Vector3> smoothCenters,
+                        int frontVertexCount,
+                        int sharpStartFront,
+                        int sharpStartBack,
+                        int ringCount)
+    {
+        // Calculate cumulative lengths along blade
+        float totalLength = 0f;
+        List<float> cumulativeLengths = new List<float> { 0f };
+
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulativeLengths.Add(totalLength);
+        }
+
+        // Initialize UV list
+        uvs = new List<Vector2>(vertices.Count);
+        for (int i = 0; i < vertices.Count; i++)
+            uvs.Add(Vector2.zero);
+
+        // 1. Front face UVs (main blade surface)
+        for (int ring = 0; ring < ringCount; ring++)
+        {
+            float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
+
+            int ringStart = ring * widthSubdivisions;
+
+            for (int w = 0; w < widthSubdivisions; w++)
+            {
+                float u = w / (float)(widthSubdivisions - 1);
+                int index = ringStart + w;
+
+                if (index < frontVertexCount)
+                    uvs[index] = new Vector2(u, v);
+            }
+        }
+
+        // 2. Back face UVs (mirror of front)
+        for (int i = 0; i < frontVertexCount; i++)
+        {
+            int backIndex = i + frontVertexCount;
+            if (backIndex < vertices.Count)
+            {
+                // Mirror U coordinate for back face
+                uvs[backIndex] = new Vector2(1f - uvs[i].x, uvs[i].y);
+            }
+        }
+
+        // 3. Bevel UVs (sharp edges)
+        // Front bevel
+        for (int ring = 0; ring < ringCount; ring++)
+        {
+            float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
+
+            int leftIndex = sharpStartFront + ring * 2;
+            int rightIndex = leftIndex + 1;
+
+            if (leftIndex < sharpStartBack)
+            {
+                uvs[leftIndex] = new Vector2(0f, v);   // Left edge
+                uvs[rightIndex] = new Vector2(1f, v);  // Right edge
+            }
+        }
+
+        // Back bevel
+        for (int ring = 0; ring < ringCount; ring++)
+        {
+            float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
+
+            int leftIndex = sharpStartBack + ring * 2;
+            int rightIndex = leftIndex + 1;
+
+            if (leftIndex < vertices.Count && rightIndex < vertices.Count)
+            {
+                uvs[leftIndex] = new Vector2(1f, v);   // Left edge (mirrored)
+                uvs[rightIndex] = new Vector2(0f, v);  // Right edge (mirrored)
+            }
+        }
+    }
+
+  
 
     private void ApplyFullers(List<Vector3> vertices,
         List<Vector3> smoothLefts,

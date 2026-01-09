@@ -534,7 +534,7 @@ MonoBehaviour:
   bladeThickness: 0.15
   edgeSharpness: 0.02
   spineThickness: 0.005
-  bladeMaterial: {fileID: 2100000, guid: 4af743c41b89b2d4694786b5cba886b6, type: 2}
+  bladeMaterial: {fileID: 2100000, guid: bf8a2c076d4fe114b80612b51055e93c, type: 2}
   sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
   fullers:
   - fullerType: 2
