@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.8717924356460571,
+                    "value": 0.7700557708740234,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.8683738112449646,
+                    "value": 0.3134523928165436,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.5084649324417114,
+                    "value": 0.393297404050827,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -97,9 +97,9 @@
     "curvatureSettings": {
         "straightSegmentThreshold": 1,
         "curvatureMode": 2,
-        "curvature_Max": 0.5600000023841858,
-        "curvature_PeakFactor": 0.13699999451637269,
-        "curvature_StepSize": 0.04399999976158142,
+        "curvature_Max": 0.0,
+        "curvature_PeakFactor": 0.0,
+        "curvature_StepSize": 0.0,
         "curvatureShape": {
             "serializedVersion": "2",
             "m_Curve": [

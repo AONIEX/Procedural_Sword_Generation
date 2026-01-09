@@ -32,29 +32,30 @@ Material:
     - _BUILTIN_QueueControl: 0
     - _BUILTIN_QueueOffset: 0
     - _BaseContrast: 1.5
-    - _BaseScale: 150
+    - _BaseScale: 120
     - _BrushedStrength: 0.56
-    - _Metalicness: 1
-    - _Noise_Influence: 0
+    - _Metalicness: 0.95
+    - _Noise_Influence: 0.54
     - _Power: 4.57
-    - _RustScale: 5
-    - _RustScale2: 120
+    - _RustScale: 6.19
+    - _RustScale2: 202.21
     - _RustSmoothness: 0.4
     - _Rust_Influence: 0
     - _Rust_Power: 1
     - _ScratchScale: 4.65
     - _Scratched_Power: 6
-    - _Smoothness: 0.75
+    - _Smoothness: 0.7
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
     - _Dark_Rust_Color: {r: 0.6150943, g: 0.33400282, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.50633675, g: 0.55479705, b: 0.6226415, a: 1}
-    - _LightestBaseColor: {r: 0.5686274, g: 0.5058824, b: 0.5058824, a: 1}
+    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
+    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Rust_color: {r: 1, g: 0.6126455, b: 0.1566037, a: 0}
-    - _Scratch_Color: {r: 0.6528301, g: 0.6528301, b: 0.6528301, a: 1}
+    - _Scratch_Color: {r: 0.82641506, g: 0.82641506, b: 0.82641506, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scratched_Tiling: {r: 1, g: 200, b: 0, a: 0}
+    - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
     - _Tiling: {r: 1, g: 200, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &5456189756263295197
