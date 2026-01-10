@@ -108,7 +108,8 @@ public class BladeGeneration : MonoBehaviour
     {
         None,
         Basic,
-        Hollow
+        Hollow,
+        Hollow_Circular
     }
 
 
@@ -138,6 +139,9 @@ public class BladeGeneration : MonoBehaviour
         [DisplayName("Fuller Falloff", "Fullers", 15, "Shape")]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
+
+        [Range(0.05f, 1.1f), DisplayName("Circle Radias", "Fullers", 13, "Shape")]
+        public float circleRadius = 0.3f;
     }
    
 
@@ -163,6 +167,9 @@ public class BladeGeneration : MonoBehaviour
 
     [DisplayName("Sharp Edge", "Edge & Spine", 6, "Edge")]
     public SharpSide sharpSide = SharpSide.Both;
+
+    //Used for circular hollow for slight smoothness
+    private float bevelAmount = 0.1f;
 
 
     private List<Vector2> uvs = new List<Vector2>();
@@ -192,24 +199,28 @@ public class BladeGeneration : MonoBehaviour
         switch (meshQuality)
         {
             case MeshQuality.Low:
-                segmentSubdivisions = 3;
-                tipSubdivisions = 2;
-                widthSubdivisions = 3;
+                segmentSubdivisions = 5;
+                tipSubdivisions = 3;
+                widthSubdivisions = 5;
+                bevelAmount = 0.0f;
                 break;
             case MeshQuality.Medium:
-                segmentSubdivisions = 8;
-                tipSubdivisions = 7;
-                widthSubdivisions = 8;
+                segmentSubdivisions = 13;
+                tipSubdivisions = 9;
+                widthSubdivisions = 13;
+                bevelAmount = 0.04f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.High:
-                segmentSubdivisions = 15;
-                tipSubdivisions = 12;
-                widthSubdivisions = 15;
+                segmentSubdivisions = 26;
+                tipSubdivisions = 20;
+                widthSubdivisions = 26;
+                bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.Ultra:
-                segmentSubdivisions = 30;
-                tipSubdivisions = 20;
-                widthSubdivisions = 30;
+                segmentSubdivisions = 50;
+                tipSubdivisions = 40;
+                widthSubdivisions = 50;
+                bevelAmount = 0.015f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }
     }
@@ -426,7 +437,10 @@ public class BladeGeneration : MonoBehaviour
         int frontVertexCount,
         List<int> trianglesFrontBack)
     {
+
         bool hollowFullerExists = false;
+        bool circularHollowFullerExists = false;
+
         for (int i = 0; i < fullers.Count; i++)
         {
             //Apply X Fullers can be different types
@@ -447,6 +461,10 @@ public class BladeGeneration : MonoBehaviour
 
                     hollowFullerExists = true;
                     break;
+                case FullerType.Hollow_Circular:
+                    Debug.Log("Cirular Hollow Exists");
+                    circularHollowFullerExists = true;
+                    break;
                 case FullerType.None:
                     break;
                 default:
@@ -465,9 +483,326 @@ public class BladeGeneration : MonoBehaviour
 
              );
         }
+        if (circularHollowFullerExists)
+        {
+            Debug.Log("Applying circular hollow fuller");
+            ApplyCircularHollowFuller(
+               vertices,
+               trianglesFrontBack,
+               frontVertexCount,
+               smoothCenters,
+               smoothLefts,
+               smoothRights
+
+           );
+        }
        
     }
 
+
+    private void ApplyCircularHollowFuller(
+    List<Vector3> vertices,
+    List<int> trianglesFrontBack,
+    int frontVertexCount,
+    List<Vector3> smoothCenters,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights)
+    {
+
+
+        int ringCount = smoothCenters.Count;
+        hollowHitsLeftPerRing = new bool[ringCount];
+        hollowHitsRightPerRing = new bool[ringCount];
+
+        bool[,] holeMask = new bool[ringCount, widthSubdivisions];
+        float[,] holeDistance = new float[ringCount, widthSubdivisions]; // NEW: Store distance from edge
+
+        hollowHitsLeft = false;
+        hollowHitsRight = false;
+        hollowStartRing = ringCount;
+        hollowEndRing = -1;
+
+        // Compute blade length
+        float totalLength = 0f;
+        float[] cumulative = new float[ringCount];
+        cumulative[0] = 0f;
+
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulative[i] = totalLength;
+        }
+
+        // Get average blade width
+        float avgWidth = 0f;
+        for (int i = 0; i < ringCount; i++)
+        {
+            avgWidth += Vector3.Distance(smoothLefts[i], smoothRights[i]);
+        }
+        avgWidth /= ringCount;
+
+        // Build circular hole mask with distance info
+        foreach (var fuller in fullers)
+        {
+            if (fuller.fullerType != FullerType.Hollow_Circular) continue;
+
+            float centerBladeT = (fuller.start + fuller.end) / 2f;
+            float centerLength = centerBladeT * totalLength;
+            float centerWidthPos = fuller.fullerCenter * 2f - 1f;
+            float worldRadius = fuller.circleRadius * Mathf.Min(totalLength, avgWidth);
+
+            for (int r = 0; r < ringCount; r++)
+            {
+                Vector3 ringLeft = smoothLefts[r];
+                Vector3 ringRight = smoothRights[r];
+                Vector3 widthDir = (ringRight - ringLeft).normalized;
+                Vector3 holeCenterPos = Vector3.Lerp(ringLeft, ringRight, (centerWidthPos + 1f) * 0.5f);
+                float lengthDist = Mathf.Abs(cumulative[r] - centerLength);
+
+                for (int v = 0; v < widthSubdivisions; v++)
+                {
+                    float t = v / (float)(widthSubdivisions - 1);
+                    Vector3 vertexPos = Vector3.Lerp(ringLeft, ringRight, t);
+                    Vector3 toVertex = vertexPos - holeCenterPos;
+                    float widthDist = Vector3.Dot(toVertex, widthDir);
+                    float distance = Mathf.Sqrt(lengthDist * lengthDist + widthDist * widthDist);
+
+                    holeDistance[r, v] = distance; // Store distance
+
+                    if (distance <= worldRadius)
+                    {
+                        holeMask[r, v] = true;
+                        hollowStartRing = Mathf.Min(hollowStartRing, r);
+                        hollowEndRing = Mathf.Max(hollowEndRing, r);
+                    }
+                }
+            }
+        }
+
+        if (hollowEndRing < 0 || hollowStartRing >= ringCount)
+            return;
+
+        // Remove front/back triangles inside holes
+        List<int> newTriangles = new List<int>();
+
+        for (int i = 0; i < trianglesFrontBack.Count; i += 3)
+        {
+            int a = trianglesFrontBack[i];
+            int b = trianglesFrontBack[i + 1];
+            int c = trianglesFrontBack[i + 2];
+
+            bool isBack = a >= frontVertexCount;
+            int fa = isBack ? a - frontVertexCount : a;
+            int fb = isBack ? b - frontVertexCount : b;
+            int fc = isBack ? c - frontVertexCount : c;
+
+            int ra = fa / widthSubdivisions;
+            int rb = fb / widthSubdivisions;
+            int rc = fc / widthSubdivisions;
+
+            int va = fa % widthSubdivisions;
+            int vb = fb % widthSubdivisions;
+            int vc = fc % widthSubdivisions;
+
+            if (ra < 0 || ra >= ringCount || va < 0 || va >= widthSubdivisions ||
+                rb < 0 || rb >= ringCount || vb < 0 || vb >= widthSubdivisions ||
+                rc < 0 || rc >= ringCount || vc < 0 || vc >= widthSubdivisions)
+            {
+                newTriangles.Add(a);
+                newTriangles.Add(b);
+                newTriangles.Add(c);
+                continue;
+            }
+
+            if (!(holeMask[ra, va] && holeMask[rb, vb] && holeMask[rc, vc]))
+            {
+                newTriangles.Add(a);
+                newTriangles.Add(b);
+                newTriangles.Add(c);
+            }
+        }
+
+        trianglesFrontBack.Clear();
+        trianglesFrontBack.AddRange(newTriangles);
+
+        List<int> wallTris = new List<int>();
+
+        void AddWall(int a0, int a1, bool flip = false)
+        {
+            int b0 = a0 + frontVertexCount;
+            int b1 = a1 + frontVertexCount;
+
+            if (!flip)
+            {
+                wallTris.Add(a0); wallTris.Add(a1); wallTris.Add(b0);
+                wallTris.Add(a1); wallTris.Add(b1); wallTris.Add(b0);
+            }
+            else
+            {
+                wallTris.Add(a0); wallTris.Add(b0); wallTris.Add(a1);
+                wallTris.Add(a1); wallTris.Add(b0); wallTris.Add(b1);
+            }
+        }
+
+        // Compute per-ring hole ranges
+        int[] holeMin = new int[ringCount];
+        int[] holeMax = new int[ringCount];
+
+        for (int r = 0; r < ringCount; r++)
+        {
+            int minV = widthSubdivisions;
+            int maxV = -1;
+
+            for (int v = 0; v < widthSubdivisions; v++)
+            {
+                if (holeMask[r, v])
+                {
+                    minV = Mathf.Min(minV, v);
+                    maxV = Mathf.Max(maxV, v);
+                }
+            }
+
+            if (maxV >= minV)
+            {
+                holeMin[r] = minV;
+                holeMax[r] = Mathf.Clamp(maxV, 0, widthSubdivisions - 1);
+            }
+            else
+            {
+                holeMin[r] = -1;
+                holeMax[r] = -1;
+            }
+        }
+
+
+        for (int r = hollowStartRing; r <= hollowEndRing; r++)
+        {
+            if (holeMin[r] < 0) continue;
+
+            Vector3 widthDir = (smoothRights[r] - smoothLefts[r]).normalized;
+            Vector3 forwardDir = GetForwardDir(smoothCenters, r);
+            Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+
+            // Find edge vertices and bevel them
+            for (int v = 0; v < widthSubdivisions; v++)
+            {
+                bool isHole = holeMask[r, v];
+                bool leftIsHole = v > 0 && holeMask[r, v - 1];
+                bool rightIsHole = v < widthSubdivisions - 1 && holeMask[r, v + 1];
+
+                // Check if this is an edge vertex (transition between hole and solid)
+                bool isEdge = (isHole && (!leftIsHole || !rightIsHole)) ||
+                             (!isHole && (leftIsHole || rightIsHole));
+
+                if (isEdge)
+                {
+                    int idx = r * widthSubdivisions + v;
+
+                    // Calculate bevel direction (toward hole center)
+                    Vector3 vertPos = vertices[idx];
+
+                    // Find nearest hole center
+                    Vector3 holeCenter = smoothCenters[r];
+                    Vector3 toCenter = (holeCenter - vertPos).normalized;
+
+                    // Apply subtle inward offset to create beveled edge
+                    float edgeFactor = isHole ? 1f : -0.5f; // Bevel inward for hole edge, outward for solid edge
+
+                    vertices[idx] += toCenter * bevelAmount * edgeFactor;
+                    vertices[idx + frontVertexCount] += toCenter * bevelAmount * edgeFactor;
+                }
+            }
+        }
+
+        // Build vertical walls between consecutive rings
+        for (int r = hollowStartRing; r < hollowEndRing && r + 1 < ringCount; r++)
+        {
+            if (holeMin[r] < 0 || holeMin[r + 1] < 0) continue;
+
+            // Left edge
+            if (holeMin[r] < widthSubdivisions && holeMin[r + 1] < widthSubdivisions)
+            {
+                AddWall(r * widthSubdivisions + holeMin[r],
+                        (r + 1) * widthSubdivisions + holeMin[r + 1], true);
+            }
+
+            // Right edge
+            if (holeMax[r] < widthSubdivisions && holeMax[r + 1] < widthSubdivisions)
+            {
+                AddWall(r * widthSubdivisions + holeMax[r],
+                        (r + 1) * widthSubdivisions + holeMax[r + 1], false);
+            }
+        }
+
+        // Build horizontal caps with smooth projection
+        for (int r = hollowStartRing; r <= hollowEndRing; r++)
+        {
+            if (holeMin[r] < 0) continue;
+
+            bool startCap = r == 0 || holeMin[r - 1] < 0;
+            bool endCap = r == ringCount - 1 || holeMin[r + 1] < 0;
+
+            Vector3 widthDir = (smoothRights[r] - smoothLefts[r]).normalized;
+            Vector3 forwardDir = GetForwardDir(smoothCenters, r);
+            Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+            Vector3 planePoint = smoothCenters[r];
+
+            // Project vertices to create flat caps at hole edges
+            for (int v = holeMin[r]; v <= holeMax[r]; v++)
+            {
+                if (v >= widthSubdivisions) continue;
+
+                int a = r * widthSubdivisions + v;
+
+                if (holeMask[r, v])
+                {
+                    vertices[a] = ProjectToPlane(vertices[a], planePoint, ringNormal);
+                    vertices[a + frontVertexCount] =
+                        ProjectToPlane(vertices[a + frontVertexCount], planePoint, ringNormal);
+                }
+            }
+
+            // Add cap triangles at start/end of hole
+            if (startCap || endCap)
+            {
+                for (int v = holeMin[r]; v < holeMax[r]; v++)
+                {
+                    if (v + 1 >= widthSubdivisions) continue;
+                    if (!holeMask[r, v] || !holeMask[r, v + 1]) continue;
+
+                    int a = r * widthSubdivisions + v;
+                    int b = r * widthSubdivisions + v + 1;
+
+                    if (startCap)
+                        AddWall(a, b, false);
+
+                    if (endCap)
+                        AddWall(a, b, true);
+                }
+            }
+        }
+
+        // Mark edge hits for bevel generation
+        for (int i = 0; i < ringCount; i++)
+        {
+            if (holeMin[i] >= 0)
+            {
+                hollowHitsLeftPerRing[i] = (holeMin[i] == 0);
+                hollowHitsRightPerRing[i] = (holeMax[i] == widthSubdivisions - 1);
+            }
+        }
+
+        if (hollowStartRing > 0)
+        {
+            if (holeMin[hollowStartRing] == 0)
+                hollowHitsLeftPerRing[hollowStartRing - 1] = true;
+
+            if (holeMax[hollowStartRing] == widthSubdivisions - 1)
+                hollowHitsRightPerRing[hollowStartRing - 1] = true;
+        }
+
+        trianglesFrontBack.AddRange(wallTris);
+    }
     private void ApplyGrooveFuller(
         List<Vector3> vertices,
         List<Vector3> smoothLefts,
