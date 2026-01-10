@@ -37,6 +37,7 @@ public enum CurvatureMode
     None,
     UserDefinedCurve,
     RandomCurve,
+    RandomOutward,
     SickleCurve
 }
 
@@ -327,9 +328,15 @@ public class SplineAndLineGen : MonoBehaviour
         widthSettings.randomWidthBiasCurve = GenerateRandomWidthCurve();
 
         if (curvatureSettings.curvatureMode == CurvatureMode.RandomCurve)
+        {
             activeCurvatureCurve = GenerateCurvatureCurve();
+        } 
+        
+        if(curvatureSettings.curvatureMode == CurvatureMode.RandomOutward) {
+            activeCurvatureCurve =  GenerateCurvature_OutwardCurve();
+        }
 
-        Vector3 pos = Vector3.zero;
+            Vector3 pos = Vector3.zero;
         float totalHeight = 0f;
         float uniformStepSize = Random.Range(coreSettings.minAndMaxHeightSpacing.x, coreSettings.minAndMaxHeightSpacing.y);
         bool alternatingStartsLeft = true; // Random.value < 0.5f;
@@ -585,6 +592,45 @@ public class SplineAndLineGen : MonoBehaviour
 
         return curve;
     }
+
+    AnimationCurve GenerateCurvature_OutwardCurve()
+    {
+        int keyCount = 12;
+        AnimationCurve curve = new AnimationCurve();
+
+        // PeakFactor controls WHEN the curve bends
+        float exponent = Mathf.Lerp(4f, 0.5f, curvatureSettings.curvature_PeakFactor);
+
+        // PeakFactor controls HOW FAR the tip goes
+        float tipStrength = curvatureSettings.curvature_Max * curvatureSettings.curvature_PeakFactor;
+
+        for (int i = 0; i < keyCount; i++)
+        {
+            float t = i / (float)(keyCount - 1);
+
+            float shaped = Mathf.Pow(t, exponent);
+
+            // Scale so the tip reaches exactly tipStrength
+            float baseValue = shaped * tipStrength;
+
+            // Add noise
+            float noise = (Mathf.PerlinNoise(t * 3f, Random.value * 10f) - 0.5f)
+                          * curvatureSettings.curvature_StepSize
+                          * curvatureSettings.curvature_Max;
+
+            float finalValue = baseValue + noise;
+
+            if (i == keyCount - 1 && tipSettings.tipLeanMode == TipLeanMode.ForcedCenterX)
+                finalValue = 0f;
+
+            curve.AddKey(t, finalValue);
+        }
+
+        for (int i = 0; i < curve.keys.Length; i++)
+            curve.SmoothTangents(i, 0.5f);
+
+        return curve;
+    }
     Vector3 GenerateCurvature(Vector3 pos, float heightRatio, int segmentIndex)
     {
         if (curvatureSettings.curvatureMode == CurvatureMode.None)//|| segmentIndex <= curvatureSettings.straightSegmentThreshold
@@ -601,6 +647,11 @@ public class SplineAndLineGen : MonoBehaviour
             case CurvatureMode.RandomCurve:
                 curveStrength = activeCurvatureCurve.Evaluate(heightRatio);
                 break;
+
+            case CurvatureMode.RandomOutward:
+                curveStrength = activeCurvatureCurve.Evaluate(heightRatio);
+                break;
+
 
             case CurvatureMode.SickleCurve:
                 float arc = Mathf.Sin(heightRatio * Mathf.PI);
