@@ -54,7 +54,7 @@ Material:
     - _Rust_color: {r: 1, g: 0.6126455, b: 0.1566037, a: 0}
     - _Scratch_Color: {r: 0.82641506, g: 0.82641506, b: 0.82641506, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Scratched_Tiling: {r: 1, g: 200, b: 0, a: 0}
+    - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
     - _Tiling: {r: 1, g: 200, b: 0, a: 0}
   m_BuildTextureStacks: []
