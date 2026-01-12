@@ -33,7 +33,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.9905548691749573,
+                    "value": 0.898047685623169,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -44,7 +44,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.7941231727600098,
+                    "value": 0.5806859135627747,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -55,7 +55,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.42996758222579958,
+                    "value": 0.5197218060493469,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -73,7 +73,7 @@
     },
     "curvatureSettings": {
         "straightSegmentThreshold": 4,
-        "curvatureMode": 3,
+        "curvatureMode": 2,
         "curvature_Max": 1.4448426961898804,
         "curvature_PeakFactor": 1.0,
         "curvature_StepSize": 0.0,
@@ -308,7 +308,8 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             },
             {
                 "fullerType": 0,
@@ -357,7 +358,8 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             },
             {
                 "fullerType": 0,
@@ -406,7 +408,8 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             }
         ]
     }

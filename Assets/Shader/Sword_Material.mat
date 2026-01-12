@@ -11,13 +11,17 @@ Material:
   m_Shader: {fileID: -6465566751694194690, guid: 94d77c85408fff242b3f20d6348a70d1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_ValidKeywords:
+  - _PATTERN_NEW_3
+  m_InvalidKeywords:
+  - _METALTYPE_WOOTZ
+  - _PATTERNTYPE_WOOTZ
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
-  stringTagMap: {}
+  stringTagMap:
+    RenderType: Opaque
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -29,13 +33,25 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BUILTIN_AlphaClip: 0
+    - _BUILTIN_Blend: 0
+    - _BUILTIN_CullMode: 2
+    - _BUILTIN_DstBlend: 0
     - _BUILTIN_QueueControl: 0
     - _BUILTIN_QueueOffset: 0
+    - _BUILTIN_SrcBlend: 1
+    - _BUILTIN_Surface: 0
+    - _BUILTIN_ZTest: 4
+    - _BUILTIN_ZWrite: 1
+    - _BUILTIN_ZWriteControl: 0
     - _BaseContrast: 1.5
     - _BaseScale: 120
     - _BrushedStrength: 0.56
+    - _METALTYPE: 5
     - _Metalicness: 0.95
     - _Noise_Influence: 0.54
+    - _PATTERN: 6
+    - _PATTERNTYPE: 5
     - _Power: 4.57
     - _RustScale: 6.19
     - _RustScale2: 202.21
@@ -45,14 +61,15 @@ Material:
     - _ScratchScale: 4.65
     - _Scratched_Power: 6
     - _Smoothness: 0.7
+    - _useWootzPattern: 0
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
     - _Dark_Rust_Color: {r: 0.6150943, g: 0.33400282, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
-    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
+    - _DarkestBaseColor: {r: 0.03921569, g: 0.03921569, b: 0.0470588, a: 1}
+    - _LightestBaseColor: {r: 0.2274509, g: 0.2470588, b: 0.3607843, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Rust_color: {r: 1, g: 0.6126455, b: 0.1566037, a: 0}
-    - _Scratch_Color: {r: 0.82641506, g: 0.82641506, b: 0.82641506, a: 1}
+    - _Scratch_Color: {r: 1, g: 1, b: 1, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}

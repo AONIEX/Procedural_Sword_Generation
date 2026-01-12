@@ -10,6 +10,7 @@ using TMPro;
 public class UIControl : MonoBehaviour
 {
     public BladeGeneration bladeGen;
+    public SwordShaderControl shaderControl;
 
     public GameObject sliderRowPrefab;
     public GameObject dropdownRowPrefab;
@@ -69,6 +70,11 @@ public class UIControl : MonoBehaviour
 
         if (bladeGen != null && bladeGen.splineGen != null)
             GenerateForObject(bladeGen.splineGen);
+
+        if(shaderControl != null)
+        {
+            GenerateForObject(shaderControl);
+        }
 
         buildingUI = false;
 

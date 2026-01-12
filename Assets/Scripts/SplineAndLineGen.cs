@@ -17,6 +17,7 @@ public class BladePreset
     public bool useSymmetry;
 
     public BladeGenerationData bladeGenerationData;
+    public ShaderParamaters shaderParamaters;
 }
 
 [System.Serializable]
@@ -251,6 +252,7 @@ public class EdgeSettings
 public class SplineAndLineGen : MonoBehaviour
 {
     public BladeGeneration bladeGeneration;
+    public SwordShaderControl swordShaderControl;
 
     [Header("Blade Preset")]
     public string presetName;
@@ -292,6 +294,7 @@ public class SplineAndLineGen : MonoBehaviour
     {
         uiControl = GameObject.FindAnyObjectByType<UIControl>();
         bladeGeneration = GetComponent<BladeGeneration>();
+        swordShaderControl = GetComponent<SwordShaderControl>();
         LoadPreset();
 
         GenerateLinesAndSplines();
@@ -739,7 +742,8 @@ public class SplineAndLineGen : MonoBehaviour
             tipSettings = this.tipSettings,
             edgeSettings = this.edgeSettings,
             useSymmetry = this.useSymmetry,
-            bladeGenerationData = bladeGeneration.GetData()
+            bladeGenerationData = bladeGeneration.GetData(),
+            shaderParamaters = swordShaderControl.GetData()
         };
 
 
@@ -846,10 +850,14 @@ public class SplineAndLineGen : MonoBehaviour
         {
             bladeGeneration.ApplyData(preset.bladeGenerationData);
         }
-        else
+
+        if(preset.shaderParamaters != null)
         {
-            GenerateLinesAndSplines();
+            swordShaderControl.ApplyData(preset.shaderParamaters);
         }
+
+        GenerateLinesAndSplines();
+
     }
 
 
