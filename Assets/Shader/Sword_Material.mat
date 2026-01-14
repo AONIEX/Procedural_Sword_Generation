@@ -65,11 +65,11 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
     - _Dark_Rust_Color: {r: 0.6150943, g: 0.33400282, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.03921569, g: 0.03921569, b: 0.0470588, a: 1}
-    - _LightestBaseColor: {r: 0.2274509, g: 0.2470588, b: 0.3607843, a: 1}
+    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
+    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Rust_color: {r: 1, g: 0.6126455, b: 0.1566037, a: 0}
-    - _Scratch_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
