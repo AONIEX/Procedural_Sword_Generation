@@ -157,6 +157,8 @@ public class BladeGeneration : MonoBehaviour
 
     bool[] hollowHitsLeftPerRing;
     bool[] hollowHitsRightPerRing;
+    bool[] circularHitsRightPerRing;
+    bool[] circularHitsLeftPerRing;
 
     public enum SharpSide
     {
@@ -507,11 +509,14 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> smoothLefts,
         List<Vector3> smoothRights)
     {
+      
+
         const int thicknessSegments = 3;
 
         int ringCount = smoothCenters.Count;
         int width = widthSubdivisions;
-
+        circularHitsLeftPerRing = new bool[ringCount];
+        circularHitsRightPerRing = new bool[ringCount];
         bool[,] holeMask = new bool[ringCount, width];
         bool[,] deleteMask = new bool[ringCount, width];
         bool[,] capSnapped = new bool[ringCount, width]; 
@@ -571,9 +576,17 @@ public class BladeGeneration : MonoBehaviour
                     if (dist <= radius)
                     {
                         holeMask[r, v] = true;
+
+                        // Track circular edge hits for bevel suppression
+                        if (v == 0)
+                            circularHitsLeftPerRing[r] = true;
+                        else if (v == width - 1)
+                            circularHitsRightPerRing[r] = true;
+
                         hollowStartRing = Mathf.Min(hollowStartRing, r);
                         hollowEndRing = Mathf.Max(hollowEndRing, r);
                     }
+
                 }
             }
         }
@@ -995,34 +1008,60 @@ public class BladeGeneration : MonoBehaviour
         frontVertexCount = vertices.Count;
     }
     private void ConnectBevels(
-        List<int> trianglesFrontBack,
-        List<int> trianglesSharp,
-        int frontVertexCount,
-        int sharpStartFront,
-        int sharpStartBack,
-        int ringCount)
+     List<int> trianglesFrontBack,
+     List<int> trianglesSharp,
+     int frontVertexCount,
+     int sharpStartFront,
+     int sharpStartBack,
+     int ringCount)
     {
         for (int i = 0; i < ringCount - 1; i++)
         {
-            bool leftBevelActive = true;
-            bool rightBevelActive = true;
+            // ----- LEFT EDGE -----
+            bool leftThis =
+              (hollowHitsLeftPerRing != null &&
+               i < hollowHitsLeftPerRing.Length &&
+               hollowHitsLeftPerRing[i])
+              ||
+              (circularHitsLeftPerRing != null &&
+               i < circularHitsLeftPerRing.Length &&
+               circularHitsLeftPerRing[i]);
 
-            if (i + 1 < hollowHitsLeftPerRing.Length)
-            {
-                bool leftThis = hollowHitsLeftPerRing[i];
-                bool leftNext = hollowHitsLeftPerRing[i + 1];
-                leftBevelActive = !(leftThis && leftNext);
-            }
+            bool leftNext =
+                (hollowHitsLeftPerRing != null &&
+                 i + 1 < hollowHitsLeftPerRing.Length &&
+                 hollowHitsLeftPerRing[i + 1])
+                ||
+                (circularHitsLeftPerRing != null &&
+                 i + 1 < circularHitsLeftPerRing.Length &&
+                 circularHitsLeftPerRing[i + 1]);
 
-            if (i + 1 < hollowHitsRightPerRing.Length)
-            {
-                bool rightThis = hollowHitsRightPerRing[i];
-                bool rightNext = hollowHitsRightPerRing[i + 1];
-                rightBevelActive = !(rightThis && rightNext);
-            }
+            bool leftBevelActive = !(leftThis && leftNext);
+
+            // ----- RIGHT EDGE -----
+
+            bool rightThis =
+                (hollowHitsRightPerRing != null &&
+                 i < hollowHitsRightPerRing.Length &&
+                 hollowHitsRightPerRing[i])
+                ||
+                (circularHitsRightPerRing != null &&
+                 i < circularHitsRightPerRing.Length &&
+                 circularHitsRightPerRing[i]);
+
+            bool rightNext =
+                (hollowHitsRightPerRing != null &&
+                 i + 1 < hollowHitsRightPerRing.Length &&
+                 hollowHitsRightPerRing[i + 1])
+                ||
+                (circularHitsRightPerRing != null &&
+                 i + 1 < circularHitsRightPerRing.Length &&
+                 circularHitsRightPerRing[i + 1]);
+
+            bool rightBevelActive = !(rightThis && rightNext);
 
 
-
+            // ----- INDICES -----
             int frontA = i * widthSubdivisions;
             int frontB = (i + 1) * widthSubdivisions;
 
@@ -1057,26 +1096,34 @@ public class BladeGeneration : MonoBehaviour
                 ? trianglesSharp
                 : trianglesFrontBack;
 
+            // ----- LEFT BEVEL -----
             if (leftBevelActive)
             {
                 leftList.Add(frontA); leftList.Add(frontB); leftList.Add(sharpLeftFrontA);
                 leftList.Add(frontB); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftFrontA);
+
                 leftList.Add(backB); leftList.Add(backA); leftList.Add(sharpLeftBackA);
                 leftList.Add(backB); leftList.Add(sharpLeftBackA); leftList.Add(sharpLeftBackB);
+
                 leftList.Add(sharpLeftFrontA); leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackA);
                 leftList.Add(sharpLeftFrontB); leftList.Add(sharpLeftBackB); leftList.Add(sharpLeftBackA);
             }
+
+            // ----- RIGHT BEVEL -----
             if (rightBevelActive)
             {
                 rightList.Add(frontARight); rightList.Add(sharpRightFrontA); rightList.Add(frontBRight);
                 rightList.Add(frontBRight); rightList.Add(sharpRightFrontA); rightList.Add(sharpRightFrontB);
+
                 rightList.Add(backARight); rightList.Add(backBRight); rightList.Add(sharpRightBackA);
                 rightList.Add(backBRight); rightList.Add(sharpRightBackB); rightList.Add(sharpRightBackA);
+
                 rightList.Add(sharpRightFrontA); rightList.Add(sharpRightBackA); rightList.Add(sharpRightFrontB);
                 rightList.Add(sharpRightFrontB); rightList.Add(sharpRightBackA); rightList.Add(sharpRightBackB);
             }
         }
     }
+
 
 
     private void GenerateBackFace(
