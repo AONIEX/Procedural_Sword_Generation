@@ -29,7 +29,10 @@ public class ShaderParamaters
     public SwordColors swordColor = SwordColors.Iron;
 
     [DisplayName("Effect Type", "Texture", 2, "")]
-    public SwordEffects swordEffcet = SwordEffects.Blood;
+    public SwordEffects swordEffcet = SwordEffects.Rust;
+
+    [Range(0.1f,0.9f)][DisplayName("Effect Amount", "Texture", 3, "")]
+    public float effectAmount = 1.0f;
 }
 
 public class SwordShaderControl : MonoBehaviour
@@ -43,15 +46,27 @@ public class SwordShaderControl : MonoBehaviour
     public Material material;
 
     private SwordColors oldSwordColor = SwordColors.Iron;
-    private SwordEffects oldEffect = SwordEffects.Blood;
+    private SwordEffects oldEffect = SwordEffects.Rust;
+    private float oldEffectAmount = 0.0f;
 
+    public Color lightRustColor;
+    public Color darkRustColor;
+
+    public Color lightBloodColor;
+    public Color darkBloodColor;
+
+    public Color lightMudColor;
+    public Color darkMudColor;
+
+    public Color lightOxidiationColor;
+    public Color darkOxidiationColor;
 
 
     // Start is called before the first frame update
     void Start()
     {
         swordParamaters.swordColor = SwordColors.Iron;
-        swordParamaters.swordEffcet = SwordEffects.Blood;
+        swordParamaters.swordEffcet = SwordEffects.Rust;
 
         swordLightColor = new Color(0.7509433f, 0.7509433f, 0.7509433f, 1f);
         swordDarkColor = new Color(0.6603774f, 0.6603774f, 0.6603774f, 1f);
@@ -63,7 +78,7 @@ public class SwordShaderControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (oldSwordColor != swordParamaters.swordColor || oldEffect != swordParamaters.swordEffcet)
+        if (oldSwordColor != swordParamaters.swordColor || oldEffect != swordParamaters.swordEffcet || swordParamaters.effectAmount != oldEffectAmount)
         {
             UpdateShader();
         }
@@ -78,7 +93,7 @@ public class SwordShaderControl : MonoBehaviour
     {
 
         UpdateColors();
-        UpatesEffect();
+        UpatesEffects();
 
         if (material == null)
             material = GetComponent<Renderer>().material;
@@ -149,12 +164,40 @@ public class SwordShaderControl : MonoBehaviour
             material.SetInt("_useWootzPattern", 0);
 
         }
+
         oldSwordColor = swordParamaters.swordColor;
-        oldEffect = swordParamaters.swordEffcet;
     }
 
-    public void UpatesEffect()
+
+    public void UpatesEffects()
     {
+
+        switch (swordParamaters.swordEffcet)    
+        {
+            case SwordEffects.Blood:
+                material.SetColor("_Rust_color", lightBloodColor);
+                material.SetColor("_Dark_Rust_Color", darkBloodColor);
+                break;
+            case SwordEffects.Mud:
+                material.SetColor("_Rust_color", lightMudColor);
+                material.SetColor("_Dark_Rust_Color", darkMudColor);
+                break;
+            case SwordEffects.Rust:
+                material.SetColor("_Rust_color", lightRustColor);
+                material.SetColor("_Dark_Rust_Color", darkRustColor);
+                break;
+            case SwordEffects.Oxidation:
+                material.SetColor("_Rust_color", lightOxidiationColor);
+                material.SetColor("_Dark_Rust_Color", darkOxidiationColor);
+                break;
+            default:
+                break;
+        }
+
+        material.SetFloat("_Rust_Power", swordParamaters.effectAmount);
+        oldEffectAmount = swordParamaters.effectAmount;
+        oldEffect = swordParamaters.swordEffcet;
+
 
     }
 

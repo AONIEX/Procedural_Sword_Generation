@@ -57,19 +57,19 @@ Material:
     - _RustScale2: 202.21
     - _RustSmoothness: 0.4
     - _Rust_Influence: 0
-    - _Rust_Power: 1
+    - _Rust_Power: 0.34490132
     - _ScratchScale: 4.65
     - _Scratched_Power: 6
     - _Smoothness: 0.7
     - _useWootzPattern: 0
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
-    - _Dark_Rust_Color: {r: 0.6150943, g: 0.33400282, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
-    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
+    - _Dark_Rust_Color: {r: 0.32941177, g: 0.18431373, b: 0.078431375, a: 0}
+    - _DarkestBaseColor: {r: 0.4784313, g: 0.4784313, b: 0.4784313, a: 1}
+    - _LightestBaseColor: {r: 0.8509804, g: 0.8509804, b: 0.8509804, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Rust_color: {r: 1, g: 0.6126455, b: 0.1566037, a: 0}
-    - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
+    - _Rust_color: {r: 0.54901963, g: 0.27450982, b: 0.25882354, a: 0}
+    - _Scratch_Color: {r: 1, g: 1, b: 1, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
