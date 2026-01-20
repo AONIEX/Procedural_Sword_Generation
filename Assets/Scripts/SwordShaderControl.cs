@@ -122,8 +122,11 @@ public class SwordShaderControl : MonoBehaviour
 
                 break;
             case SwordColors.Steel:
-                swordLightColor = new Color(0.8509804f, 0.8509804f, 0.8509804f, 1f);
-                swordDarkColor = new Color(0.4784313f, 0.4784313f, 0.4784313f, 1f);
+                swordLightColor = new Color(0.6078432f, 0.6078432f, 0.6078432f, 1f);
+                swordDarkColor = new Color(0.5396226f, 0.5396226f, 0.5396226f, 1f);
+
+                //swordLightColor = new Color(0.8509804f, 0.8509804f, 0.8509804f, 1f);
+                //swordDarkColor = new Color(0.4784313f, 0.4784313f, 0.4784313f, 1f);
                 swordScratchColor = new Color(1, 1, 1, 1);
 
                 break;
