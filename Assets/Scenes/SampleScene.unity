@@ -316,7 +316,7 @@ MonoBehaviour:
   bladeGeneration: {fileID: 0}
   swordShaderControl: {fileID: 0}
   presetName: random
-  bladePreset: 6
+  bladePreset: 5
   useSymmetry: 1
   coreSettings:
     splinePointCount: 7

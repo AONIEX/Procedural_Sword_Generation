@@ -2,24 +2,24 @@
     "presetName": "Gladius",
     "coreSettings": {
         "splinePointCount": 7,
-        "heightSpacing": 0.44999998807907107,
-        "heightSpacingMode": 0,
-        "totalBladeHeight": 3.0,
+        "heightSpacing": 0.3499999940395355,
+        "heightSpacingMode": 3,
+        "totalBladeHeight": 3.569051742553711,
         "minAndMaxHeightSpacing": {
-            "x": 0.27457937598228457,
-            "y": 0.6000000238418579
-        },
-        "minAndMaxWidth": {
-            "x": 0.31824156641960146,
+            "x": 0.5865877866744995,
             "y": 0.5
         },
+        "minAndMaxWidth": {
+            "x": 0.4764714241027832,
+            "y": 0.48691242933273318
+        },
         "minAndMaxAngle": {
-            "x": -5.0,
-            "y": 5.0
+            "x": 1.0146045684814454,
+            "y": 0.11309266090393067
         }
     },
     "widthSettings": {
-        "useRandomWidthCurve": true,
+        "useRandomWidthCurve": false,
         "userDefinedCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -37,7 +37,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.800000011920929,
+                    "value": 1.0,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -56,7 +56,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.0,
-                    "value": 0.7062013149261475,
+                    "value": 0.574199914932251,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -67,7 +67,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 0.5,
-                    "value": 0.7122744917869568,
+                    "value": 0.3959025740623474,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -78,7 +78,7 @@
                 {
                     "serializedVersion": "3",
                     "time": 1.0,
-                    "value": 0.5941513776779175,
+                    "value": 0.4099544882774353,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -92,14 +92,14 @@
             "m_RotationOrder": 4
         },
         "noiseInfluence": 1.0,
-        "noiseFrequency": 0.12300000339746475
+        "noiseFrequency": 0.05028390884399414
     },
     "curvatureSettings": {
-        "straightSegmentThreshold": 3,
-        "curvatureMode": 0,
+        "straightSegmentThreshold": 1,
+        "curvatureMode": 2,
         "curvature_Max": 0.0,
-        "curvature_PeakFactor": 0.30000001192092898,
-        "curvature_StepSize": 0.20000000298023225,
+        "curvature_PeakFactor": 0.0,
+        "curvature_StepSize": 0.0,
         "curvatureShape": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -107,6 +107,17 @@
                     "serializedVersion": "3",
                     "time": 0.0,
                     "value": 0.0,
+                    "inSlope": 0.0,
+                    "outSlope": 2.0,
+                    "tangentMode": 0,
+                    "weightedMode": 0,
+                    "inWeight": 0.0,
+                    "outWeight": 0.0
+                },
+                {
+                    "serializedVersion": "3",
+                    "time": 0.5,
+                    "value": 1.0,
                     "inSlope": 0.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
@@ -118,7 +129,7 @@
                     "serializedVersion": "3",
                     "time": 1.0,
                     "value": 0.0,
-                    "inSlope": 0.0,
+                    "inSlope": -2.0,
                     "outSlope": 0.0,
                     "tangentMode": 0,
                     "weightedMode": 0,
@@ -131,14 +142,14 @@
             "m_RotationOrder": 4
         },
         "curvatureDirection": {
-            "x": 1.0,
+            "x": -1.0,
             "y": 0.0,
             "z": 0.0
         }
     },
     "tipSettings": {
-        "tipLeanMode": 0,
-        "heightOffset": 0.10000000149011612,
+        "tipLeanMode": 2,
+        "heightOffset": 0.1877126693725586,
         "tipLeanStrengthCurve": {
             "serializedVersion": "2",
             "m_Curve": [
@@ -172,14 +183,14 @@
     },
     "edgeSettings": {
         "edgeCollapseMode": 6,
-        "collapsePattern": "NNN",
-        "spineOffset": 0.0
+        "collapsePattern": "NNNNNNN",
+        "spineOffset": 0.052558302879333499
     },
     "useSymmetry": true,
     "bladeGenerationData": {
         "baseProfiles": [
             {
-                "profile": 0,
+                "profile": 2,
                 "startHeight": 0.0,
                 "endHeight": 1.0,
                 "influenceCurve": {
@@ -188,10 +199,10 @@
                         {
                             "serializedVersion": "3",
                             "time": 0.0,
-                            "value": 0.0,
+                            "value": 1.0,
                             "inSlope": 0.0,
                             "outSlope": 0.0,
-                            "tangentMode": 0,
+                            "tangentMode": 34,
                             "weightedMode": 0,
                             "inWeight": 0.0,
                             "outWeight": 0.0
@@ -200,9 +211,9 @@
                             "serializedVersion": "3",
                             "time": 1.0,
                             "value": 1.0,
-                            "inSlope": 2.0,
-                            "outSlope": 2.0,
-                            "tangentMode": 0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 34,
                             "weightedMode": 0,
                             "inWeight": 0.0,
                             "outWeight": 0.0
@@ -212,7 +223,7 @@
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
                 },
-                "scale": 1.0
+                "scale": 1.1100000143051148
             },
             {
                 "profile": 1,
@@ -224,7 +235,7 @@
                         {
                             "serializedVersion": "3",
                             "time": 0.0,
-                            "value": 0.0,
+                            "value": 1.0,
                             "inSlope": 0.0,
                             "outSlope": 0.0,
                             "tangentMode": 0,
@@ -291,14 +302,14 @@
         "meshQuality": 2,
         "handleXPosition": 0.0,
         "bladeThickness": 0.15000000596046449,
-        "edgeSharpness": 0.019999999552965165,
-        "spineThickness": 0.004999999888241291,
+        "edgeSharpness": 0.020563285797834398,
+        "spineThickness": 0.0010000000474974514,
         "sharpSide": 2,
         "fullers": [
             {
-                "fullerType": 2,
-                "start": 0.38999998569488528,
-                "end": 0.6499999761581421,
+                "fullerType": 0,
+                "start": 0.0,
+                "end": 0.7861384749412537,
                 "fullerDepth": 0.8999999761581421,
                 "fullerWidth": 0.75,
                 "fullerCenter": 0.5,
@@ -342,10 +353,11 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             },
             {
-                "fullerType": 2,
+                "fullerType": 0,
                 "start": 0.0,
                 "end": 1.0,
                 "fullerDepth": 0.8999999761581421,
@@ -391,10 +403,11 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             },
             {
-                "fullerType": 2,
+                "fullerType": 0,
                 "start": 0.05400000140070915,
                 "end": 0.19599999487400056,
                 "fullerDepth": 0.8999999761581421,
@@ -440,7 +453,8 @@
                     "m_PreInfinity": 2,
                     "m_PostInfinity": 2,
                     "m_RotationOrder": 4
-                }
+                },
+                "circleRadius": 0.30000001192092898
             }
         ]
     }
