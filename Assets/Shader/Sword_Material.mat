@@ -48,6 +48,7 @@ Material:
     - _BaseScale: 120
     - _BlemishStrength: 0.65
     - _BrushedStrength: 0.56
+    - _FresnelPower: 0
     - _METALTYPE: 5
     - _Metalicness: 0.95
     - _Noise_Influence: 0.54
@@ -56,7 +57,7 @@ Material:
     - _Power: 4.57
     - _RustScale: 6.19
     - _RustScale2: 202.21
-    - _RustSmoothness: 0.4
+    - _RustSmoothness: 0.65
     - _Rust_Influence: 0
     - _Rust_Power: 1
     - _ScratchScale: 4.65
