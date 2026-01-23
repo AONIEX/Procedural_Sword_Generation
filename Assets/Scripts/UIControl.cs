@@ -30,6 +30,9 @@ public class UIControl : MonoBehaviour
     private float lastGenerateTime = 0f;
     private bool pendingGenerate = false;
 
+    private enum GenerationType { None, Full, Spline }
+    private GenerationType pendingGeneration = GenerationType.None;
+
     // Section -> SubSection -> UI elements
     private Dictionary<string, Dictionary<string, List<GameObject>>> sectionUIElements
         = new Dictionary<string, Dictionary<string, List<GameObject>>>();
@@ -43,15 +46,25 @@ public class UIControl : MonoBehaviour
 
     void Update()
     {
-        if (!pendingGenerate) return;
-        if (!autoGenerate) return;
+        if (!pendingGenerate || !autoGenerate) return;
 
         float interval = 1f / maxGenerateRate;
         if (Time.time - lastGenerateTime >= interval)
         {
-            pendingGenerate = false;
             lastGenerateTime = Time.time;
-            GenerateBlade();
+            pendingGenerate = false;
+
+            switch (pendingGeneration)
+            {
+                case GenerationType.Full:
+                    bladeGen.Generate3DBlade(true);
+                    break;
+                case GenerationType.Spline:
+                    GenerateBlade();
+                    break;
+            }
+
+            pendingGeneration = GenerationType.None;
         }
     }
 
@@ -66,15 +79,13 @@ public class UIControl : MonoBehaviour
         buildingUI = true;
 
         if (bladeGen != null)
-            GenerateForObject(bladeGen);
+            GenerateForObject(bladeGen, bladeGen);
 
         if (bladeGen != null && bladeGen.splineGen != null)
-            GenerateForObject(bladeGen.splineGen);
+            GenerateForObject(bladeGen.splineGen, bladeGen.splineGen);
 
-        if(shaderControl != null)
-        {
-            GenerateForObject(shaderControl);
-        }
+        if (shaderControl != null)
+            GenerateForObject(shaderControl, shaderControl);
 
         buildingUI = false;
 
@@ -110,7 +121,6 @@ public class UIControl : MonoBehaviour
 
     void ShowSection(string section)
     {
-        // Hide everything first
         foreach (var sec in sectionUIElements.Values)
             foreach (var sub in sec.Values)
                 foreach (var go in sub)
@@ -120,31 +130,26 @@ public class UIControl : MonoBehaviour
             return;
 
         int siblingIndex = 0;
-
-        // IMPORTANT: deterministic subsection order
-        foreach (var subPair in sectionUIElements[section]
-            .OrderBy(s => s.Key)) // alphabetical, or customize
+        foreach (var subPair in sectionUIElements[section].OrderBy(s => s.Key))
         {
             foreach (var go in subPair.Value)
             {
                 if (go == null) continue;
-
                 go.SetActive(true);
                 go.transform.SetSiblingIndex(siblingIndex++);
             }
         }
     }
 
-
     // ====================== CORE GENERATION ======================
 
     void GenerateForObject(
-    object obj,
-    string currentSection = "General",
-    string currentSubSection = "Basic",
-    bool forceSection = false  // ⭐ NEW: Force fields to stay in current section
-)
-
+        object obj,
+        object rootOwner,
+        string currentSection = "General",
+        string currentSubSection = "Basic",
+        bool forceSection = false
+    )
     {
         if (obj == null) return;
 
@@ -163,20 +168,16 @@ public class UIControl : MonoBehaviour
         {
             object value = field.GetValue(obj);
 
-            // Then in the field processing loop, change this line:
             string section = (forceSection ? currentSection : attr?.Section) ?? currentSection;
             string subSection = (forceSection ? currentSubSection : attr?.SubSection) ?? currentSubSection;
-
             string label = attr?.DisplayName ?? PrettyFieldName(field.Name);
 
             // ---------- RANGE ----------
             RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
-            if (range != null &&
-                (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
+            if (range != null && (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection,
-                    CreateSlider(obj, field, label, range));
+                AddToSection(section, subSection, CreateSlider(obj, field, label, range, rootOwner));
                 continue;
             }
 
@@ -184,7 +185,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(Vector2))
             {
                 EnsureSubSectionExists(section, subSection);
-                CreateVector2Sliders(obj, field, label, section, subSection);
+                CreateVector2Sliders(obj, field, label, section, subSection, rootOwner);
                 continue;
             }
 
@@ -192,8 +193,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(bool))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection,
-                    CreateToggle(obj, field, label));
+                AddToSection(section, subSection, CreateToggle(obj, field, label, rootOwner));
                 continue;
             }
 
@@ -201,8 +201,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType.IsEnum)
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection,
-                    CreateEnumDropdown(obj, field, label));
+                AddToSection(section, subSection, CreateEnumDropdown(obj, field, label, rootOwner));
                 continue;
             }
 
@@ -210,35 +209,28 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(AnimationCurve))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection,
-                    CreateCurveEditor(obj, field, label));
+                AddToSection(section, subSection, CreateCurveEditor(obj, field, label, rootOwner));
                 continue;
             }
 
-            // ---------- List ----------
-
-            if (field.FieldType.IsGenericType &&
-            field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+            // ---------- LIST ----------
+            if (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 IList list = (IList)value;
                 if (list == null) continue;
 
                 EnsureSubSectionExists(section, subSection);
-
                 for (int i = 0; i < list.Count; i++)
                 {
                     GameObject listHeader = CreateHeaderRow($"{label} {i + 1}");
                     AddToSection(section, subSection, listHeader);
-
-                    // ⭐ Pass forceSection=true to keep all fields together under the header
-                    GenerateForObject(list[i], section, subSection, forceSection: true);
+                    GenerateForObject(list[i], rootOwner, section, subSection, forceSection: true);
                 }
                 continue;
             }
 
             // ---------- NESTED CLASS ----------
-            if (field.FieldType.IsClass &&
-                field.FieldType != typeof(string) &&
+            if (field.FieldType.IsClass && field.FieldType != typeof(string) &&
                 !field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)))
             {
                 if (value == null)
@@ -246,8 +238,7 @@ public class UIControl : MonoBehaviour
                     value = Activator.CreateInstance(field.FieldType);
                     field.SetValue(obj, value);
                 }
-
-                GenerateForObject(value, section, subSection);
+                GenerateForObject(value, rootOwner, section, subSection);
             }
         }
     }
@@ -260,11 +251,9 @@ public class UIControl : MonoBehaviour
             sectionUIElements[section] = new Dictionary<string, List<GameObject>>();
 
         var subs = sectionUIElements[section];
-
         if (!subs.ContainsKey(subSection))
         {
             subs[subSection] = new List<GameObject>();
-
             GameObject header = CreateHeaderRow(subSection);
             header.SetActive(false);
             subs[subSection].Add(header);
@@ -287,7 +276,7 @@ public class UIControl : MonoBehaviour
 
     // ====================== UI ELEMENTS ======================
 
-    GameObject CreateSlider(object obj, FieldInfo field, string label, RangeAttribute range)
+    GameObject CreateSlider(object obj, FieldInfo field, string label, RangeAttribute range, object rootOwner)
     {
         GameObject row = Instantiate(sliderRowPrefab, uiParent);
         TMP_Text text = row.GetComponentInChildren<TMP_Text>();
@@ -316,18 +305,20 @@ public class UIControl : MonoBehaviour
             }
 
             if (!buildingUI)
-                RequestGenerate();
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         });
 
         return row;
     }
 
-    void CreateVector2Sliders(object obj, FieldInfo field, string label,
-                          string section, string subSection)
+    void CreateVector2Sliders(object obj, FieldInfo field, string label, string section, string subSection, object rootOwner)
     {
         Vector2 v = (Vector2)field.GetValue(obj);
-
-        // ⭐ Get the attribute
         Vector2RangeAttribute range = field.GetCustomAttribute<Vector2RangeAttribute>();
 
         GameObject minRow = Instantiate(sliderRowPrefab, uiParent);
@@ -339,47 +330,55 @@ public class UIControl : MonoBehaviour
         TMP_Text minText = minRow.GetComponentInChildren<TMP_Text>();
         TMP_Text maxText = maxRow.GetComponentInChildren<TMP_Text>();
 
-        // ⭐ Apply attribute min/max to sliders
         if (range != null)
         {
             minSlider.minValue = range.MinX;
             minSlider.maxValue = range.MaxX;
-
             maxSlider.minValue = range.MinY;
             maxSlider.maxValue = range.MaxY;
         }
 
-        // Set initial values
         minSlider.value = v.x;
         maxSlider.value = v.y;
 
         UpdateLabel(minText, $"{label} Min", v.x, false);
         UpdateLabel(maxText, $"{label} Max", v.y, false);
 
-        // Min slider logic
         minSlider.onValueChanged.AddListener(val =>
         {
             Vector2 nv = (Vector2)field.GetValue(obj);
             nv.x = val;
             field.SetValue(obj, nv);
             UpdateLabel(minText, $"{label} Min", val, false);
-            if (!buildingUI) RequestGenerate();
+            if (!buildingUI)
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         });
 
-        // Max slider logic
         maxSlider.onValueChanged.AddListener(val =>
         {
             Vector2 nv = (Vector2)field.GetValue(obj);
             nv.y = val;
             field.SetValue(obj, nv);
             UpdateLabel(maxText, $"{label} Max", val, false);
-            if (!buildingUI) RequestGenerate();
+            if (!buildingUI)
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         });
 
         AddToSection(section, subSection, minRow);
         AddToSection(section, subSection, maxRow);
     }
-    GameObject CreateToggle(object obj, FieldInfo field, string label)
+
+    GameObject CreateToggle(object obj, FieldInfo field, string label, object rootOwner)
     {
         GameObject row = Instantiate(toggleRowPrefab, uiParent);
         TMP_Text text = row.GetComponentInChildren<TMP_Text>();
@@ -391,13 +390,19 @@ public class UIControl : MonoBehaviour
         toggle.onValueChanged.AddListener(v =>
         {
             field.SetValue(obj, v);
-            if (!buildingUI) RequestGenerate();
+            if (!buildingUI)
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         });
 
         return row;
     }
 
-    GameObject CreateEnumDropdown(object obj, FieldInfo field, string label)
+    GameObject CreateEnumDropdown(object obj, FieldInfo field, string label, object rootOwner)
     {
         GameObject row = Instantiate(dropdownRowPrefab, uiParent);
         TMP_Text text = row.GetComponentInChildren<TMP_Text>();
@@ -412,25 +417,36 @@ public class UIControl : MonoBehaviour
         dd.onValueChanged.AddListener(i =>
         {
             field.SetValue(obj, Enum.GetValues(field.FieldType).GetValue(i));
-            if (!buildingUI) RequestGenerate();
+            if (!buildingUI)
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         });
 
         return row;
     }
 
-    GameObject CreateCurveEditor(object obj, FieldInfo field, string label)
+    GameObject CreateCurveEditor(object obj, FieldInfo field, string label, object rootOwner)
     {
         GameObject row = Instantiate(curveEditorPrefab, uiParent);
         RuntimeCurveEditor editor = row.GetComponent<RuntimeCurveEditor>();
 
-        AnimationCurve curve = (AnimationCurve)field.GetValue(obj)
-            ?? AnimationCurve.Linear(0, 0, 1, 1);
-
+        AnimationCurve curve = (AnimationCurve)field.GetValue(obj) ?? AnimationCurve.Linear(0, 0, 1, 1);
         editor.Initialize(curve, label);
+
         editor.onCurveChanged = c =>
         {
             field.SetValue(obj, c);
-            if (!buildingUI) RequestGenerate();
+            if (!buildingUI)
+            {
+                if (rootOwner == bladeGen)
+                    RequestGenerate(GenerationType.Full);
+                else if (rootOwner == bladeGen.splineGen)
+                    RequestGenerate(GenerationType.Spline);
+            }
         };
 
         return row;
@@ -446,15 +462,20 @@ public class UIControl : MonoBehaviour
 
     string PrettyFieldName(string raw)
     {
-        return System.Text.RegularExpressions.Regex
-            .Replace(raw, "(\\B[A-Z])", " $1");
+        return System.Text.RegularExpressions.Regex.Replace(raw, "(\\B[A-Z])", " $1");
     }
 
     public void GenerateBlade() => bladeGen.Generate();
 
-    void RequestGenerate()
+    void RequestGenerate(GenerationType type)
     {
-        if (autoGenerate) pendingGenerate = true;
+        if (!autoGenerate) return;
+        if (type == GenerationType.Full)
+            pendingGeneration = GenerationType.Full;
+        else if (pendingGeneration != GenerationType.Full)
+            pendingGeneration = GenerationType.Spline;
+
+        pendingGenerate = true;
     }
 
     public void AutoGenerateSwitch(bool TorF)
