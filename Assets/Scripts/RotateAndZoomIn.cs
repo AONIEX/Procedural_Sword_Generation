@@ -77,4 +77,27 @@ public class RotateAndZoomIn : MonoBehaviour
             transform.localPosition = pos;
         }
     }
+
+    public void RotateToFront()
+    {
+        StartCoroutine(RotateOverTime(Quaternion.Euler(0f, 0f, 45f), 0.5f));
+
+    }
+
+    private IEnumerator RotateOverTime(Quaternion target, float duration)
+    {
+        Quaternion start = transform.rotation;
+        float t = 0f;
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float lerp = t / duration;
+            transform.rotation = Quaternion.Slerp(start, target, lerp);
+            yield return null;
+        }
+
+        transform.rotation = target; // snap to final
+    }
+
 }

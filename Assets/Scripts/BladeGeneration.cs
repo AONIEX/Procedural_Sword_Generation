@@ -47,6 +47,11 @@ public class BladeProfileLayer
 
 public class BladeGeneration : MonoBehaviour
 {
+    [HideInUI]
+    public List<Segment> segments;
+    [HideInUI]
+    public List<Vector3> smoothCenters;
+
     public SplineAndLineGen splineGen;
 
     [Header("Blade Base Profiles")]
@@ -232,22 +237,24 @@ public class BladeGeneration : MonoBehaviour
         RegenerateBlade(true);
     }
 
-    public void Generate3DBlade()
+    public void Generate3DBlade(bool smoothSegements)
     {
         Mesh mesh3D = new Mesh();
+        mesh3D.name = "Blade Mesh"; // <--- ADDED: Name the mesh
         List<Vector3> vertices = new List<Vector3>();
         List<int> trianglesFrontBack = new List<int>();
         List<int> trianglesSharp = new List<int>();
 
         uvs.Clear();
 
-        var segments = splineGen.segments;
-        if (segments == null) return;
+   
 
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
-        List<Vector3> smoothCenters = new List<Vector3>();
-        GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters);
+        smoothCenters = new List<Vector3>();
+
+            GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters, smoothSegements);
+       
 
 
         // 1. Front face
@@ -346,8 +353,13 @@ public class BladeGeneration : MonoBehaviour
         if (meshRenderer == null)
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.materials = new Material[] { bladeMaterial, sharpEdgeMaterial };
-    }
 
+        MeshCollider meshCollider = GetComponent<MeshCollider>();
+        if (meshCollider == null)
+            meshCollider = gameObject.AddComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh3D;
+        meshCollider.convex = false;
+    }
 
 
     private void GenerateUVs(List<Vector3> vertices,
@@ -1060,6 +1072,7 @@ public class BladeGeneration : MonoBehaviour
 
             bool rightBevelActive = !(rightThis && rightNext);
 
+  
 
             // ----- INDICES -----
             int frontA = i * widthSubdivisions;
@@ -1357,7 +1370,7 @@ public class BladeGeneration : MonoBehaviour
      List<Segment> segments,
      List<Vector3> smoothLefts,
      List<Vector3> smoothRights,
-     List<Vector3> smoothCenters)
+     List<Vector3> smoothCenters, bool symmetry = true)
     {
         // Compute total number of rings across the whole blade
         int totalRings = 0;
@@ -1400,6 +1413,7 @@ public class BladeGeneration : MonoBehaviour
                     continue;
 
                 float t = j / (float)currentSubdivisions;
+
 
                 Vector3 center = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
@@ -1460,13 +1474,13 @@ public class BladeGeneration : MonoBehaviour
                     right = center;
                     left = center - widthDir * fullWidth;
                 }
-                else if (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
-                {
-                    // No collapse - symmetric width
-                    float halfWidth = fullWidth * 0.5f;
-                    left = center - widthDir * halfWidth;
-                    right = center + widthDir * halfWidth;
-                }
+                //else if (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
+                //{
+                //    // No collapse - symmetric width
+                //    float halfWidth = fullWidth * 0.5f;
+                //    left = center - widthDir * halfWidth;
+                //    right = center + widthDir * halfWidth;
+                //}
                 else
                 {
                     // Transitioning between collapse states - blend smoothly
@@ -1512,6 +1526,7 @@ public class BladeGeneration : MonoBehaviour
                     float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                 }
+
 
                 // Curvature smoothing (now uses the offset center)
                 Vector3 leftOffset = left - center;
@@ -1865,7 +1880,9 @@ public class BladeGeneration : MonoBehaviour
         ApplyMeshQualitySettings();
         splineGen.GenerateLinesAndSplines();
         SmoothSegmentCenters();
-        Generate3DBlade();
+        segments = splineGen.segments;
+        if (segments == null) return;
+        Generate3DBlade(true);
 
         if (recalcHandle)
             CalculateHandandGuardSize();
