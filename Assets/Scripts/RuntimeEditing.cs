@@ -446,7 +446,7 @@ public class RuntimeEditing : MonoBehaviour
         }
 
         // Only allow highlight if mouse is actually near a point
-        float hoverRadius = 35f; // pixels
+        float hoverRadius = 50; // pixels
         if (minDist > hoverRadius)
             hoveredCenterIndex = -1;
 
