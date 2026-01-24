@@ -3,6 +3,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Splines;
+using static UnityEngine.CompositeCollider2D;
 
 #region Variables and Enmums
 [System.Serializable]
@@ -251,6 +252,14 @@ public class EdgeSettings
 
 public class SplineAndLineGen : MonoBehaviour
 {
+    [Header("Manual Edit Falloff")]
+    [DisplayName("Curve Fall Off Radius", "Manual", 2, "Curvature")]
+    [Range(1, 5)] public int editFalloffRadius = 2;
+    [DisplayName("Curve Fall Off Curve", "Manual", 2, "Curvature")]
+    public AnimationCurve editFalloffCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
+
+
+
     public BladeGeneration bladeGeneration;
     public SwordShaderControl swordShaderControl;
 
@@ -321,6 +330,8 @@ public class SplineAndLineGen : MonoBehaviour
 
     public void GenerateLinesAndSplines()
     {
+        //if (usingManualSpline) return;
+
         if (splineContainer == null)
             splineContainer = GetComponent<SplineContainer>() ?? gameObject.AddComponent<SplineContainer>();
 
@@ -867,5 +878,75 @@ public class SplineAndLineGen : MonoBehaviour
         SaveCurrentPreset(presetName);
     }
 
-   
+    public void MoveSplinePoint(int index, Vector3 worldPos)
+    {
+        if (splineContainer == null) return;
+        if (index < 0 || index >= splineContainer.Spline.Count) return;
+
+
+        Vector3 localPos = transform.InverseTransformPoint(worldPos);
+
+        // Original center before move
+        Vector3 originalCenter = splineContainer.Spline[index].Position;
+
+        Vector3 delta = localPos - originalCenter;
+
+        ApplyFalloffMovement(index, delta);
+    }
+
+    void ApplyFalloffMovement(int centerIndex, Vector3 delta)
+    {
+        int count = splineContainer.Spline.Count;
+
+        for (int i = 0; i < count; i++)
+        {
+            int distance = Mathf.Abs(i - centerIndex);
+            if (distance > editFalloffRadius) continue;
+
+            float t = distance / (float)editFalloffRadius;
+            float weight = editFalloffCurve.Evaluate(t);
+
+            BezierKnot knot = splineContainer.Spline[i];
+
+            Vector3 pos = (Vector3)knot.Position;
+
+            // Apply weighted movement
+            pos += delta * weight;
+
+            // Convert back
+            knot.Position = (Unity.Mathematics.float3)pos;
+            splineContainer.Spline[i] = knot;
+        }
+
+        UpdateSegmentsFromSpline();
+    }
+
+
+    void UpdateSegmentsFromSpline()
+    {
+        for (int i = 0; i < segments.Count; i++)
+        {
+            Segment oldSeg = segments[i];
+
+            // Store offsets BEFORE center changes
+            Vector3 leftOffset = oldSeg.left - oldSeg.center;
+            Vector3 rightOffset = oldSeg.right - oldSeg.center;
+
+            Vector3 newCenter = splineContainer.Spline[i].Position;
+
+            segments[i] = new Segment
+            {
+                center = newCenter,
+                left = newCenter + leftOffset,
+                right = newCenter + rightOffset
+            };
+        }
+
+        bladeGeneration.Generate3DBlade(false);
+    }
+
+
+
+
+
 }

@@ -50,6 +50,18 @@ public class RuntimeEditing : MonoBehaviour
     public float maxEdgeDistance = 1f;    // optional max distance from cente
 
 
+    [Header("Spline Center Visualization")]
+    public bool showCenterPoints = true;
+    public float centerPointSize = 0.015f;
+    public Material centerPointMaterial;
+    public Material centerPointHoverMaterial;
+
+    private List<GameObject> centerPointObjects = new List<GameObject>();
+    private int hoveredCenterIndex = -1;
+
+    private SplineAndLineGen splineGen;
+
+
     void Start()
     {
         cam = Camera.main;
@@ -77,8 +89,11 @@ public class RuntimeEditing : MonoBehaviour
 
             if (blade != null)
             {
+
                 hoveredBlade = blade;
+                splineGen = blade.GetComponent<SplineAndLineGen>();
                 hoveredSegmentIndex = FindClosestSegmentIndex(blade, hit.point);
+
 
                 // Switch to hammer cursor
                 if (hammerTex != null && !usingHammerTex)
@@ -94,10 +109,31 @@ public class RuntimeEditing : MonoBehaviour
                     bool expand = Input.GetMouseButtonDown(1);
                     EditBladeAtHit(blade, hit, expand);
                 }
+
+                if (hoveredCenterIndex != -1 && Input.GetMouseButton(0) && splineGen != null)
+                {
+                    Vector3 planeNormal = hoveredBlade.transform.forward;
+                    Plane dragPlane = new Plane(planeNormal, hoveredBlade.transform.position);
+
+                    if (dragPlane.Raycast(ray, out float enter))
+                    {
+                        Vector3 worldHit = ray.GetPoint(enter);
+
+                        // LOCK height so blade doesn't stretch
+                        Vector3 local = hoveredBlade.transform.InverseTransformPoint(worldHit);
+                        local.y = splineGen.segments[hoveredCenterIndex].center.y;
+
+                        worldHit = hoveredBlade.transform.TransformPoint(local);
+
+                        splineGen.MoveSplinePoint(hoveredCenterIndex, worldHit);
+                    }
+                }
+
             }
 
 
             UpdateHighlightMesh(hit.point);
+
         }
         if (hoveredBlade == null && normalTex != null && usingHammerTex)
         {
@@ -106,6 +142,10 @@ public class RuntimeEditing : MonoBehaviour
             usingHammerTex = false;
         }
 
+        if (hoveredBlade != null)
+            UpdateCenterPointPositions(hoveredBlade);
+        else
+            SetCenterPointsActive(false);
     }
 
     void CreateHighlightObject()
@@ -346,10 +386,85 @@ public class RuntimeEditing : MonoBehaviour
         highlightObj.SetActive(true);
     }
 
+    void BuildCenterPointObjects(BladeGeneration blade)
+    {
+        // Clear old
+        foreach (var go in centerPointObjects)
+            Destroy(go);
+        centerPointObjects.Clear();
+
+        if (blade == null || blade.segments == null) return;
+
+        for (int i = 0; i < blade.segments.Count; i++)
+        {
+            GameObject p = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            p.name = "CenterPoint_" + i;
+            p.transform.localScale = Vector3.one * centerPointSize;
+            p.GetComponent<Collider>().enabled = false; // visual only
+
+            var mr = p.GetComponent<MeshRenderer>();
+            mr.material = centerPointMaterial;
+
+            centerPointObjects.Add(p);
+        }
+    }
+
+    void UpdateCenterPointPositions(BladeGeneration blade)
+    {
+        if (!showCenterPoints || blade == null || blade.segments == null)
+        {
+            SetCenterPointsActive(false);
+            return;
+        }
+
+        if (centerPointObjects.Count != blade.segments.Count)
+            BuildCenterPointObjects(blade);
+
+        SetCenterPointsActive(true);
+
+        float minDist = float.MaxValue;
+        hoveredCenterIndex = -1;
+
+        for (int i = 0; i < blade.segments.Count; i++)
+        {
+            Vector3 worldPos = blade.transform.TransformPoint(blade.segments[i].center);
+            centerPointObjects[i].transform.position = worldPos;
+
+            // Convert to screen space
+            Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
+
+            // Ignore if behind camera
+            if (screenPos.z < 0f) continue;
+
+            float dist = Vector2.Distance(Input.mousePosition, screenPos);
+
+            if (dist < minDist)
+            {
+                minDist = dist;
+                hoveredCenterIndex = i;
+            }
+        }
+
+        // Only allow highlight if mouse is actually near a point
+        float hoverRadius = 35f; // pixels
+        if (minDist > hoverRadius)
+            hoveredCenterIndex = -1;
+
+        for (int i = 0; i < centerPointObjects.Count; i++)
+        {
+            var mr = centerPointObjects[i].GetComponent<MeshRenderer>();
+            mr.material = (i == hoveredCenterIndex)
+                ? centerPointHoverMaterial
+                : centerPointMaterial;
+        }
+
+    }
 
 
-
-
-
-
+    void SetCenterPointsActive(bool state)
+    {
+        foreach (var go in centerPointObjects)
+            if (go != null)
+                go.SetActive(state);
+    }
 }
