@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.UI;
 public class RuntimeEditing : MonoBehaviour
 {
+    [Header("Manual Mode")]
+    public bool editCurvature = false;
+
     [Header("Shape Settings")]
     [Range(0.01f, 1f)]
     public float thinAmount = 0.2f;
@@ -56,6 +59,8 @@ public class RuntimeEditing : MonoBehaviour
     public Material centerPointMaterial;
     public Material centerPointHoverMaterial;
 
+    [Header("UI")]
+    public Image modeImage;
     private List<GameObject> centerPointObjects = new List<GameObject>();
     private int hoveredCenterIndex = -1;
 
@@ -68,7 +73,7 @@ public class RuntimeEditing : MonoBehaviour
 
         if (normalTex != null)
         {
-            Vector2 hotspot = new Vector2(normalTex.width * 0.5f, normalTex.height * 0.5f);
+            Vector2 hotspot = new Vector2(0,0);
             Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
         }
 
@@ -103,46 +108,52 @@ public class RuntimeEditing : MonoBehaviour
                     usingHammerTex = true;
                 }
 
-                // Editing
-                if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+                if (!editCurvature)
                 {
-                    bool expand = Input.GetMouseButtonDown(1);
-                    EditBladeAtHit(blade, hit, expand);
-                }
-
-                if (hoveredCenterIndex != -1 && Input.GetMouseButton(0) && splineGen != null)
-                {
-                    Vector3 planeNormal = hoveredBlade.transform.forward;
-                    Plane dragPlane = new Plane(planeNormal, hoveredBlade.transform.position);
-
-                    if (dragPlane.Raycast(ray, out float enter))
+                    // Editing
+                    if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
                     {
-                        Vector3 worldHit = ray.GetPoint(enter);
+                        bool expand = Input.GetMouseButtonDown(1);
+                        EditBladeAtHit(blade, hit, expand);
+                    }
 
-                        // LOCK height so blade doesn't stretch
-                        Vector3 local = hoveredBlade.transform.InverseTransformPoint(worldHit);
-                        local.y = splineGen.segments[hoveredCenterIndex].center.y;
+                }
+                else
+                {
+                    if (hoveredCenterIndex != -1 && Input.GetMouseButton(0) && splineGen != null)
+                    {
+                        Vector3 planeNormal = hoveredBlade.transform.forward;
+                        Plane dragPlane = new Plane(planeNormal, hoveredBlade.transform.position);
 
-                        worldHit = hoveredBlade.transform.TransformPoint(local);
+                        if (dragPlane.Raycast(ray, out float enter))
+                        {
+                            Vector3 worldHit = ray.GetPoint(enter);
 
-                        splineGen.MoveSplinePoint(hoveredCenterIndex, worldHit);
+                            // LOCK height so blade doesn't stretch
+                            Vector3 local = hoveredBlade.transform.InverseTransformPoint(worldHit);
+                            local.y = splineGen.segments[hoveredCenterIndex].center.y;
+
+                            worldHit = hoveredBlade.transform.TransformPoint(local);
+
+                            splineGen.MoveSplinePoint(hoveredCenterIndex, worldHit);
+                        }
                     }
                 }
 
             }
 
-
-            UpdateHighlightMesh(hit.point);
+            if(!editCurvature)
+                UpdateHighlightMesh(hit.point);
 
         }
         if (hoveredBlade == null && normalTex != null && usingHammerTex)
         {
-            Vector2 hotspot = new Vector2(normalTex.width * 0.5f, normalTex.height * 0.5f);
+            Vector2 hotspot = new Vector2(0, 0);
             Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
             usingHammerTex = false;
         }
 
-        if (hoveredBlade != null)
+        if (hoveredBlade != null && editCurvature)
             UpdateCenterPointPositions(hoveredBlade);
         else
             SetCenterPointsActive(false);
@@ -466,5 +477,37 @@ public class RuntimeEditing : MonoBehaviour
         foreach (var go in centerPointObjects)
             if (go != null)
                 go.SetActive(state);
+    }
+
+    public void ToggleMode()
+    {
+        editCurvature = !editCurvature;
+
+        if (modeImage != null)
+        {
+            if (editCurvature)
+            {
+                Sprite sprite = Sprite.Create(
+                normalTex,
+                new Rect(0, 0, normalTex.width, normalTex.height),
+                new Vector2(0.5f, 0.5f)
+                 );
+
+                // Assign to UI Image
+                modeImage.sprite = sprite;
+
+            }
+            else
+            {
+                Sprite sprite = Sprite.Create(
+              hammerTex,
+              new Rect(0, 0, hammerTex.width, hammerTex.height),
+              new Vector2(0.5f, 0.5f)
+               );
+
+                // Assign to UI Image
+                modeImage.sprite = sprite;
+            }
+        }
     }
 }

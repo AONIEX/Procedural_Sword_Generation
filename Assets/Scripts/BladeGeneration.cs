@@ -154,6 +154,10 @@ public class BladeGeneration : MonoBehaviour
     [DisplayName("Fuller Settings", "Fullers", 20, "General")]
     public List<FullerSettings> fullers;
 
+
+    [HideInUI]
+    public List<Vector3> smoothGeometricCenters;
+
     private float[,] holeMask;
     private bool hollowHitsLeft;
     private bool hollowHitsRight;
@@ -252,8 +256,9 @@ public class BladeGeneration : MonoBehaviour
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
         smoothCenters = new List<Vector3>();
+        smoothGeometricCenters = new List<Vector3>();
 
-            GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters, smoothSegements);
+        GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters, smoothGeometricCenters);
        
 
 
@@ -279,6 +284,7 @@ public class BladeGeneration : MonoBehaviour
             smoothLefts,
             smoothRights,
             smoothCenters,
+            smoothGeometricCenters,
             trianglesFrontBack
         );
 
@@ -1146,6 +1152,7 @@ public class BladeGeneration : MonoBehaviour
      List<Vector3> smoothLefts,
      List<Vector3> smoothRights,
      List<Vector3> smoothCenters,
+     List<Vector3> smoothGeometricCenters,
      List<int> trianglesFrontBack)
     {
         int ringCount = smoothLefts.Count;
@@ -1168,12 +1175,15 @@ public class BladeGeneration : MonoBehaviour
 
             Vector3 left = smoothLefts[ring];
             Vector3 right = smoothRights[ring];
-            Vector3 center = smoothCenters[ring]; // This is the spine position (offset)
+
+            // KEY FIX: Use the ORIGINAL segment center for thickness distribution
+            Vector3 segmentCenter = smoothGeometricCenters[ring];
+
+            // The spine center (with offset applied) - for reference only
+            Vector3 spineCenter = smoothCenters[ring];
 
             Vector3 widthDir = (right - left).normalized;
-
             Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
-
             Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
 
             int ringStart = ring * widthSubdivisions;
@@ -1185,39 +1195,46 @@ public class BladeGeneration : MonoBehaviour
                 // Standard t from left (0) to right (1)
                 float t = v / (float)(widthSubdivisions - 1);
 
-                // Get the actual vertex position
+                // Get the vertex position
                 Vector3 vertexPos = Vector3.Lerp(left, right, t);
 
-                // Calculate where the spine is in the 0-1 range
-                float spineT = (spineOffset + 1f) * 0.5f; // Convert -1..1 to 0..1
-
-                // Calculate widthT RELATIVE TO THE SPINE
-                // At spine: widthT = 0, At edges: widthT = ±1
-                float widthT;
-                if (t < spineT) // Left of spine
+                // Calculate where the segment center is along the left-right line
+                // This finds where the original segment center sits in the 0-1 range
+                float segmentCenterT;
+                float leftToRight = Vector3.Distance(left, right);
+                if (leftToRight > 0.0001f)
                 {
-                    // Map from 0..spineT to -1..0
-                    widthT = (t / Mathf.Max(spineT, 0.0001f)) - 1f;
+                    float leftToSegment = Vector3.Distance(left, segmentCenter);
+                    segmentCenterT = leftToSegment / leftToRight;
                 }
-                else // Right of spine
+                else
                 {
-                    // Map from spineT..1 to 0..1
-                    widthT = (t - spineT) / Mathf.Max(1f - spineT, 0.0001f);
+                    segmentCenterT = 0.5f; // Fallback to middle
+                }
+
+                // Calculate widthT relative to the SEGMENT CENTER
+                float widthT;
+                if (t < segmentCenterT)
+                {
+                    // Left of segment center: map to -1..0
+                    widthT = (t / Mathf.Max(segmentCenterT, 0.0001f)) - 1f;
+                }
+                else
+                {
+                    // Right of segment center: map to 0..1
+                    widthT = (t - segmentCenterT) / Mathf.Max(1f - segmentCenterT, 0.0001f);
                 }
 
                 float baseHalf = bladeThickness * 0.5f;
 
-                // Use the blend function with profiles
-                // widthT is now relative to spine, so spine = 0 (thickest)
+                // Use the blend function with profiles (widthT is now relative to segment center)
                 float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
 
                 // Apply tip fade
                 float halfThickness = shaped * profileTipFade;
 
-
                 vertices[frontIndex] += bladeNormal * halfThickness;
                 vertices.Add(vertices[frontIndex] - bladeNormal * (halfThickness * 2f));
-
             }
         }
 
@@ -1235,16 +1252,10 @@ public class BladeGeneration : MonoBehaviour
             int vB = b % widthSubdivisions;
             int vC = c % widthSubdivisions;
 
-            //if (holeMask[ringA, vA] > 0.5f &&
-            //    holeMask[ringB, vB] > 0.5f &&
-            //    holeMask[ringC, vC] > 0.5f)
-            //    continue;
-
             trianglesFrontBack.Add(c + frontVertexCount);
             trianglesFrontBack.Add(b + frontVertexCount);
             trianglesFrontBack.Add(a + frontVertexCount);
         }
-
     }
     private void GenerateBevelVertices(
         List<Vector3> vertices,
@@ -1367,10 +1378,12 @@ public class BladeGeneration : MonoBehaviour
 
 
     public void GenerateSmoothSegments(
-     List<Segment> segments,
-     List<Vector3> smoothLefts,
-     List<Vector3> smoothRights,
-     List<Vector3> smoothCenters, bool symmetry = true)
+    List<Segment> segments,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights,
+    List<Vector3> smoothCenters,
+    List<Vector3> smoothGeometricCenters,
+    bool symmetry = true)
     {
         // Compute total number of rings across the whole blade
         int totalRings = 0;
@@ -1414,8 +1427,9 @@ public class BladeGeneration : MonoBehaviour
 
                 float t = j / (float)currentSubdivisions;
 
-
-                Vector3 center = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
+                // IMPORTANT: Save the original segment center from Catmull-Rom interpolation
+                Vector3 originalSegmentCenter = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
+                Vector3 center = originalSegmentCenter; // Start with the segment center
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
                 Vector3 right = CatmullRom(p0.right, p1.right, p2.right, p3.right, t);
 
@@ -1428,15 +1442,15 @@ public class BladeGeneration : MonoBehaviour
 
                 if (p1LeftCollapsed && p2LeftCollapsed)
                 {
-                    leftCollapseBlend = 1f; // Fully collapsed throughout
+                    leftCollapseBlend = 1f;
                 }
                 else if (p1LeftCollapsed && !p2LeftCollapsed)
                 {
-                    leftCollapseBlend = 1f - t; // Fade out collapse
+                    leftCollapseBlend = 1f - t;
                 }
                 else if (!p1LeftCollapsed && p2LeftCollapsed)
                 {
-                    leftCollapseBlend = t; // Fade in collapse
+                    leftCollapseBlend = t;
                 }
 
                 if (p1RightCollapsed && p2RightCollapsed)
@@ -1464,40 +1478,28 @@ public class BladeGeneration : MonoBehaviour
                 // Apply width scaling BASED ON COLLAPSE STATE
                 if (leftCollapseBlend > 0.99f && rightCollapseBlend < 0.01f)
                 {
-                    // Left fully collapsed - right should be full width
                     left = center;
                     right = center + widthDir * fullWidth;
                 }
                 else if (rightCollapseBlend > 0.99f && leftCollapseBlend < 0.01f)
                 {
-                    // Right fully collapsed - left should be full width
                     right = center;
                     left = center - widthDir * fullWidth;
                 }
-                //else if (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
-                //{
-                //    // No collapse - symmetric width
-                //    float halfWidth = fullWidth * 0.5f;
-                //    left = center - widthDir * halfWidth;
-                //    right = center + widthDir * halfWidth;
-                //}
                 else
                 {
                     // Transitioning between collapse states - blend smoothly
                     float halfWidth = fullWidth * 0.5f;
 
-                    // Start with symmetric positions
                     Vector3 symmetricLeft = center - widthDir * halfWidth;
                     Vector3 symmetricRight = center + widthDir * halfWidth;
 
-                    // Calculate collapsed positions (non-collapsed side gets FULL width)
                     Vector3 leftCollapsedPos = center;
                     Vector3 leftCollapsedRightPos = center + widthDir * fullWidth;
 
                     Vector3 rightCollapsedPos = center;
                     Vector3 rightCollapsedLeftPos = center - widthDir * fullWidth;
 
-                    // Blend between states
                     if (leftCollapseBlend > 0f)
                     {
                         left = Vector3.Lerp(symmetricLeft, leftCollapsedPos, leftCollapseBlend);
@@ -1519,14 +1521,20 @@ public class BladeGeneration : MonoBehaviour
                     }
                 }
 
-                // Apply spine offset ONLY if no edge collapse is active at this ring
+                // KEY FIX: Save the ORIGINAL segment center for thickness distribution
+                smoothGeometricCenters.Add(originalSegmentCenter);
+
+                // Apply spine offset to create the spine center (used for structure, not thickness)
                 float spineOffset = splineGen.edgeSettings.spineOffset;
                 if (Mathf.Abs(spineOffset) > 0.001f && leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
                 {
                     float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                 }
-
+                else
+                {
+                    center = originalSegmentCenter;
+                }
 
                 // Curvature smoothing (now uses the offset center)
                 Vector3 leftOffset = left - center;
