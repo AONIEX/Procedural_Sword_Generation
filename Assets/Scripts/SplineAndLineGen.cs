@@ -944,9 +944,4 @@ public class SplineAndLineGen : MonoBehaviour
 
         bladeGeneration.Generate3DBlade(false);
     }
-
-
-
-
-
 }
