@@ -1486,6 +1486,13 @@ public class BladeGeneration : MonoBehaviour
                     right = center;
                     left = center - widthDir * fullWidth;
                 }
+                else if (splineGen.edgeSettings.edgeCollapseMode !=EdgeCollapseMode.None && (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f))
+                {
+                    // No collapse - symmetric width
+                    float halfWidth = fullWidth * 0.5f;
+                    left = center - widthDir * halfWidth;
+                    right = center + widthDir * halfWidth;
+                }
                 else
                 {
                     // Transitioning between collapse states - blend smoothly
@@ -1520,17 +1527,28 @@ public class BladeGeneration : MonoBehaviour
                         );
                     }
                 }
+                float spineOffset = splineGen.edgeSettings.spineOffset;
 
-                // KEY FIX: Save the ORIGINAL segment center for thickness distribution
-                smoothGeometricCenters.Add(originalSegmentCenter);
+                if (splineGen.edgeSettings.edgeCollapseMode != EdgeCollapseMode.None)
+                {
+                    float offsetT = (spineOffset + 1f) * 0.5f;
+                    center = Vector3.Lerp(left, right, offsetT);
+                    smoothGeometricCenters.Add(center);
+
+                }
+                else
+                {
+
+                    smoothGeometricCenters.Add(originalSegmentCenter);
+                }
 
                 // Apply spine offset to create the spine center (used for structure, not thickness)
-                float spineOffset = splineGen.edgeSettings.spineOffset;
                 if (Mathf.Abs(spineOffset) > 0.001f && leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f)
                 {
                     float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                 }
+             
                 else
                 {
                     center = originalSegmentCenter;
