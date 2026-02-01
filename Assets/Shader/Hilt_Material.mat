@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hilt_Material
+  m_Shader: {fileID: -6465566751694194690, guid: 94d77c85408fff242b3f20d6348a70d1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _PATTERN_NEW_3
+  m_InvalidKeywords:
+  - _METALTYPE_WOOTZ
+  - _PATTERNTYPE_WOOTZ
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BUILTIN_AlphaClip: 0
+    - _BUILTIN_Blend: 0
+    - _BUILTIN_CullMode: 2
+    - _BUILTIN_DstBlend: 0
+    - _BUILTIN_QueueControl: 0
+    - _BUILTIN_QueueOffset: 0
+    - _BUILTIN_SrcBlend: 1
+    - _BUILTIN_Surface: 0
+    - _BUILTIN_ZTest: 4
+    - _BUILTIN_ZWrite: 1
+    - _BUILTIN_ZWriteControl: 0
+    - _BaseContrast: 1.3
+    - _BaseScale: 44.81
+    - _BlemishStrength: 0.65
+    - _BrushedStrength: 0.56
+    - _FresnelPower: 0
+    - _METALTYPE: 5
+    - _Metalicness: 0.95
+    - _Noise_Influence: 0.54
+    - _PATTERN: 6
+    - _PATTERNTYPE: 5
+    - _Power: 4.57
+    - _RustScale: 6.19
+    - _RustScale2: 202.21
+    - _RustSmoothness: 0.65
+    - _Rust_Influence: 0
+    - _Rust_Power: 1
+    - _ScratchScale: 4.65
+    - _Scratched_Power: 6
+    - _Smoothness: 0.75
+    - _useWootzPattern: 0
+    m_Colors:
+    - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
+    - _Dark_Rust_Color: {r: 0.6156863, g: 0.33333334, b: 0, a: 0}
+    - _DarkestBaseColor: {r: 0.4792453, g: 0.4620648, b: 0.4620648, a: 1}
+    - _LightestBaseColor: {r: 0.06415099, g: 0.06415099, b: 0.06415099, a: 1}
+    - _Offset: {r: 0, g: 0, b: 0, a: 0}
+    - _Rust_color: {r: 1, g: 0.6117647, b: 0.15686275, a: 0}
+    - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
+    - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
+    - _Scratched_Tiling: {r: 5, g: 9.54, b: 0, a: 0}
+    - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
+    - _Tiling: {r: 1, g: 200, b: 0, a: 0}
+  m_BuildTextureStacks: []
+--- !u!114 &5456189756263295197
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 639247ca83abc874e893eb93af2b5e44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 0
