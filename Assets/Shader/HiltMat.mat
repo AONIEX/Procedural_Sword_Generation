@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Sword_Material
+  m_Name: HiltMat
   m_Shader: {fileID: -6465566751694194690, guid: 94d77c85408fff242b3f20d6348a70d1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -44,40 +44,40 @@ Material:
     - _BUILTIN_ZTest: 4
     - _BUILTIN_ZWrite: 1
     - _BUILTIN_ZWriteControl: 0
-    - _BaseContrast: 1.5
-    - _BaseScale: 90
-    - _BlemishScale: 10
-    - _BlemishStrength: 0.65
-    - _BrushedStrength: 0.56
-    - _FresnelPower: 0
+    - _BaseContrast: 1.4
+    - _BaseScale: 95
+    - _BlemishScale: 0.72
+    - _BlemishStrength: 0.2
+    - _BrushedStrength: 0
+    - _FresnelPower: 2
     - _METALTYPE: 5
-    - _Metalicness: 0.95
+    - _Metalicness: 1
     - _Noise_Influence: 0.54
     - _PATTERN: 6
     - _PATTERNTYPE: 5
     - _Power: 4.57
     - _RustScale: 6.19
-    - _RustScale2: 202.21
+    - _RustScale2: 201.61
     - _RustSmoothness: 0.65
     - _Rust_Influence: 0
     - _Rust_Power: 1
-    - _ScratchScale: 4.65
+    - _ScratchScale: 14.2
     - _Scratched_Power: 6
-    - _ShiningCellAmount: 5
-    - _Smoothness: 0.75
+    - _ShiningCellAmount: 0.59
+    - _Smoothness: 1
     - _useWootzPattern: 0
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
     - _BaseTiling: {r: 1, g: 1, b: 0, a: 0}
-    - _BlemishTiling: {r: 60, g: 60, b: 0, a: 0}
+    - _BlemishTiling: {r: 50.2, g: 4, b: 0, a: 0}
     - _Dark_Rust_Color: {r: 0.6156863, g: 0.33333334, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
-    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
+    - _DarkestBaseColor: {r: 0.19999999, g: 0.19999999, b: 0.19999999, a: 1}
+    - _LightestBaseColor: {r: 0.7056604, g: 0.65373445, b: 0.65373445, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Rust_color: {r: 1, g: 0.6117647, b: 0.15686275, a: 0}
     - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
-    - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
+    - _Scratched_Offset: {r: 28.6, g: 0, b: 0, a: 0}
+    - _Scratched_Tiling: {r: 30.7, g: 30, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
     - _Tiling: {r: 1, g: 200, b: 0, a: 0}
   m_BuildTextureStacks: []

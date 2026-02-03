@@ -3302,48 +3302,91 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e955b6147b2723449824ef89a88f670b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  guardMaterial: {fileID: 2100000, guid: c74f4e32bc96deb4eb17b9365b439893, type: 2}
+  guardMaterial: {fileID: 2100000, guid: c6d1591c085c58d48a35256c0c0c74d3, type: 2}
   guardSpline: {fileID: 1071013774}
-  guardHalfLength: 0.382
+  guardHalfLength: 0.477
   verticalCurve: -0.05
   guardWidth: 0.1
-  guardThickness: 0.157
-  guardHeight: 0.05
+  guardThickness: 0.15
+  guardHeight: 0.075
   guardThicknessStart: 0.05
   guardThicknessEnd: 0.05
-  thicknessSegments: 3
-  verticalSegments: 3
+  thicknessSegments: 6
+  verticalSegments: 6
   guardHeightCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
+      time: 0.006668091
+      value: 0.2507019
+      inSlope: 1.5188519
+      outSlope: 1.5188519
       tangentMode: 34
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5
+      value: 1
+      inSlope: 0.012019932
+      outSlope: 0.012019932
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     - serializedVersion: 3
       time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
+      value: 0.252594
+      inSlope: -1.494812
+      outSlope: -1.494812
       tangentMode: 34
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.33333334
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  topCenterHeight: 0.053
+  topCenterHeight: 0.036
   topProfile:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
       value: 0
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -2
+      outSlope: -2
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  acrossCenterHeight: 0.0242
+  acrossProfile:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
       inSlope: 1
       outSlope: 1
       tangentMode: 34
@@ -3356,31 +3399,6 @@ MonoBehaviour:
       inSlope: 1
       outSlope: 1
       tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  acrossCenterHeight: 0
-  acrossProfile:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
@@ -3389,6 +3407,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   controlPoints: 4
   guardSamples: 20
+  uvScale: 1
   guardHalfWidth: 0.25
   guardCurveHeight: 0.05
   guardCurveResolution: 4
