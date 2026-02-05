@@ -299,6 +299,14 @@ public class BladeGeneration : MonoBehaviour
             hollowHitsRightPerRing = new bool[ringCount];
         }
 
+
+        if (circularHitsLeftPerRing == null || circularHitsLeftPerRing.Length != ringCount)
+        {
+            circularHitsLeftPerRing = new bool[ringCount];
+            circularHitsRightPerRing = new bool[ringCount];
+        }
+
+
         // 3. Bevel / ridge vertices
         int sharpStartFront, sharpStartBack;
         GenerateBevelVertices(
@@ -311,15 +319,7 @@ public class BladeGeneration : MonoBehaviour
             out sharpStartBack
         );
 
-        // 4. Connect bevels to blade faces
-        ConnectBevels(
-            trianglesFrontBack,
-            trianglesSharp,
-            frontVertexCount,
-            sharpStartFront,
-            sharpStartBack,
-            ringCount
-        );
+       
 
 
 
@@ -339,7 +339,15 @@ public class BladeGeneration : MonoBehaviour
 
 
 
-
+        // 4. Connect bevels to blade faces
+        ConnectBevels(
+            trianglesFrontBack,
+            trianglesSharp,
+            frontVertexCount,
+            sharpStartFront,
+            sharpStartBack,
+            ringCount
+        );
         // 5. Final mesh
         mesh3D.SetVertices(vertices);
         mesh3D.SetUVs(0, uvs); // Apply UVs
@@ -898,13 +906,13 @@ public class BladeGeneration : MonoBehaviour
 
 
     private void ApplyGrooveFuller(
-        List<Vector3> vertices,
-        List<Vector3> smoothLefts,
-        List<Vector3> smoothRights,
-        List<Vector3> smoothCenters,
-        Vector3 bladeNormal,
-        int frontVertexCount,
-        FullerSettings fuller)
+    List<Vector3> vertices,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights,
+    List<Vector3> smoothCenters,
+    Vector3 bladeNormal,
+    int frontVertexCount,
+    FullerSettings fuller)
     {
         if (fuller == null)
             return;
@@ -923,10 +931,25 @@ public class BladeGeneration : MonoBehaviour
             cumulativeLengths.Add(totalLength);
         }
 
+        // FIX: Calculate average width to scale fuller depth appropriately
+        float avgWidth = 0f;
+        for (int i = 0; i < ringCount; i++)
+        {
+            avgWidth += Vector3.Distance(smoothLefts[i], smoothRights[i]);
+        }
+        avgWidth /= ringCount;
+
+        // FIX: Scale depth based on blade dimensions
+        // Larger blades need proportionally shallower fullers relative to blade thickness
+        float bladeSizeScale = Mathf.Clamp(avgWidth / 0.5f, 0.5f, 2f);
+
         float[,] depthMap = new float[ringCount, widthSubdivisions];
 
         float fadeInLength = 0.05f;
         float fadeOutLength = 0.05f;
+
+        // FIX: Set maximum depth relative to blade dimensions
+        float maxAllowedDepth = bladeThickness * 0.35f; // Reduced from 0.4f
 
         for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
         {
@@ -959,23 +982,23 @@ public class BladeGeneration : MonoBehaviour
             if (lengthMask <= 0f)
                 continue;
 
+            // FIX: Apply size scaling to depth calculation
             float depth = fuller.fullerDepth * (bladeThickness * 0.5f) * lengthMask;
+            depth = depth / bladeSizeScale; // Scale down for larger blades
+            depth = Mathf.Min(depth, maxAllowedDepth); // Hard cap
+
             float width = fuller.fullerWidth;
-            int count = 1;
 
             if (depth <= 0f || width <= 0f)
                 continue;
 
-            // FIXED: Fuller positioning - fullerCenter maps directly to blade position
-            // 0.0 = left edge, 0.5 = center, 1.0 = right edge
-            float centerPos = fuller.fullerCenter * 2f - 1f; // Convert 0-1 to -1 to 1
+            float centerPos = fuller.fullerCenter * 2f - 1f;
 
             for (int vertIdx = 0; vertIdx < widthSubdivisions; vertIdx++)
             {
                 float widthT = vertIdx / (float)(widthSubdivisions - 1);
-                float widthPos = widthT * 2f - 1f; // -1 (left) to 1 (right)
+                float widthPos = widthT * 2f - 1f;
 
-                // Calculate distance from this vertex to the fuller center
                 float dist = Mathf.Abs(widthPos - centerPos) / width;
 
                 if (dist > 1f)
@@ -984,12 +1007,15 @@ public class BladeGeneration : MonoBehaviour
                 float falloff = fuller.fullerFalloff.Evaluate(dist);
                 float fullerDepth = depth * falloff;
 
-                depthMap[ringIdx, vertIdx] = Mathf.Max(depthMap[ringIdx, vertIdx], fullerDepth);
+                // Don't let fullers stack infinitely
+                float existingDepth = depthMap[ringIdx, vertIdx];
+                depthMap[ringIdx, vertIdx] = Mathf.Min(existingDepth + fullerDepth, maxAllowedDepth);
             }
         }
+
         float[,] smoothedDepth = SmoothDepthMap(depthMap, ringCount);
 
-
+        // Apply with final safety clamp
         for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
         {
             Vector3 left = smoothLefts[ringIdx];
@@ -1005,7 +1031,8 @@ public class BladeGeneration : MonoBehaviour
             {
                 int front = ringStart + v;
                 int back = front + frontVertexCount;
-                float d = smoothedDepth[ringIdx, v];
+
+                float d = Mathf.Min(smoothedDepth[ringIdx, v], maxAllowedDepth);
 
                 vertices[front] -= ringNormal * d;
                 vertices[back] += ringNormal * d;
@@ -1752,6 +1779,23 @@ public class BladeGeneration : MonoBehaviour
             guard.transform.localScale = new Vector3(baseWidth * 2, guard.transform.localScale.y, Mathf.Max(bladeThickness, 0.05f) * 1.2f);
         if (handle != null)
             handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
+
+        // Align holder with the first segment's center point
+        if (holder != null && splineGen != null && splineGen.segments != null && splineGen.segments.Count > 0)
+        {
+            // Get the actual first segment center from the spline
+            Vector3 firstSegmentCenter = splineGen.segments[0].center;
+
+            // Set holder position to match the blade's starting X position
+            holder.transform.localPosition = new Vector3(
+                firstSegmentCenter.x,
+                holder.transform.localPosition.y,
+                holder.transform.localPosition.z
+            );
+
+            // Update HandleXPosition to reflect this
+            HandleXPosition = firstSegmentCenter.x;
+        }
     }
 
     float EvaluateBladeProfile(
@@ -1904,6 +1948,14 @@ public class BladeGeneration : MonoBehaviour
     private void RegenerateBlade(bool recalcHandle = false)
     {
         ApplyMeshQualitySettings();
+
+        // FIX: Clear existing mesh data
+        MeshFilter meshFilter = GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.mesh != null)
+        {
+            meshFilter.mesh.Clear();
+        }
+
         splineGen.GenerateLinesAndSplines();
         SmoothSegmentCenters();
         segments = splineGen.segments;
@@ -1912,6 +1964,8 @@ public class BladeGeneration : MonoBehaviour
 
         if (recalcHandle)
             CalculateHandandGuardSize();
+
+        CalculateHandandGuardSize();
     }
 
     private float[,] SmoothDepthMap(float[,] depthMap, int ringCount)
@@ -2286,5 +2340,337 @@ public class BladeGeneration : MonoBehaviour
         RegenerateBlade(true);
     }
 
+    public void RandomGeneration()
+    {
+        splineGen.SetRandomParamaters();
+        SetRandomParamaters();
+        RegenerateBlade(true);
 
+
+    }
+
+    private void SetRandomParamaters()
+    {
+        // 90% chance of realistic sword, 10% chance of experimental/fantasy
+        bool isRealistic = UnityEngine.Random.value < 0.9f;
+
+        // Define ranges based on realism
+        float thicknessMin = isRealistic ? 0.04f : 0.03f;
+        float thicknessMax = isRealistic ? 0.08f : 0.15f;
+
+        float sharpnessMin = isRealistic ? 0.02f : 0.01f;
+        float sharpnessMax = isRealistic ? 0.02f : 0.05f;
+
+        //float spineMin = isRealistic ? 0.003f : 0.001f;
+        //float spineMax = isRealistic ? 0.015f : 0.05f;
+
+        float handleMin = isRealistic ? -0.1f : -0.3f;
+        float handleMax = isRealistic ? 0.1f : 0.3f;
+
+        // Apply random values within ranges
+        bladeThickness = UnityEngine.Random.Range(thicknessMin, thicknessMax);
+        edgeSharpness = UnityEngine.Random.Range(sharpnessMin, sharpnessMax);
+        //spineThickness = UnityEngine.Random.Range(spineMin, spineMax);
+        HandleXPosition = UnityEngine.Random.Range(handleMin, handleMax);
+
+        // Profile overlap blend
+        profileOverlapBlendAmount = UnityEngine.Random.Range(0.3f, 1.0f);
+
+        // Sharp side
+        float sharpRoll = UnityEngine.Random.value;
+
+        if (splineGen.useSymmetry)
+        {
+            sharpSide = SharpSide.Both;
+        }
+        else
+        {
+            sharpSide = isRealistic && sharpRoll < 0.5f ? SharpSide.Both :
+                        (UnityEngine.Random.value < 0.5f ? SharpSide.Left : SharpSide.Right);
+        }
+            
+
+        // Mesh quality
+        //float qualityRoll = UnityEngine.Random.value;
+        //meshQuality = qualityRoll < 0.1f ? MeshQuality.Low :
+        //              qualityRoll < 0.5f ? MeshQuality.Medium :
+        //              qualityRoll < 0.9f ? MeshQuality.High : MeshQuality.Ultra;
+
+        // Generate profiles and fullers
+        GenerateRandomProfiles(isRealistic);
+        GenerateRandomFullers(isRealistic);
+    }
+
+    private void GenerateRandomProfiles(bool isRealistic)
+    {
+        baseProfiles.Clear();
+
+        float countRoll = UnityEngine.Random.value;
+        int profileCount = isRealistic ? (countRoll < 0.8f ? 1 : countRoll < 0.9f ? 2 : 3) :
+                                         UnityEngine.Random.Range(1, 4);
+
+        BladeBaseProfile[] availableProfiles = isRealistic ?
+            new BladeBaseProfile[] { BladeBaseProfile.Lenticular, BladeBaseProfile.Diamond,
+                              BladeBaseProfile.HollowGround } :
+            (BladeBaseProfile[])System.Enum.GetValues(typeof(BladeBaseProfile));
+
+        float currentStart = 0f;
+
+        for (int i = 0; i < profileCount; i++)
+        {
+            bool isLast = i == profileCount - 1;
+
+            float sectionLength = (1f - currentStart) / (profileCount - i);
+            float endHeight = isLast ? 1f : currentStart +
+                UnityEngine.Random.Range(sectionLength * (isRealistic ? 0.8f : 0.5f),
+                                         sectionLength * (isRealistic ? 1.2f : 1.5f));
+
+            // FIX 1: Clamp end height BEFORE adding overlap
+            endHeight = Mathf.Min(endHeight, 0.95f);
+
+            float overlapAmount = isRealistic ? UnityEngine.Random.Range(0.1f, 0.2f) :
+                                               UnityEngine.Random.Range(0.05f, 0.3f);
+
+            // FIX 2: Ensure overlap doesn't exceed 1.0
+            float finalEndHeight = isLast ? 1f : Mathf.Min(endHeight + overlapAmount, 1f);
+
+            // FIX 3: Validate the profile is valid
+            if (finalEndHeight <= currentStart)
+            {
+                Debug.LogWarning($"Invalid profile range: start={currentStart}, end={finalEndHeight}");
+                continue;
+            }
+
+            baseProfiles.Add(new BladeProfileLayer
+            {
+                profile = availableProfiles[UnityEngine.Random.Range(0, availableProfiles.Length)],
+                startHeight = currentStart,
+                endHeight = finalEndHeight,
+                scale = UnityEngine.Random.Range(isRealistic ? 0.9f : 0.5f,
+                                                isRealistic ? 1.15f : 1.5f),
+                influenceCurve = isRealistic ? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f) :
+                                              GenerateRandomCurve()
+            });
+
+            currentStart = endHeight;
+        }
+
+        // FIX 4: Ensure at least one valid profile exists
+        if (baseProfiles.Count == 0)
+        {
+            baseProfiles.Add(new BladeProfileLayer
+            {
+                profile = BladeBaseProfile.Lenticular,
+                startHeight = 0f,
+                endHeight = 1f,
+                scale = 1f,
+                influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
+            });
+        }
+    }
+    private void GenerateRandomFullers(bool isRealistic)
+    {
+        fullers = fullers ?? new List<FullerSettings>();
+        fullers.Clear();
+
+        // 80% chance of exactly one basic fuller, 20% chance of other configurations
+        float configRoll = UnityEngine.Random.value;
+
+        if (configRoll < 0.8f)
+        {
+            // STANDARD CASE: Single basic fuller (80% of the time)
+            float fullerStart = UnityEngine.Random.value < 0.8f ? 0f : UnityEngine.Random.Range(0.05f, 0.2f);
+            float fullerEnd = UnityEngine.Random.Range(0.6f, 0.9f);
+
+            fullers.Add(new FullerSettings
+            {
+                fullerType = FullerType.Basic,
+                start = fullerStart,
+                end = fullerEnd,
+                fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                fullerWidth = UnityEngine.Random.Range(0.15f, 0.35f),
+                fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f), // Keep centered
+                circleRadius = 0.3f,
+                fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
+            });
+        }
+        else
+        {
+            // ALTERNATIVE CASES: Other configurations (20% of the time)
+            float altRoll = UnityEngine.Random.value;
+
+            if (altRoll < 0.25f)
+            {
+                // No fuller at all
+                return;
+            }
+            else if (altRoll < 0.75f)
+            {
+                // Single non-basic fuller
+                FullerType type = UnityEngine.Random.value < 0.5f ? FullerType.Hollow : FullerType.Hollow_Circular;
+
+                float maxDepth = isRealistic ? 0.3f : 0.45f;
+                float maxWidth = isRealistic ? 0.35f : 0.8f;
+
+                float fullerStart = UnityEngine.Random.Range(0.1f, 0.3f);
+                float fullerEnd = UnityEngine.Random.Range(0.6f, 0.85f);
+
+                float fullerCenter;
+                float circleRadius;
+
+                if (type == FullerType.Hollow_Circular)
+                {
+                    // Circular fuller: center (0.5) or edge positioning
+                    float positionRoll = UnityEngine.Random.value;
+
+                    if (positionRoll < 0.33f)
+                    {
+                        // Center position - smaller radius
+                        fullerCenter = 0.5f;
+                        circleRadius = UnityEngine.Random.Range(0.15f, 0.75f);
+                    }
+                    else if (positionRoll < 0.66f)
+                    {
+                        // Left edge - bigger radius
+                        fullerCenter = UnityEngine.Random.Range(0.0f, 0.1f);
+                        circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
+                    }
+                    else
+                    {
+                        // Right edge - bigger radius
+                        fullerCenter = UnityEngine.Random.Range(0.9f, 1.0f);
+                        circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
+                    }
+                }
+                else
+                {
+                    // Hollow fuller - normal centered positioning
+                    fullerCenter = UnityEngine.Random.Range(0.0f, 1.0f);
+                    circleRadius = UnityEngine.Random.Range(0.15f, 0.35f);
+                }
+
+                fullers.Add(new FullerSettings
+                {
+                    fullerType = type,
+                    start = fullerStart,
+                    end = fullerEnd,
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerWidth = UnityEngine.Random.Range(0.15f, maxWidth),
+                    fullerCenter = fullerCenter,
+                    circleRadius = circleRadius,
+                    fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
+                                                 GenerateRandomCurve()
+                });
+            }
+            else
+            {
+                // Two fullers (one basic + one other, or two basics)
+                bool twoBasics = UnityEngine.Random.value < 0.1f;
+
+                // First fuller - always basic, starts at 0
+                fullers.Add(new FullerSettings
+                {
+                    fullerType = FullerType.Basic,
+                    start = 0f,
+                    end = UnityEngine.Random.Range(0.5f, 0.7f),
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerWidth = UnityEngine.Random.Range(0.15f, 0.3f),
+                    fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f),
+                    circleRadius = 0.3f,
+                    fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
+                });
+
+                // Second fuller
+                FullerType secondType = twoBasics ? FullerType.Basic :
+                    (UnityEngine.Random.value < 0.5f ? FullerType.Hollow : FullerType.Hollow_Circular);
+
+                float maxDepth = secondType == FullerType.Basic ? 0.25f : (isRealistic ? 0.3f : 0.9f);
+                float maxWidth = secondType == FullerType.Basic ? 0.5f : (isRealistic ? 0.3f : 0.9f);
+
+                float secondStart = UnityEngine.Random.Range(0.3f, 0.5f);
+                float secondEnd = UnityEngine.Random.Range(0.7f, 0.9f);
+
+                float secondCenter;
+                float circleRadius;
+
+                if (secondType == FullerType.Hollow_Circular)
+                {
+                    // Circular fuller: center (0.5) or edge positioning
+                    float positionRoll = UnityEngine.Random.value;
+
+                    // Avoid overlapping with first fuller's position
+                    float firstCenter = fullers[0].fullerCenter;
+
+                    if (positionRoll < 0.33f && Mathf.Abs(firstCenter - 0.5f) > 0.15f)
+                    {
+                        // Center position - smaller radius
+                        secondCenter = 0.5f;
+                        circleRadius = UnityEngine.Random.Range(0.15f, 0.3f);
+                    }
+                    else if (positionRoll < 0.66f && firstCenter > 0.4f)
+                    {
+                        // Left edge - bigger radius (only if first fuller isn't too far left)
+                        secondCenter = UnityEngine.Random.Range(0.15f, 0.3f);
+                        circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
+                    }
+                    else
+                    {
+                        // Right edge - bigger radius (only if first fuller isn't too far right)
+                        secondCenter = UnityEngine.Random.Range(0.7f, 0.85f);
+                        circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
+                    }
+                }
+                else
+                {
+                    // Position second fuller to avoid too much overlap with first
+                    secondCenter = fullers[0].fullerCenter > 0.5f ?
+                        UnityEngine.Random.Range(0.4f, 0.6f) :
+                        UnityEngine.Random.Range(0.3f, 0.7f);
+                    circleRadius = UnityEngine.Random.Range(0.12f, 0.3f);
+                }
+
+                fullers.Add(new FullerSettings
+                {
+                    fullerType = secondType,
+                    start = secondStart,
+                    end = secondEnd,
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerWidth = UnityEngine.Random.Range(0.1f, maxWidth),
+                    fullerCenter = secondCenter,
+                    circleRadius = circleRadius,
+                    fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
+                                                 GenerateRandomCurve()
+                });
+            }
+        }
+    }
+
+
+    private AnimationCurve GenerateRandomCurve()
+    {
+        // Generate smooth random curves
+        int keyCount = UnityEngine.Random.Range(3, 10);
+        Keyframe[] keys = new Keyframe[keyCount];
+
+        keys[0] = new Keyframe(0f, UnityEngine.Random.Range(0f, 1f));
+        keys[keyCount - 1] = new Keyframe(1f, UnityEngine.Random.Range(0f, 1f));
+
+        for (int i = 1; i < keyCount - 1; i++)
+        {
+            float time = i / (float)(keyCount - 1);
+            keys[i] = new Keyframe(time, UnityEngine.Random.Range(0f, 1f));
+        }
+
+        AnimationCurve curve = new AnimationCurve(keys);
+
+        // Smooth the curve
+        for (int i = 0; i < keyCount; i++)
+        {
+            curve.SmoothTangents(i, 0.5f);
+        }
+
+        return curve;
+    }
+
+ 
 }

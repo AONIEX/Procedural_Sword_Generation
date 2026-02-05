@@ -482,4 +482,10 @@ public class UIControl : MonoBehaviour
     {
         autoGenerate = TorF;
     }
+
+    public void RandomGeneration()
+    {
+        bladeGen.RandomGeneration();
+        RefreshUI();
+    }
 }

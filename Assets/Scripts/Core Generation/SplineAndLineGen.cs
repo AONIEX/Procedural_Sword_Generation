@@ -49,8 +49,8 @@ public enum TipLeanMode
     RandomLean,
     ForcedCenterX,
     ForcedLeft,
-    ForcedRight,
-    None
+    ForcedRight
+    
 }
 
 public enum EdgeCollapseMode
@@ -114,7 +114,7 @@ public class TipSettings
 public class CoreSettings
 {
     [Tooltip("Defines the amount of segments wanted")]
-    [Range(3, 20), DisplayName("Spline Point Count", "Blade Geometry", 0, "Segments")]
+    [Range(3, 12), DisplayName("Spline Point Count", "Blade Geometry", 0, "Segments")]
     public int splinePointCount = 5;
 
     [Tooltip("Defines spacing between blade segments")]
@@ -545,7 +545,7 @@ public class SplineAndLineGen : MonoBehaviour
                 right = leanedPos;
                 break;
 
-            case TipLeanMode.None:
+            //case TipLeanMode.None:
             default:
                 break;
         }
@@ -943,5 +943,209 @@ public class SplineAndLineGen : MonoBehaviour
         }
 
         bladeGeneration.Generate3DBlade(false);
+    }
+
+    public void SetRandomParamaters()
+    {
+        // 90% chance of realistic sword, 10% chance of experimental/fantasy
+        bool isRealistic = UnityEngine.Random.value < 0.9f;
+
+        // === CORE SETTINGS ===
+        coreSettings.splinePointCount = isRealistic ?
+            UnityEngine.Random.Range(5, 8) :
+            UnityEngine.Random.Range(3, 12);
+
+        coreSettings.heightSpacing = isRealistic ?
+            UnityEngine.Random.Range(0.2f, 0.5f) :
+            UnityEngine.Random.Range(0.25f, 0.5f);
+
+        // Height spacing mode
+        float spacingRoll = UnityEngine.Random.value;
+        if (isRealistic)
+        {
+            // 60% Fixed, 30% RandomUniform, 10% SetHeight
+            coreSettings.heightSpacingMode = spacingRoll < 0.8f ? HeightSpacingMode.SetHeight :
+                                              spacingRoll < 0.9f ? HeightSpacingMode.RandomUniform :
+                                              HeightSpacingMode.Fixed;
+        }
+        else
+        {
+            coreSettings.heightSpacingMode = (HeightSpacingMode)UnityEngine.Random.Range(0, 2);
+        }
+
+        coreSettings.totalBladeHeight = isRealistic ?
+            UnityEngine.Random.Range(2f, 5f) :
+            UnityEngine.Random.Range(0.5f, 10f);
+
+        coreSettings.minAndMaxHeightSpacing = isRealistic ?
+            new Vector2(UnityEngine.Random.Range(0.3f, 0.5f), UnityEngine.Random.Range(0.6f, 1f)) :
+            new Vector2(UnityEngine.Random.Range(0.1f, 0.5f), UnityEngine.Random.Range(0.5f, 1f));
+
+        coreSettings.minAndMaxWidth = isRealistic ?
+            new Vector2(UnityEngine.Random.Range(0.2f, 0.3f), UnityEngine.Random.Range(0.3f, .6f)) :
+            new Vector2(UnityEngine.Random.Range(0.2f, 0.5f), UnityEngine.Random.Range(0.5f, .7f));
+
+        coreSettings.minAndMaxAngle = isRealistic ?
+            new Vector2(UnityEngine.Random.Range(-10f, -5f), UnityEngine.Random.Range(5f, 10f)) :
+            new Vector2(UnityEngine.Random.Range(-25, -5f), UnityEngine.Random.Range(5f, 25));
+
+        // === SYMMETRY ===
+        // 70% use symmetry for realistic blades
+        useSymmetry = isRealistic ? UnityEngine.Random.value < 0.7f : UnityEngine.Random.value < 0.4f;
+
+
+        // === WIDTH SETTINGS ===
+        widthSettings.useRandomWidthCurve = isRealistic ?
+            UnityEngine.Random.value < 0.8f :
+            UnityEngine.Random.value < 0.5f;
+
+        widthSettings.noiseInfluence = isRealistic ?
+            UnityEngine.Random.Range(0f, 0.3f) :
+            UnityEngine.Random.Range(0f, 1f);
+
+        widthSettings.noiseFrequency = UnityEngine.Random.Range(0.05f, 0.5f);
+
+        // Generate user defined curve if not using random
+        if (!widthSettings.useRandomWidthCurve)
+        {
+            widthSettings.userDefinedCurve = GenerateRandomWidthCurve();
+        }
+
+        // === TIP SETTINGS ===
+        float tipRoll = UnityEngine.Random.value;
+        if (isRealistic)
+        {
+            // 70% Centered, 20% ForcedCenterX, 10% RandomLean
+            tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.Centered :
+                                       tipRoll < 0.9f ? TipLeanMode.ForcedCenterX :
+                                       TipLeanMode.RandomLean;
+        }
+        else
+        {
+            tipSettings.tipLeanMode = (TipLeanMode)UnityEngine.Random.Range(0, 6);
+        }
+
+        tipSettings.heightOffset = isRealistic ?
+            UnityEngine.Random.Range(0, 0.3f) :
+            UnityEngine.Random.Range(-.3f, 1f);
+
+        // Generate tip lean strength curve
+        tipSettings.tipLeanStrengthCurve = GenerateRealisticCurve(
+            isRealistic ? 0.3f : 0f,
+            isRealistic ? 0.8f : 1f
+        );
+
+
+
+        float curvatureRoll = UnityEngine.Random.value;
+        if (isRealistic)
+        {
+            // 40% None, 30% RandomCurve, 20% RandomOutward, 10% SickleCurve
+            curvatureSettings.curvatureMode = curvatureRoll < 0.4f ? CurvatureMode.None :
+                                               curvatureRoll < 0.7f ? CurvatureMode.RandomCurve :
+                                               curvatureRoll < 0.9f ? CurvatureMode.RandomOutward :
+                                               CurvatureMode.SickleCurve;
+        }
+        else
+        {
+            curvatureSettings.curvatureMode = (CurvatureMode)UnityEngine.Random.Range(0, 5);
+        }
+
+
+        if (curvatureSettings.curvatureMode != CurvatureMode.None)
+        {
+            // === CURVATURE SETTINGS ===
+            curvatureSettings.straightSegmentThreshold = isRealistic ?
+                UnityEngine.Random.Range(1, 3) :
+                UnityEngine.Random.Range(1, 5);
+        }
+        else
+        {
+            curvatureSettings.straightSegmentThreshold = isRealistic ?
+               UnityEngine.Random.Range(0, 3) :
+               UnityEngine.Random.Range(0, 5);
+        }
+    
+
+        curvatureSettings.curvature_Max = isRealistic ?
+            UnityEngine.Random.Range(0.2f, 0.5f) :
+            UnityEngine.Random.Range(0f, 2f);
+
+        curvatureSettings.curvature_PeakFactor = UnityEngine.Random.Range(0.5f, 0.8f);
+
+        curvatureSettings.curvature_StepSize =  0; // isRealistic ?
+        //    UnityEngine.Random.Range(0.01f, 0.08f) :
+        //    UnityEngine.Random.Range(0f, 0.2f);
+
+        // Generate curvature shape
+        curvatureSettings.curvatureShape = GenerateRealisticCurve(
+            isRealistic ? 0.3f : 0f,
+            isRealistic ? 0.8f : 1f
+        );
+
+        // Set curvature direction (mostly horizontal)
+        curvatureSettings.curvatureDirection = new Vector3(
+            UnityEngine.Random.value < 0.5f ? -1f : 1f,
+            0f,
+            0f
+        );
+
+        // === EDGE SETTINGS ===
+        float edgeRoll = UnityEngine.Random.value;
+        if (isRealistic)
+        {
+            // 60% None, 25% Alternating, 10% LooseAlternating, 5% others
+            curvatureSettings.curvatureMode = edgeRoll < 0.6f ? CurvatureMode.None :
+                                               edgeRoll < 0.85f ? CurvatureMode.RandomCurve :
+                                               edgeRoll < 0.95f ? CurvatureMode.RandomOutward :
+                                               CurvatureMode.SickleCurve;
+
+            edgeSettings.edgeCollapseMode = edgeRoll < 0.8f ? EdgeCollapseMode.None :
+                                            edgeRoll < 0.9f ? EdgeCollapseMode.Alternating :
+                                            edgeRoll < 0.95f ? EdgeCollapseMode.LooseAlternating :
+                                            (EdgeCollapseMode)UnityEngine.Random.Range(0, 5);
+        }
+        else
+        {
+            edgeSettings.edgeCollapseMode = (EdgeCollapseMode)UnityEngine.Random.Range(0, 5);
+        }
+
+        // Generate collapse pattern if needed
+        if (edgeSettings.edgeCollapseMode != EdgeCollapseMode.None)
+        {
+            edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount);
+        }
+
+        edgeSettings.spineOffset = isRealistic ?
+            UnityEngine.Random.Range(-0.2f, 0.2f) :
+            UnityEngine.Random.Range(-1f, 1f);
+
+        // === REGENERATE ===
+        GenerateLinesAndSplines();
+    }
+
+    private AnimationCurve GenerateRealisticCurve(float minValue, float maxValue)
+    {
+        int keyCount = UnityEngine.Random.Range(3, 6);
+        Keyframe[] keys = new Keyframe[keyCount];
+
+        keys[0] = new Keyframe(0f, UnityEngine.Random.Range(minValue, maxValue));
+        keys[keyCount - 1] = new Keyframe(1f, UnityEngine.Random.Range(minValue, maxValue));
+
+        for (int i = 1; i < keyCount - 1; i++)
+        {
+            float time = i / (float)(keyCount - 1);
+            keys[i] = new Keyframe(time, UnityEngine.Random.Range(minValue, maxValue));
+        }
+
+        AnimationCurve curve = new AnimationCurve(keys);
+
+        // Smooth the curve
+        for (int i = 0; i < keyCount; i++)
+        {
+            curve.SmoothTangents(i, 0.5f);
+        }
+
+        return curve;
     }
 }

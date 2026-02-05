@@ -33,6 +33,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _ApplyGradient: 0
     - _BUILTIN_AlphaClip: 0
     - _BUILTIN_Blend: 0
     - _BUILTIN_CullMode: 2
@@ -44,14 +45,14 @@ Material:
     - _BUILTIN_ZTest: 4
     - _BUILTIN_ZWrite: 1
     - _BUILTIN_ZWriteControl: 0
-    - _BaseContrast: 1.4
+    - _BaseContrast: 1.5
     - _BaseScale: 95
-    - _BlemishScale: 0.72
+    - _BlemishScale: 0
     - _BlemishStrength: 0.2
     - _BrushedStrength: 0
-    - _FresnelPower: 2
+    - _FresnelPower: 1
     - _METALTYPE: 5
-    - _Metalicness: 1
+    - _Metalicness: 0.8
     - _Noise_Influence: 0.54
     - _PATTERN: 6
     - _PATTERNTYPE: 5
@@ -62,22 +63,22 @@ Material:
     - _Rust_Influence: 0
     - _Rust_Power: 1
     - _ScratchScale: 14.2
-    - _Scratched_Power: 6
+    - _Scratched_Power: 9.65
     - _ShiningCellAmount: 0.59
-    - _Smoothness: 1
+    - _Smoothness: 0.7
     - _useWootzPattern: 0
     m_Colors:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
-    - _BaseTiling: {r: 1, g: 1, b: 0, a: 0}
-    - _BlemishTiling: {r: 50.2, g: 4, b: 0, a: 0}
+    - _BaseTiling: {r: 5.12, g: 5, b: 0, a: 0}
+    - _BlemishTiling: {r: 31.52, g: 41.4, b: 0, a: 0}
     - _Dark_Rust_Color: {r: 0.6156863, g: 0.33333334, b: 0, a: 0}
-    - _DarkestBaseColor: {r: 0.19999999, g: 0.19999999, b: 0.19999999, a: 1}
-    - _LightestBaseColor: {r: 0.7056604, g: 0.65373445, b: 0.65373445, a: 1}
+    - _DarkestBaseColor: {r: 0.18490559, g: 0.1796724, b: 0.1796724, a: 1}
+    - _LightestBaseColor: {r: 0.4641509, g: 0.4440085, b: 0.4440085, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Rust_color: {r: 1, g: 0.6117647, b: 0.15686275, a: 0}
     - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
     - _Scratched_Offset: {r: 28.6, g: 0, b: 0, a: 0}
-    - _Scratched_Tiling: {r: 30.7, g: 30, b: 0, a: 0}
+    - _Scratched_Tiling: {r: 1, g: 1, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}
     - _Tiling: {r: 1, g: 200, b: 0, a: 0}
   m_BuildTextureStacks: []
