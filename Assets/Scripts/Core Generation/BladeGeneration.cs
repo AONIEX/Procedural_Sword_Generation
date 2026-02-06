@@ -1776,27 +1776,39 @@ public class BladeGeneration : MonoBehaviour
     public void CalculateHandandGuardSize()
     {
         if (guard != null)
-            guard.transform.localScale = new Vector3(baseWidth * 2, guard.transform.localScale.y, Mathf.Max(bladeThickness, 0.05f) * 1.2f);
+            guard.transform.localScale = new Vector3(
+                baseWidth * 2,
+                guard.transform.localScale.y,
+                Mathf.Max(bladeThickness, 0.05f) * 1.2f
+            );
+
         if (handle != null)
-            handle.transform.localScale = new Vector3(baseWidth, handle.transform.localScale.y, handle.transform.localScale.z);
+            handle.transform.localScale = new Vector3(
+                baseWidth,
+                handle.transform.localScale.y,
+                handle.transform.localScale.z
+            );
 
-        // Align holder with the first segment's center point
-        if (holder != null && splineGen != null && splineGen.segments != null && splineGen.segments.Count > 0)
+        // CRITICAL FIX: Always align holder with first segment center
+        if (holder != null && splineGen != null &&
+            splineGen.segments != null && splineGen.segments.Count > 0)
         {
-            // Get the actual first segment center from the spline
-            Vector3 firstSegmentCenter = splineGen.segments[0].center;
+            // Get the ACTUAL first segment center
+            Segment firstSegment = splineGen.segments[0];
+            Vector3 trueGeometricCenter = (firstSegment.left + firstSegment.right) * 0.5f;
 
-            // Set holder position to match the blade's starting X position
+            // Move holder to match blade base center
             holder.transform.localPosition = new Vector3(
-                firstSegmentCenter.x,
+                trueGeometricCenter.x,
                 holder.transform.localPosition.y,
                 holder.transform.localPosition.z
             );
 
-            // Update HandleXPosition to reflect this
-            HandleXPosition = firstSegmentCenter.x;
+            // Sync HandleXPosition with actual position
+            HandleXPosition = trueGeometricCenter.x;
         }
     }
+
 
     float EvaluateBladeProfile(
         BladeBaseProfile profile,
@@ -1835,10 +1847,10 @@ public class BladeGeneration : MonoBehaviour
         return active;
     }
     float BlendThicknessAtOverlap(
-     List<BladeProfileLayer> layers,
-     float bladeT,
-     float widthT,
-     float halfThickness)
+        List<BladeProfileLayer> layers,
+        float bladeT,
+        float widthT,
+        float halfThickness)
     {
         var active = GetActiveLayers(layers, bladeT);
 
@@ -1846,26 +1858,56 @@ public class BladeGeneration : MonoBehaviour
             return halfThickness;
 
         if (active.Count == 1)
-            return EvaluateBladeProfile(active[0].profile, widthT, halfThickness);
+        {
+            var layer = active[0];
+            float layerThickness = EvaluateBladeProfile(layer.profile, widthT, halfThickness);
+            return layerThickness * layer.scale;
+        }
 
         active.Sort((a, b) => a.startHeight.CompareTo(b.startHeight));
 
-        BladeProfileLayer lower = active[0];
-        BladeProfileLayer upper = active[1];
+        // Natural blending with automatic overlap detection
+        float totalWeight = 0f;
+        float blendedThickness = 0f;
 
-        float overlapStart = upper.startHeight;
-        float overlapEnd = lower.endHeight;
+        // Use profileOverlapBlendAmount to control blend zone size
+        float blendZone = 0.1f * profileOverlapBlendAmount; // 10% of range * blend strength
 
-        float tLocal = Mathf.InverseLerp(overlapStart, overlapEnd, bladeT);
+        foreach (var layer in active)
+        {
+            float layerStart = layer.startHeight;
+            float layerEnd = layer.endHeight;
+            float layerSpan = layerEnd - layerStart;
 
-        float blendAmount = upper.influenceCurve.Evaluate(tLocal);
+            // Define blend zones at start and end
+            float blendInEnd = layerStart + blendZone;
+            float blendOutStart = layerEnd - blendZone;
 
-        float lowerShape = EvaluateBladeProfile(lower.profile, widthT, halfThickness);
-        float upperShape = EvaluateBladeProfile(upper.profile, widthT, halfThickness);
+            float weight = 1f;
 
+            // Fade in at start
+            if (bladeT < blendInEnd && bladeT > layerStart)
+            {
+                float t = (bladeT - layerStart) / blendZone;
+                weight *= Mathf.SmoothStep(0f, 1f, t);
+            }
 
-        return Mathf.Lerp(lowerShape, upperShape, blendAmount) * lower.scale;
+            // Fade out at end
+            if (bladeT > blendOutStart && bladeT < layerEnd)
+            {
+                float t = (layerEnd - bladeT) / blendZone;
+                weight *= Mathf.SmoothStep(0f, 1f, t);
+            }
+
+            float layerThickness = EvaluateBladeProfile(layer.profile, widthT, halfThickness);
+
+            blendedThickness += layerThickness * layer.scale * weight;
+            totalWeight += weight;
+        }
+
+        return totalWeight > 0f ? blendedThickness / totalWeight : halfThickness;
     }
+
     float GetWidthScale(BladeBaseProfile profile)
     {
         switch (profile)
@@ -2411,10 +2453,12 @@ public class BladeGeneration : MonoBehaviour
 
         BladeBaseProfile[] availableProfiles = isRealistic ?
             new BladeBaseProfile[] { BladeBaseProfile.Lenticular, BladeBaseProfile.Diamond,
-                              BladeBaseProfile.HollowGround } :
+                          BladeBaseProfile.HollowGround } :
             (BladeBaseProfile[])System.Enum.GetValues(typeof(BladeBaseProfile));
 
         float currentStart = 0f;
+        BladeBaseProfile lastProfile = BladeBaseProfile.Lenticular;
+        bool isFirstProfile = true;
 
         for (int i = 0; i < profileCount; i++)
         {
@@ -2425,25 +2469,56 @@ public class BladeGeneration : MonoBehaviour
                 UnityEngine.Random.Range(sectionLength * (isRealistic ? 0.8f : 0.5f),
                                          sectionLength * (isRealistic ? 1.2f : 1.5f));
 
-            // FIX 1: Clamp end height BEFORE adding overlap
             endHeight = Mathf.Min(endHeight, 0.95f);
 
             float overlapAmount = isRealistic ? UnityEngine.Random.Range(0.1f, 0.2f) :
                                                UnityEngine.Random.Range(0.05f, 0.3f);
 
-            // FIX 2: Ensure overlap doesn't exceed 1.0
             float finalEndHeight = isLast ? 1f : Mathf.Min(endHeight + overlapAmount, 1f);
 
-            // FIX 3: Validate the profile is valid
             if (finalEndHeight <= currentStart)
             {
                 Debug.LogWarning($"Invalid profile range: start={currentStart}, end={finalEndHeight}");
                 continue;
             }
 
+            // ========== ENHANCED SELECTION WITH VISUAL CONTRAST ==========
+            BladeBaseProfile selectedProfile;
+
+            if (profileCount == 1 || isFirstProfile)
+            {
+                selectedProfile = availableProfiles[UnityEngine.Random.Range(0, availableProfiles.Length)];
+                isFirstProfile = false;
+            }
+            else
+            {
+                // Create weighted list - profiles that contrast more with previous get higher weight
+                List<BladeBaseProfile> candidates = new List<BladeBaseProfile>();
+                List<float> weights = new List<float>();
+
+                foreach (var p in availableProfiles)
+                {
+                    if (p == lastProfile)
+                        continue; // Skip identical
+
+                    // Calculate "visual contrast" - how different the shapes are
+                    float contrast = GetProfileContrast(lastProfile, p);
+
+                    candidates.Add(p);
+                    weights.Add(contrast);
+                }
+
+                if (candidates.Count == 0)
+                    candidates = new List<BladeBaseProfile>(availableProfiles);
+
+                // Weighted random selection
+                selectedProfile = WeightedRandomProfile(candidates, weights);
+            }
+            // ============================================================
+
             baseProfiles.Add(new BladeProfileLayer
             {
-                profile = availableProfiles[UnityEngine.Random.Range(0, availableProfiles.Length)],
+                profile = selectedProfile,
                 startHeight = currentStart,
                 endHeight = finalEndHeight,
                 scale = UnityEngine.Random.Range(isRealistic ? 0.9f : 0.5f,
@@ -2452,10 +2527,10 @@ public class BladeGeneration : MonoBehaviour
                                               GenerateRandomCurve()
             });
 
+            lastProfile = selectedProfile;
             currentStart = endHeight;
         }
 
-        // FIX 4: Ensure at least one valid profile exists
         if (baseProfiles.Count == 0)
         {
             baseProfiles.Add(new BladeProfileLayer
@@ -2467,6 +2542,61 @@ public class BladeGeneration : MonoBehaviour
                 influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
             });
         }
+    }
+
+    // Helper: Calculate visual contrast between two profiles
+    private float GetProfileContrast(BladeBaseProfile a, BladeBaseProfile b)
+    {
+        // Define shape "families" - similar shapes have low contrast
+        // Diamond/Triangular are angular
+        // Lenticular/HollowGround are curved
+        // Flat/Hexagonal are geometric
+
+        if (a == b) return 0f;
+
+        // High contrast pairs (1.0)
+        if ((a == BladeBaseProfile.Diamond && b == BladeBaseProfile.Lenticular) ||
+            (a == BladeBaseProfile.Lenticular && b == BladeBaseProfile.Diamond) ||
+            (a == BladeBaseProfile.Triangular && b == BladeBaseProfile.HollowGround) ||
+            (a == BladeBaseProfile.HollowGround && b == BladeBaseProfile.Triangular))
+            return 1.0f;
+
+        // Medium contrast (0.7f)
+        if ((a == BladeBaseProfile.Flat && (b == BladeBaseProfile.Lenticular || b == BladeBaseProfile.Diamond)) ||
+            (b == BladeBaseProfile.Flat && (a == BladeBaseProfile.Lenticular || a == BladeBaseProfile.Diamond)))
+            return 0.7f;
+
+        // Default medium-high contrast
+        return 0.8f;
+    }
+
+    // Helper: Weighted random selection
+    private BladeBaseProfile WeightedRandomProfile(List<BladeBaseProfile> profiles, List<float> weights)
+    {
+        if (profiles.Count == 0)
+            return BladeBaseProfile.Lenticular;
+
+        if (weights == null || weights.Count != profiles.Count)
+        {
+            // Fallback to uniform random
+            return profiles[UnityEngine.Random.Range(0, profiles.Count)];
+        }
+
+        float totalWeight = 0f;
+        foreach (float w in weights)
+            totalWeight += w;
+
+        float random = UnityEngine.Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+
+        for (int i = 0; i < profiles.Count; i++)
+        {
+            cumulative += weights[i];
+            if (random <= cumulative)
+                return profiles[i];
+        }
+
+        return profiles[profiles.Count - 1];
     }
     private void GenerateRandomFullers(bool isRealistic)
     {
