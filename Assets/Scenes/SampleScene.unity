@@ -1641,6 +1641,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bladeGen: {fileID: 28350894}
   shaderControl: {fileID: 28350898}
+  hiltGen: {fileID: 1555368602}
   sliderRowPrefab: {fileID: 5262284429567289594, guid: ea784764eb7e0074e8bc96d8797f6cf2, type: 3}
   dropdownRowPrefab: {fileID: 6461030533648725776, guid: 49767dabae7ce3647a3eff6c91565afd, type: 3}
   toggleRowPrefab: {fileID: 5340144560994068897, guid: 303c48006e630614d89192d723025a5c, type: 3}
@@ -5483,7 +5484,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  ridgeDepth: 0
+  ridgeDepth: 0.005
 --- !u!1 &1577240951
 GameObject:
   m_ObjectHideFlags: 0

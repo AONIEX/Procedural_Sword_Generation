@@ -479,7 +479,12 @@ public class SplineAndLineGen : MonoBehaviour
                         collapseLeftSide = (alternatingStartsLeft == isEven);
                         collapseRightSide = !collapseLeftSide;
                     }
-                    break;
+                    else
+                    {
+                        collapseLeftSide = false;
+                        collapseRightSide = false;
+                    }
+                        break;
                 //case EdgeCollapseMode.Patterned:
                 //case EdgeCollapseMode.RandomPatterned:
                 //    int segmentGroup = Mathf.FloorToInt((float)i / coreSettings.splinePointCount * edgeSettings.collapsePattern.Length);

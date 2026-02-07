@@ -297,6 +297,9 @@ public class BladeGeneration : MonoBehaviour
         Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
         int ringCount = smoothLefts.Count;
 
+        circularHitsLeftPerRing = new bool[ringCount];
+        circularHitsRightPerRing = new bool[ringCount];
+
         if (hollowHitsLeftPerRing == null || hollowHitsLeftPerRing.Length != ringCount)
         {
             hollowHitsLeftPerRing = new bool[ringCount];
@@ -304,11 +307,7 @@ public class BladeGeneration : MonoBehaviour
         }
 
 
-        if (circularHitsLeftPerRing == null || circularHitsLeftPerRing.Length != ringCount)
-        {
-            circularHitsLeftPerRing = new bool[ringCount];
-            circularHitsRightPerRing = new bool[ringCount];
-        }
+       
 
 
         // 3. Bevel / ridge vertices
@@ -2472,11 +2471,12 @@ public class BladeGeneration : MonoBehaviour
     {
         splineGen.SetRandomParamaters();
         SetRandomParamaters();
-        if(swordShaderControl != null)
+        RegenerateBlade(true);
+
+        if (swordShaderControl != null)
             swordShaderControl.RandomizeShader();
         if(hiltCreation != null)  
             hiltCreation.RandomiseGuard(baseWidth, bladeThickness);
-        RegenerateBlade(true);
 
 
     }
@@ -2693,17 +2693,16 @@ public class BladeGeneration : MonoBehaviour
         fullers = fullers ?? new List<FullerSettings>();
         fullers.Clear();
 
-        // ALWAYS create 4 fuller slots
         const int TOTAL_FULLER_SLOTS = 4;
+        bool hasCircularFuller = false;
 
         // 80% chance of exactly one basic fuller, 20% chance of other configurations
         float configRoll = UnityEngine.Random.value;
-
         int activeFullerCount = 0;
 
         if (configRoll < 0.8f)
         {
-            // STANDARD CASE: Single basic fuller (80% of the time)
+            // STANDARD CASE: Single basic fuller
             float fullerStart = UnityEngine.Random.value < 0.8f ? 0f : UnityEngine.Random.Range(0.05f, 0.2f);
             float fullerEnd = UnityEngine.Random.Range(0.6f, 0.9f);
 
@@ -2718,157 +2717,74 @@ public class BladeGeneration : MonoBehaviour
                 circleRadius = 0.3f,
                 fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
             });
+
             activeFullerCount = 1;
         }
         else
         {
-            // ALTERNATIVE CASES: Other configurations (20% of the time)
+            // ALTERNATIVE CASES
             float altRoll = UnityEngine.Random.value;
 
             if (altRoll < 0.25f)
             {
-                // No active fullers
-                activeFullerCount = 0;
+                activeFullerCount = 0; // no fullers
             }
             else if (altRoll < 0.75f)
             {
                 // Single non-basic fuller
                 FullerType type = UnityEngine.Random.value < 0.5f ? FullerType.Hollow : FullerType.Hollow_Circular;
 
-                float maxDepth = isRealistic ? 0.3f : 0.45f;
-                float maxWidth = isRealistic ? 0.35f : 0.8f;
-
-                float fullerStart = UnityEngine.Random.Range(0.1f, 0.3f);
-                float fullerEnd = UnityEngine.Random.Range(0.6f, 0.85f);
-
-                float fullerCenter;
-                float circleRadius;
-
                 if (type == FullerType.Hollow_Circular)
-                {
-                    // Circular fuller: center (0.5) or edge positioning
-                    float positionRoll = UnityEngine.Random.value;
+                    hasCircularFuller = true;
 
-                    if (positionRoll < 0.33f)
-                    {
-                        fullerCenter = UnityEngine.Random.Range(0.4f,0.6f);
-                        circleRadius = UnityEngine.Random.Range(0.15f, 0.75f);
-                    }
-                    else if (positionRoll < 0.66f)
-                    {
-                        fullerCenter = UnityEngine.Random.Range(0.0f, 0.05f);
-                        circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
-
-                    }
-                    else
-                    {
-                        fullerCenter = UnityEngine.Random.Range(0.95f, 1.0f);
-                        circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
-
-                    }
-                    fullerStart = UnityEngine.Random.Range(0.1f, 0.8f);
-
-                }
-                else
-                {
-                    fullerCenter = UnityEngine.Random.Range(0.0f, 1.0f);
-                    circleRadius = UnityEngine.Random.Range(0.15f, 0.35f);
-                }
-
-                fullers.Add(new FullerSettings
-                {
-                    fullerType = type,
-                    start = fullerStart,
-                    end = fullerEnd,
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
-                    fullerWidth = UnityEngine.Random.Range(0.15f, maxWidth),
-                    fullerCenter = fullerCenter,
-                    circleRadius = circleRadius,
-                    fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
-                                                 GenerateRandomCurve()
-                });
+                fullers.Add(GenerateRandomFuller(type, null, isRealistic));
                 activeFullerCount = 1;
             }
             else
             {
-                // Two fullers (one basic + one other, or two basics)
-                bool twoBasics = UnityEngine.Random.value < 0.1f;
+                // TWO OR MORE FULLERS
+                bool twoBasics = UnityEngine.Random.value < 0.3f;
 
-                // First fuller - always basic, starts at 0
-                fullers.Add(new FullerSettings
-                {
-                    fullerType = FullerType.Basic,
-                    start = 0f,
-                    end = UnityEngine.Random.Range(0.5f, 0.7f),
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
-                    fullerWidth = UnityEngine.Random.Range(0.15f, 0.3f),
-                    fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f),
-                    circleRadius = 0.3f,
-                    fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
-                });
+                // First fuller - always basic
+                fullers.Add(GenerateRandomFuller(FullerType.Basic, null, isRealistic));
+                activeFullerCount = 1;
 
                 // Second fuller
                 FullerType secondType = twoBasics ? FullerType.Basic :
                     (UnityEngine.Random.value < 0.5f ? FullerType.Hollow : FullerType.Hollow_Circular);
 
-                float maxDepth = secondType == FullerType.Basic ? 0.25f : (isRealistic ? 0.3f : 0.9f);
-                float maxWidth = secondType == FullerType.Basic ? 0.5f : (isRealistic ? 0.3f : 0.9f);
-
-                float secondStart = UnityEngine.Random.Range(0.3f, 0.5f);
-                float secondEnd = UnityEngine.Random.Range(0.7f, 0.9f);
-
-                float secondCenter;
-                float circleRadius;
-
                 if (secondType == FullerType.Hollow_Circular)
+                    hasCircularFuller = true;
+
+                fullers.Add(GenerateRandomFuller(secondType, fullers[0], isRealistic));
+                activeFullerCount++;
+
+                // POSSIBLE 3rd and 4th FULLERS
+                while (activeFullerCount < 4)
                 {
-                    float positionRoll = UnityEngine.Random.value;
-                    float firstCenter = fullers[0].fullerCenter;
-
-                    if (positionRoll < 0.33f && Mathf.Abs(firstCenter - 0.5f) > 0.15f)
+                    // 50% chance to add another fuller
+                    if (UnityEngine.Random.value < 0.5f)
                     {
-                        secondCenter = 0.5f;
-                        circleRadius = UnityEngine.Random.Range(0.15f, 0.3f);
+                        // Random type but respect the "one circular only" rule
+                        FullerType type;
+                        if (hasCircularFuller)
+                            type = UnityEngine.Random.value < 0.5f ? FullerType.Basic : FullerType.Hollow;
+                        else
+                            type = UnityEngine.Random.value < 0.33f ? FullerType.Basic :
+                                   (UnityEngine.Random.value < 0.66f ? FullerType.Hollow : FullerType.Hollow_Circular);
 
-                    }
-                    else if (positionRoll < 0.66f && firstCenter > 0.4f)
-                    {
-                        secondCenter = UnityEngine.Random.Range(0.15f, 0.3f);
-                        circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
-                    }
-                    else
-                    {
-                        secondCenter = UnityEngine.Random.Range(0.7f, 0.85f);
-                        circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
-                    }
-                    secondStart = UnityEngine.Random.Range(0.1f, 0.8f);
+                        if (type == FullerType.Hollow_Circular)
+                            hasCircularFuller = true;
 
+                        fullers.Add(GenerateRandomFuller(type, fullers[activeFullerCount - 1], isRealistic));
+                        activeFullerCount++;
+                    }
+                    else break;
                 }
-                else
-                {
-                    secondCenter = fullers[0].fullerCenter > 0.5f ?
-                        UnityEngine.Random.Range(0.4f, 0.6f) :
-                        UnityEngine.Random.Range(0.3f, 0.7f);
-                    circleRadius = UnityEngine.Random.Range(0.12f, 0.3f);
-                }
-
-                fullers.Add(new FullerSettings
-                {
-                    fullerType = secondType,
-                    start = secondStart,
-                    end = secondEnd,
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
-                    fullerWidth = UnityEngine.Random.Range(0.1f, maxWidth),
-                    fullerCenter = secondCenter,
-                    circleRadius = circleRadius,
-                    fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
-                                                 GenerateRandomCurve()
-                });
-                activeFullerCount = 2;
             }
         }
 
-        // FILL REMAINING SLOTS WITH "NONE" FULLERS
+        // Fill remaining slots with None
         while (fullers.Count < TOTAL_FULLER_SLOTS)
         {
             fullers.Add(new FullerSettings
@@ -2883,6 +2799,53 @@ public class BladeGeneration : MonoBehaviour
                 fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
             });
         }
+    }
+
+    // Helper method unchanged except adding "previous" logic
+    private FullerSettings GenerateRandomFuller(FullerType type, FullerSettings previous, bool isRealistic)
+    {
+        float start = UnityEngine.Random.Range(0.1f, 0.8f);
+        float end = UnityEngine.Random.Range(start + 0.1f, 0.95f);
+
+        float center;
+        float radius;
+
+        if (type == FullerType.Hollow_Circular)
+        {
+            float positionRoll = UnityEngine.Random.value;
+            if (positionRoll < 0.33f)
+            {
+                center = 0.5f;
+                radius = UnityEngine.Random.Range(0.3f, 0.5f);
+            }
+            else if (positionRoll < 0.66f)
+            {
+                center = UnityEngine.Random.Range(0.05f, 0.2f);
+                radius = UnityEngine.Random.Range(0.25f, 0.65f);
+            }
+            else
+            {
+                center = UnityEngine.Random.Range(0.8f, 0.95f);
+                radius = UnityEngine.Random.Range(0.25f, 0.65f);
+            }
+        }
+        else
+        {
+            center = previous != null && previous.fullerCenter > 0.5f ? UnityEngine.Random.Range(0.4f, 0.6f) : UnityEngine.Random.Range(0.3f, 0.7f);
+            radius = UnityEngine.Random.Range(0.12f, 0.35f);
+        }
+
+        return new FullerSettings
+        {
+            fullerType = type,
+            start = start,
+            end = end,
+            fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
+            fullerWidth = UnityEngine.Random.Range(0.1f, 0.35f),
+            fullerCenter = center,
+            circleRadius = radius,
+            fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) : GenerateRandomCurve()
+        };
     }
 
 

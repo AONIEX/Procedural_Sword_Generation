@@ -11,7 +11,8 @@ public class UIControl : MonoBehaviour
 {
     public BladeGeneration bladeGen;
     public SwordShaderControl shaderControl;
-
+    public HiltCreation hiltGen;
+    
     public GameObject sliderRowPrefab;
     public GameObject dropdownRowPrefab;
     public GameObject toggleRowPrefab;
@@ -30,7 +31,7 @@ public class UIControl : MonoBehaviour
     private float lastGenerateTime = 0f;
     private bool pendingGenerate = false;
 
-    private enum GenerationType { None, Full, Spline }
+    private enum GenerationType { None, Full, Spline, Guard }
     private GenerationType pendingGeneration = GenerationType.None;
 
     // Section -> SubSection -> UI elements
@@ -58,10 +59,16 @@ public class UIControl : MonoBehaviour
             {
                 case GenerationType.Full:
                     bladeGen.Generate3DBlade(true);
+                    if (hiltGen != null)
+                        hiltGen.GenerateGuard(); 
                     break;
                 case GenerationType.Spline:
                     GenerateBlade();
                     break;
+                case GenerationType.Guard:
+                        hiltGen.RegenerateGuard();  // regenerate immediately
+                    break;
+
             }
 
             pendingGeneration = GenerationType.None;
@@ -86,6 +93,9 @@ public class UIControl : MonoBehaviour
 
         if (shaderControl != null)
             GenerateForObject(shaderControl, shaderControl);
+
+        if (hiltGen != null)
+            GenerateForObject(hiltGen, hiltGen);
 
         buildingUI = false;
 
@@ -310,6 +320,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         });
 
@@ -356,6 +369,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         });
 
@@ -371,6 +387,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         });
 
@@ -396,6 +415,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         });
 
@@ -423,6 +445,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         });
 
@@ -446,6 +471,9 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Full);
                 else if (rootOwner == bladeGen.splineGen)
                     RequestGenerate(GenerationType.Spline);
+                else if (rootOwner == hiltGen)
+                    RequestGenerate(GenerationType.Guard);
+
             }
         };
 
@@ -470,9 +498,13 @@ public class UIControl : MonoBehaviour
     void RequestGenerate(GenerationType type)
     {
         if (!autoGenerate) return;
+
+        // Always prioritize Full over others
         if (type == GenerationType.Full)
             pendingGeneration = GenerationType.Full;
-        else if (pendingGeneration != GenerationType.Full)
+        else if (type == GenerationType.Guard && pendingGeneration != GenerationType.Full)
+            pendingGeneration = GenerationType.Guard;
+        else if (type == GenerationType.Spline && pendingGeneration == GenerationType.None)
             pendingGeneration = GenerationType.Spline;
 
         pendingGenerate = true;
