@@ -44,6 +44,7 @@ public class SwordShaderControl : MonoBehaviour
     public Color swordScratchColor;
     
     public Material material;
+    public Material bakeMaterial;
 
     private SwordColors oldSwordColor = SwordColors.Iron;
     private SwordEffects oldEffect = SwordEffects.Rust;
@@ -103,6 +104,7 @@ public class SwordShaderControl : MonoBehaviour
         material.SetColor("_DarkestBaseColor", swordDarkColor);
         material.SetColor("_Scratch_Color", swordScratchColor);
 
+        UpdateBakeMaterial();
     }
 
     public void UpdateColors()
@@ -214,6 +216,44 @@ public class SwordShaderControl : MonoBehaviour
 
         UpdateShader();
     }
+
+    private void UpdateBakeMaterial()
+    {
+        if (bakeMaterial == null || material == null)
+            return;
+
+        // Copy base colors
+        bakeMaterial.SetColor("_LightestBaseColor", swordLightColor);
+        bakeMaterial.SetColor("_DarkestBaseColor", swordDarkColor);
+        bakeMaterial.SetColor("_Scratch_Color", swordScratchColor);
+
+        // Copy effect colors
+        switch (swordParamaters.swordEffcet)
+        {
+            case SwordEffects.Blood:
+                bakeMaterial.SetColor("_Rust_color", lightBloodColor);
+                bakeMaterial.SetColor("_Dark_Rust_Color", darkBloodColor);
+                break;
+            case SwordEffects.Mud:
+                bakeMaterial.SetColor("_Rust_color", lightMudColor);
+                bakeMaterial.SetColor("_Dark_Rust_Color", darkMudColor);
+                break;
+            case SwordEffects.Rust:
+                bakeMaterial.SetColor("_Rust_color", lightRustColor);
+                bakeMaterial.SetColor("_Dark_Rust_Color", darkRustColor);
+                break;
+            case SwordEffects.Oxidation:
+                bakeMaterial.SetColor("_Rust_color", lightOxidiationColor);
+                bakeMaterial.SetColor("_Dark_Rust_Color", darkOxidiationColor);
+                break;
+        }
+
+        bakeMaterial.SetFloat("_Rust_Power", swordParamaters.effectAmount);
+
+        // Wootz pattern
+        bakeMaterial.SetInt("_useWootzPattern", swordParamaters.swordColor == SwordColors.Wootz ? 1 : 0);
+    }
+
 
     public void RandomizeShader()
     {

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Reflection;
+using System.IO;
+using System.Security.Cryptography.X509Certificates;
 
 
 
@@ -189,6 +191,9 @@ public class BladeGeneration : MonoBehaviour
     [Header("Other Control")]
     public SwordShaderControl swordShaderControl;
     public HiltCreation hiltCreation;
+    public TextureExporter textureExporter;
+
+    private MeshFilter meshFilter;
     void Start()
     {
         HandleXPosition = holder.transform.localPosition.x;
@@ -203,12 +208,55 @@ public class BladeGeneration : MonoBehaviour
             RegenerateBlade(true);
         }
 
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            ExportMesh();
+        }
+
         if (handle.transform.localPosition.x != HandleXPosition)
         {
             holder.transform.localPosition = new Vector3(HandleXPosition, holder.transform.localPosition.y, holder.transform.localPosition.z);
         }
     }
 
+
+    public void ExportMesh()
+    {
+        if (meshFilter == null)
+        {
+
+            meshFilter = GetComponent<MeshFilter>();
+        }
+
+        if (meshFilter != null)
+        {
+
+            string folderPath = Application.dataPath + "/Exported/" + "blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + "/";
+
+            // --- Create a folder for this sword ---
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            // Full path to the .obj file
+            string meshFilePath = Path.Combine(folderPath, "_blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
+
+            // Export the mesh using the correct file path
+            RuntimeObjExporter.ExportMesh(meshFilter.mesh, meshFilePath);
+            Debug.Log("Exported Mesh to: " + meshFilePath);
+
+            // Export the texture to the same folder
+            textureExporter.ExportTexture(folderPath);
+            Debug.Log("Exported Mesh");
+
+        }
+
+
+    }
+
+
+    
     private void ApplyMeshQualitySettings()
     {
         switch (meshQuality)
