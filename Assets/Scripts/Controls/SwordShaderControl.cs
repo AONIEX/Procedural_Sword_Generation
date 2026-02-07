@@ -214,4 +214,33 @@ public class SwordShaderControl : MonoBehaviour
 
         UpdateShader();
     }
+
+    public void RandomizeShader()
+    {
+        swordParamaters.effectAmount = Random.Range(0.5f, 0.8f);
+        swordParamaters.swordEffcet = SwordEffects.Rust;
+
+        float colorRoll = UnityEngine.Random.value;
+        swordParamaters.swordColor = colorRoll < 0.5f ? SwordColors.Iron :
+                                                colorRoll < 0.6f ? SwordColors.Bronze :
+                                                colorRoll < 0.7f ? SwordColors.Steel :
+                                                colorRoll < 0.8f ? SwordColors.Carbon :
+                                                colorRoll < 0.85f ? SwordColors.Damascus :
+                                                colorRoll < 0.9f ? SwordColors.Wootz :
+                                                SwordColors.Obsidian;
+
+        
+        float effectChance = UnityEngine.Random.value;
+
+        if (effectChance < 0.85f)
+        {
+            float effectRoll = UnityEngine.Random.value;
+            swordParamaters.swordEffcet = effectRoll < 0.5f ? SwordEffects.Blood :
+                                                   effectRoll < 0.7f ? SwordEffects.Rust :
+                                                   effectRoll < 0.9f ? SwordEffects.Mud :
+                                                   SwordEffects.Oxidation;
+        }
+        UpdateShader();
+
+    }
 }

@@ -459,8 +459,15 @@ public class SplineAndLineGen : MonoBehaviour
                     collapseRightSide = true;
                     break;
                 case EdgeCollapseMode.Random:
-                    collapseLeftSide = Random.value < 0.5f;
-                    collapseRightSide = !collapseLeftSide;
+                    if (Random.value < 0.5f) {
+                        collapseLeftSide = false;
+                        collapseRightSide = true;
+                    }
+                    else
+                    {
+                        collapseLeftSide = true;
+                        collapseRightSide = false;
+                    }
                     break;
                 case EdgeCollapseMode.Alternating:
                     collapseLeftSide = (alternatingStartsLeft == isEven);
@@ -975,16 +982,16 @@ public class SplineAndLineGen : MonoBehaviour
         }
 
         coreSettings.totalBladeHeight = isRealistic ?
-            UnityEngine.Random.Range(2f, 5f) :
-            UnityEngine.Random.Range(0.5f, 10f);
+            UnityEngine.Random.Range(2f, 3.5f) :
+            UnityEngine.Random.Range(0.5f, 7.5f);
 
         coreSettings.minAndMaxHeightSpacing = isRealistic ?
             new Vector2(UnityEngine.Random.Range(0.3f, 0.5f), UnityEngine.Random.Range(0.6f, 1f)) :
             new Vector2(UnityEngine.Random.Range(0.1f, 0.5f), UnityEngine.Random.Range(0.5f, 1f));
 
         coreSettings.minAndMaxWidth = isRealistic ?
-            new Vector2(UnityEngine.Random.Range(0.2f, 0.3f), UnityEngine.Random.Range(0.3f, .6f)) :
-            new Vector2(UnityEngine.Random.Range(0.2f, 0.5f), UnityEngine.Random.Range(0.5f, .7f));
+            new Vector2(UnityEngine.Random.Range(0.2f, 0.3f), UnityEngine.Random.Range(0.3f, .5f)) :
+            new Vector2(UnityEngine.Random.Range(0.2f, 0.4f), UnityEngine.Random.Range(0.4f, .6f));
 
         coreSettings.minAndMaxAngle = isRealistic ?
             new Vector2(UnityEngine.Random.Range(-10f, -5f), UnityEngine.Random.Range(5f, 10f)) :
@@ -1013,21 +1020,21 @@ public class SplineAndLineGen : MonoBehaviour
         float tipRoll = UnityEngine.Random.value;
         if (isRealistic)
         {
-            tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.Centered :
-                                       tipRoll < 0.9f ? TipLeanMode.ForcedCenterX :
+            tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.ForcedCenterX :
+                                       tipRoll < 0.9f ? TipLeanMode.Centered :
                                        TipLeanMode.RandomLean;
         }
         else
         {
-            tipSettings.tipLeanMode = (TipLeanMode)UnityEngine.Random.Range(0, 6);
+            tipSettings.tipLeanMode = (TipLeanMode)UnityEngine.Random.Range(0, 5);
         }
 
         tipSettings.heightOffset = isRealistic ?
             UnityEngine.Random.Range(0, 0.3f) :
-            UnityEngine.Random.Range(-.3f, 1f);
+            UnityEngine.Random.Range(-0.2f, 1f);
 
         tipSettings.tipLeanStrengthCurve = GenerateRealisticCurve(
-            isRealistic ? 0.3f : 0f,
+            isRealistic ? 0.3f : 0.5f,
             isRealistic ? 0.8f : 1f
         );
 
@@ -1050,19 +1057,28 @@ public class SplineAndLineGen : MonoBehaviour
         // Check if alternating pattern is used
         hasAlternatingPattern = (edgeSettings.edgeCollapseMode == EdgeCollapseMode.Alternating ||
                                 edgeSettings.edgeCollapseMode == EdgeCollapseMode.LooseAlternating);
+        bool hasAnyCollapse = edgeSettings.edgeCollapseMode != EdgeCollapseMode.None;
 
         // Generate collapse pattern if needed
         if (edgeSettings.edgeCollapseMode != EdgeCollapseMode.None)
         {
             edgeSettings.collapsePattern = GenerateRandomCollapsePattern(coreSettings.splinePointCount);
         }
+        if (hasAnyCollapse) {
+            edgeSettings.spineOffset = isRealistic ?
+               UnityEngine.Random.Range(-0.2f, 0.2f) :
+               UnityEngine.Random.Range(-0.35f, 0.35f);
+        }
+        else
+        {
+            edgeSettings.spineOffset = isRealistic ?
+           UnityEngine.Random.Range(-0.2f, 0.2f) :
+           UnityEngine.Random.Range(-1f, 1f);
+        }
 
-        edgeSettings.spineOffset = isRealistic ?
-            UnityEngine.Random.Range(-0.2f, 0.2f) :
-            UnityEngine.Random.Range(-1f, 1f);
 
-        // === CURVATURE SETTINGS (INFLUENCED BY ALTERNATING PATTERN) ===
-        float curvatureRoll = UnityEngine.Random.value;
+            // === CURVATURE SETTINGS (INFLUENCED BY ALTERNATING PATTERN) ===
+            float curvatureRoll = UnityEngine.Random.value;
 
         if (hasAlternatingPattern)
         {
@@ -1071,15 +1087,17 @@ public class SplineAndLineGen : MonoBehaviour
             {
                 // 70% None (was 40%), 20% RandomCurve (was 30%), 8% RandomOutward (was 20%), 2% Sickle (was 10%)
                 curvatureSettings.curvatureMode = curvatureRoll < 0.7f ? CurvatureMode.None :
-                                                   curvatureRoll < 0.9f ? CurvatureMode.RandomCurve :
-                                                   curvatureRoll < 0.98f ? CurvatureMode.RandomOutward :
+                                                   curvatureRoll < 0.9f ? CurvatureMode.RandomOutward :
+                                                   curvatureRoll < 0.98f ? CurvatureMode.RandomCurve :
                                                    CurvatureMode.SickleCurve;
             }
             else
             {
                 // 50% chance of None (was would be ~20%)
                 curvatureSettings.curvatureMode = curvatureRoll < 0.5f ? CurvatureMode.None :
-                                                   (CurvatureMode)UnityEngine.Random.Range(1, 5);
+                                                      curvatureRoll < 0.7f ? CurvatureMode.RandomOutward :
+                                                      curvatureRoll < 0.9f ? CurvatureMode.RandomCurve :
+                                                      CurvatureMode.SickleCurve;
             }
 
             // If curvature is applied, make it LESS extreme
@@ -1097,8 +1115,8 @@ public class SplineAndLineGen : MonoBehaviour
             {
                 // 40% None, 30% RandomCurve, 20% RandomOutward, 10% SickleCurve
                 curvatureSettings.curvatureMode = curvatureRoll < 0.3f ? CurvatureMode.None :
-                                                   curvatureRoll < 0.6f ? CurvatureMode.RandomCurve :
-                                                   curvatureRoll < 0.9f ? CurvatureMode.RandomOutward :
+                                                   curvatureRoll < 0.75f ? CurvatureMode.RandomOutward :
+                                                   curvatureRoll < 0.9f ? CurvatureMode.RandomCurve :
                                                    CurvatureMode.SickleCurve;
             }
             else
@@ -1108,16 +1126,16 @@ public class SplineAndLineGen : MonoBehaviour
 
             // Normal curvature strength
             curvatureSettings.curvature_Max = isRealistic ?
-                UnityEngine.Random.Range(0.2f, 0.5f) :
-                UnityEngine.Random.Range(0f, 2f);
+                UnityEngine.Random.Range(0.25f, 0.75f) :
+                UnityEngine.Random.Range(0f, 1.4f);
         }
 
         // === REST OF CURVATURE SETTINGS ===
         if (curvatureSettings.curvatureMode != CurvatureMode.None)
         {
             curvatureSettings.straightSegmentThreshold = isRealistic ?
-                UnityEngine.Random.Range(1, 3) :
-                UnityEngine.Random.Range(1, 5);
+                UnityEngine.Random.Range(2, 3) :
+                UnityEngine.Random.Range(2, 5);
         }
         else
         {

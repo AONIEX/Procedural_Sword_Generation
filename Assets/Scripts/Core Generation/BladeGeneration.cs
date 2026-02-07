@@ -185,6 +185,10 @@ public class BladeGeneration : MonoBehaviour
 
     private List<Vector2> uvs = new List<Vector2>();
 
+
+    [Header("Other Control")]
+    public SwordShaderControl swordShaderControl;
+    public HiltCreation hiltCreation;
     void Start()
     {
         HandleXPosition = holder.transform.localPosition.x;
@@ -259,8 +263,8 @@ public class BladeGeneration : MonoBehaviour
         smoothGeometricCenters = new List<Vector3>();
 
         GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters, smoothGeometricCenters);
-       
 
+        baseWidth = CalculateMaxBladeWidth(smoothLefts, smoothRights);
 
         // 1. Front face
         int frontVertexCount;
@@ -578,7 +582,7 @@ public class BladeGeneration : MonoBehaviour
             if (fuller.fullerType != FullerType.Hollow_Circular)
                 continue;
 
-            float centerLen = (fuller.start + fuller.end) * 0.5f * totalLength;
+            float centerLen = fuller.start * totalLength;
             float centerU = fuller.fullerCenter * 2f - 1f;
             float radius = fuller.circleRadius * Mathf.Min(totalLength, avgWidth);
 
@@ -1403,7 +1407,21 @@ public class BladeGeneration : MonoBehaviour
     }
 
 
+    private float CalculateMaxBladeWidth(List<Vector3> smoothLefts, List<Vector3> smoothRights)
+    {
+        float maxWidth = 0f;
 
+        // Check first 30% of blade (base area where guard sits)
+        int checkCount = Mathf.Min(smoothLefts.Count, Mathf.CeilToInt(smoothLefts.Count * 0.3f));
+
+        for (int i = 0; i < checkCount; i++)
+        {
+            float width = Vector3.Distance(smoothLefts[i], smoothRights[i]);
+            maxWidth = Mathf.Max(maxWidth, width);
+        }
+
+        return maxWidth;
+    }
     public void GenerateSmoothSegments(
     List<Segment> segments,
     List<Vector3> smoothLefts,
@@ -1422,6 +1440,7 @@ public class BladeGeneration : MonoBehaviour
         }
 
         int ringIndex = 0;
+        const float TRANSITION_BLEND_RANGE = 0.3f; // Smooth collapse transitions over 30% of segment
 
         for (int i = 0; i < segments.Count - 1; i++)
         {
@@ -1463,7 +1482,7 @@ public class BladeGeneration : MonoBehaviour
                 float bladeT = ringIndex / (float)(totalRings - 1);
                 ringIndex++;
 
-                // Calculate collapse blend factors for smooth transitions
+                // ===== IMPROVED COLLAPSE BLEND CALCULATION =====
                 float leftCollapseBlend = 0f;
                 float rightCollapseBlend = 0f;
 
@@ -1473,11 +1492,15 @@ public class BladeGeneration : MonoBehaviour
                 }
                 else if (p1LeftCollapsed && !p2LeftCollapsed)
                 {
-                    leftCollapseBlend = 1f - t;
+                    // Smooth fade out using SmoothStep
+                    float smoothT = Mathf.SmoothStep(0f, 1f, 1f - t);
+                    leftCollapseBlend = smoothT;
                 }
                 else if (!p1LeftCollapsed && p2LeftCollapsed)
                 {
-                    leftCollapseBlend = t;
+                    // Smooth fade in using SmoothStep
+                    float smoothT = Mathf.SmoothStep(0f, 1f, t);
+                    leftCollapseBlend = smoothT;
                 }
 
                 if (p1RightCollapsed && p2RightCollapsed)
@@ -1486,11 +1509,13 @@ public class BladeGeneration : MonoBehaviour
                 }
                 else if (p1RightCollapsed && !p2RightCollapsed)
                 {
-                    rightCollapseBlend = 1f - t;
+                    float smoothT = Mathf.SmoothStep(0f, 1f, 1f - t);
+                    rightCollapseBlend = smoothT;
                 }
                 else if (!p1RightCollapsed && p2RightCollapsed)
                 {
-                    rightCollapseBlend = t;
+                    float smoothT = Mathf.SmoothStep(0f, 1f, t);
+                    rightCollapseBlend = smoothT;
                 }
 
                 // Width scaling with edge collapse awareness
@@ -1513,7 +1538,8 @@ public class BladeGeneration : MonoBehaviour
                     right = center;
                     left = center - widthDir * fullWidth;
                 }
-                else if (splineGen.edgeSettings.edgeCollapseMode !=EdgeCollapseMode.None && (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f))
+                else if (splineGen.edgeSettings.edgeCollapseMode != EdgeCollapseMode.None &&
+                         (leftCollapseBlend < 0.01f && rightCollapseBlend < 0.01f))
                 {
                     // No collapse - symmetric width
                     float halfWidth = fullWidth * 0.5f;
@@ -1554,18 +1580,18 @@ public class BladeGeneration : MonoBehaviour
                         );
                     }
                 }
+
                 float spineOffset = splineGen.edgeSettings.spineOffset;
 
+                // Store geometric center (before spine offset)
                 if (splineGen.edgeSettings.edgeCollapseMode != EdgeCollapseMode.None)
                 {
                     float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                     smoothGeometricCenters.Add(center);
-
                 }
                 else
                 {
-
                     smoothGeometricCenters.Add(originalSegmentCenter);
                 }
 
@@ -1575,7 +1601,6 @@ public class BladeGeneration : MonoBehaviour
                     float offsetT = (spineOffset + 1f) * 0.5f;
                     center = Vector3.Lerp(left, right, offsetT);
                 }
-             
                 else
                 {
                     center = originalSegmentCenter;
@@ -1601,14 +1626,64 @@ public class BladeGeneration : MonoBehaviour
                 left = center + leftOffset;
                 right = center + rightOffset;
 
-                if (smoothLefts.Count == 0 && i == 0 && j == 0)
+                // ===== KINK DETECTION (OPTIONAL DEBUG) =====
+                if (smoothCenters.Count > 2)
                 {
-                    baseWidth = Vector3.Distance(left, right);
+                    Vector3 prevDir = (smoothCenters[smoothCenters.Count - 1] - smoothCenters[smoothCenters.Count - 2]).normalized;
+                    Vector3 currDir = (center - smoothCenters[smoothCenters.Count - 1]).normalized;
+                    float angle = Vector3.Angle(prevDir, currDir);
+
+                    if (angle > 45f) // Sharp turn detected
+                    {
+                        Debug.LogWarning($"Sharp angle detected: {angle}° at ring {ringIndex}, segment {i}, t={t:F3}");
+                        Debug.LogWarning($"Left collapse: {leftCollapseBlend:F3}, Right collapse: {rightCollapseBlend:F3}");
+                    }
                 }
+
+                //if (smoothLefts.Count == 0 && i == 0 && j == 0)
+                //{
+                //    baseWidth = Vector3.Distance(left, right);
+                //}
 
                 smoothCenters.Add(center);
                 smoothLefts.Add(left);
                 smoothRights.Add(right);
+            }
+        }
+
+        // ===== POST-GENERATION SMOOTHING PASS =====
+        // This helps eliminate any remaining kinks from collapse transitions
+        if (smoothCenters.Count > 2)
+        {
+            List<Vector3> originalCenters = new List<Vector3>(smoothCenters);
+            List<Vector3> originalLefts = new List<Vector3>(smoothLefts);
+            List<Vector3> originalRights = new List<Vector3>(smoothRights);
+
+            const int SMOOTH_WINDOW = 2;
+            const float SMOOTH_STRENGTH = 0.4f;
+
+            for (int i = SMOOTH_WINDOW; i < smoothCenters.Count - SMOOTH_WINDOW; i++)
+            {
+                Vector3 avgCenter = Vector3.zero;
+                Vector3 avgLeft = Vector3.zero;
+                Vector3 avgRight = Vector3.zero;
+                int count = 0;
+
+                for (int k = -SMOOTH_WINDOW; k <= SMOOTH_WINDOW; k++)
+                {
+                    avgCenter += originalCenters[i + k];
+                    avgLeft += originalLefts[i + k];
+                    avgRight += originalRights[i + k];
+                    count++;
+                }
+
+                avgCenter /= count;
+                avgLeft /= count;
+                avgRight /= count;
+
+                smoothCenters[i] = Vector3.Lerp(originalCenters[i], avgCenter, SMOOTH_STRENGTH);
+                smoothLefts[i] = Vector3.Lerp(originalLefts[i], avgLeft, SMOOTH_STRENGTH);
+                smoothRights[i] = Vector3.Lerp(originalRights[i], avgRight, SMOOTH_STRENGTH);
             }
         }
     }
@@ -1752,12 +1827,23 @@ public class BladeGeneration : MonoBehaviour
 
     Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
-        return 0.5f * (
+        Vector3 result = 0.5f * (
             2f * p1 +
             (-p0 + p2) * t +
             (2f * p0 - 5f * p1 + 4f * p2 - p3) * t * t +
             (-p0 + 3f * p1 - 3f * p2 + p3) * t * t * t
         );
+
+        // Clamp deviation from linear interpolation
+        Vector3 linear = Vector3.Lerp(p1, p2, t);
+        float maxDeviation = Vector3.Distance(p1, p2) * 0.5f; // 50% of segment length
+
+        if (Vector3.Distance(result, linear) > maxDeviation)
+        {
+            result = linear + (result - linear).normalized * maxDeviation;
+        }
+
+        return result;
     }
 
     void SmoothSegmentCenters()
@@ -2386,6 +2472,10 @@ public class BladeGeneration : MonoBehaviour
     {
         splineGen.SetRandomParamaters();
         SetRandomParamaters();
+        if(swordShaderControl != null)
+            swordShaderControl.RandomizeShader();
+        if(hiltCreation != null)  
+            hiltCreation.RandomiseGuard(baseWidth, bladeThickness);
         RegenerateBlade(true);
 
 
@@ -2603,8 +2693,13 @@ public class BladeGeneration : MonoBehaviour
         fullers = fullers ?? new List<FullerSettings>();
         fullers.Clear();
 
+        // ALWAYS create 4 fuller slots
+        const int TOTAL_FULLER_SLOTS = 4;
+
         // 80% chance of exactly one basic fuller, 20% chance of other configurations
         float configRoll = UnityEngine.Random.value;
+
+        int activeFullerCount = 0;
 
         if (configRoll < 0.8f)
         {
@@ -2617,12 +2712,13 @@ public class BladeGeneration : MonoBehaviour
                 fullerType = FullerType.Basic,
                 start = fullerStart,
                 end = fullerEnd,
-                fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
                 fullerWidth = UnityEngine.Random.Range(0.15f, 0.35f),
-                fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f), // Keep centered
+                fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f),
                 circleRadius = 0.3f,
                 fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
             });
+            activeFullerCount = 1;
         }
         else
         {
@@ -2631,8 +2727,8 @@ public class BladeGeneration : MonoBehaviour
 
             if (altRoll < 0.25f)
             {
-                // No fuller at all
-                return;
+                // No active fullers
+                activeFullerCount = 0;
             }
             else if (altRoll < 0.75f)
             {
@@ -2655,26 +2751,26 @@ public class BladeGeneration : MonoBehaviour
 
                     if (positionRoll < 0.33f)
                     {
-                        // Center position - smaller radius
-                        fullerCenter = 0.5f;
+                        fullerCenter = UnityEngine.Random.Range(0.4f,0.6f);
                         circleRadius = UnityEngine.Random.Range(0.15f, 0.75f);
                     }
                     else if (positionRoll < 0.66f)
                     {
-                        // Left edge - bigger radius
-                        fullerCenter = UnityEngine.Random.Range(0.0f, 0.1f);
+                        fullerCenter = UnityEngine.Random.Range(0.0f, 0.05f);
                         circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
+
                     }
                     else
                     {
-                        // Right edge - bigger radius
-                        fullerCenter = UnityEngine.Random.Range(0.9f, 1.0f);
+                        fullerCenter = UnityEngine.Random.Range(0.95f, 1.0f);
                         circleRadius = UnityEngine.Random.Range(0.4f, 0.75f);
+
                     }
+                    fullerStart = UnityEngine.Random.Range(0.1f, 0.8f);
+
                 }
                 else
                 {
-                    // Hollow fuller - normal centered positioning
                     fullerCenter = UnityEngine.Random.Range(0.0f, 1.0f);
                     circleRadius = UnityEngine.Random.Range(0.15f, 0.35f);
                 }
@@ -2684,13 +2780,14 @@ public class BladeGeneration : MonoBehaviour
                     fullerType = type,
                     start = fullerStart,
                     end = fullerEnd,
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
                     fullerWidth = UnityEngine.Random.Range(0.15f, maxWidth),
                     fullerCenter = fullerCenter,
                     circleRadius = circleRadius,
                     fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
                                                  GenerateRandomCurve()
                 });
+                activeFullerCount = 1;
             }
             else
             {
@@ -2703,7 +2800,7 @@ public class BladeGeneration : MonoBehaviour
                     fullerType = FullerType.Basic,
                     start = 0f,
                     end = UnityEngine.Random.Range(0.5f, 0.7f),
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
                     fullerWidth = UnityEngine.Random.Range(0.15f, 0.3f),
                     fullerCenter = UnityEngine.Random.Range(0.4f, 0.6f),
                     circleRadius = 0.3f,
@@ -2725,34 +2822,30 @@ public class BladeGeneration : MonoBehaviour
 
                 if (secondType == FullerType.Hollow_Circular)
                 {
-                    // Circular fuller: center (0.5) or edge positioning
                     float positionRoll = UnityEngine.Random.value;
-
-                    // Avoid overlapping with first fuller's position
                     float firstCenter = fullers[0].fullerCenter;
 
                     if (positionRoll < 0.33f && Mathf.Abs(firstCenter - 0.5f) > 0.15f)
                     {
-                        // Center position - smaller radius
                         secondCenter = 0.5f;
                         circleRadius = UnityEngine.Random.Range(0.15f, 0.3f);
+
                     }
                     else if (positionRoll < 0.66f && firstCenter > 0.4f)
                     {
-                        // Left edge - bigger radius (only if first fuller isn't too far left)
                         secondCenter = UnityEngine.Random.Range(0.15f, 0.3f);
                         circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
                     }
                     else
                     {
-                        // Right edge - bigger radius (only if first fuller isn't too far right)
                         secondCenter = UnityEngine.Random.Range(0.7f, 0.85f);
                         circleRadius = UnityEngine.Random.Range(0.25f, 0.45f);
                     }
+                    secondStart = UnityEngine.Random.Range(0.1f, 0.8f);
+
                 }
                 else
                 {
-                    // Position second fuller to avoid too much overlap with first
                     secondCenter = fullers[0].fullerCenter > 0.5f ?
                         UnityEngine.Random.Range(0.4f, 0.6f) :
                         UnityEngine.Random.Range(0.3f, 0.7f);
@@ -2764,14 +2857,31 @@ public class BladeGeneration : MonoBehaviour
                     fullerType = secondType,
                     start = secondStart,
                     end = secondEnd,
-                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f), // Reduced max
+                    fullerDepth = UnityEngine.Random.Range(0.15f, isRealistic ? 0.3f : 0.4f),
                     fullerWidth = UnityEngine.Random.Range(0.1f, maxWidth),
                     fullerCenter = secondCenter,
                     circleRadius = circleRadius,
                     fullerFalloff = isRealistic ? AnimationCurve.EaseInOut(0f, 1f, 1f, 0f) :
                                                  GenerateRandomCurve()
                 });
+                activeFullerCount = 2;
             }
+        }
+
+        // FILL REMAINING SLOTS WITH "NONE" FULLERS
+        while (fullers.Count < TOTAL_FULLER_SLOTS)
+        {
+            fullers.Add(new FullerSettings
+            {
+                fullerType = FullerType.None,
+                start = 0.1f,
+                end = 0.8f,
+                fullerDepth = 0.3f,
+                fullerWidth = 0.3f,
+                fullerCenter = 0.5f,
+                circleRadius = 0.3f,
+                fullerFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f)
+            });
         }
     }
 

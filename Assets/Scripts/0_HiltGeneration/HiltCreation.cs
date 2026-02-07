@@ -61,8 +61,11 @@ public class HiltCreation : MonoBehaviour
             s.Add(new BezierKnot(new float3(x, y, 0)));
         }
 
+        CenterSplineVertically(s);
+
         spline.Spline = s;
     }
+
 
     void GenerateGuard()
     {
@@ -102,6 +105,9 @@ public class HiltCreation : MonoBehaviour
 
             float scaledThickness = thickness * thicknessCurve.Evaluate(t);
             float scaledWidth = width * widthCurve.Evaluate(t);
+
+            scaledWidth = Mathf.Max(scaledWidth, width * 0.3f);      // Never go below 30% of base width
+            scaledThickness = Mathf.Max(scaledThickness, thickness * 0.3f); // Never go below 30% of base thickness
 
             // Outer corners
             Vector3 topL = p + normal * scaledThickness + binormal * scaledWidth;
@@ -183,4 +189,289 @@ public class HiltCreation : MonoBehaviour
         if (guardMaterial != null)
             GetComponent<MeshRenderer>().material = guardMaterial;
     }
+
+    public void RandomiseGuard(float bladeWidth, float bladeThickness)
+    {
+        // 90% realistic, 10% experimental
+        bool isRealistic = UnityEngine.Random.value < 0.9f;
+
+        // === SPLINE SHAPE ===
+        // Point count: realistic guards usually have 3-7 points
+        pointCount = isRealistic ? UnityEngine.Random.Range(4, 8) : UnityEngine.Random.Range(4, 12);
+
+        // Spline length: realistic crossguards are 0.2-0.5 units wide
+        //splineLength = isRealistic ?
+        //    UnityEngine.Random.Range(0.5f, 1.0f) :
+        //    UnityEngine.Random.Range(0.4f, 1.2f);
+        float widthMultiplier = isRealistic ?
+       UnityEngine.Random.Range(1.5f, 2.5f) :
+       UnityEngine.Random.Range(2.0f, 3.0f);
+
+        splineLength = bladeWidth * widthMultiplier;
+
+        // Clamp to reasonable limits
+        splineLength = Mathf.Clamp(splineLength, 0.6f, 2.5f);
+
+        // Max height: subtle curves for realistic, more dramatic for experimental
+        maxHeight = isRealistic ?
+            UnityEngine.Random.Range(0.075f, 0.12f) :
+            UnityEngine.Random.Range(0.06f, 0.15f);
+
+        // Shape curve: choose from preset curve types
+        float curveRoll = UnityEngine.Random.value;
+
+        //if (isRealistic)
+        //{
+        // Shape curve: FLAT, U, or V only (no inverted shapes)
+
+        if (curveRoll < 0.5f)
+        {
+            // FLAT (50%)
+            shapeCurve = AnimationCurve.Linear(0, 0, 1, 0);
+        }
+        else if (curveRoll < 0.8f)
+        {
+            // U-SHAPE (30%) – smooth downward bow
+            float depth = UnityEngine.Random.Range(0.5f, 1.0f);
+
+            shapeCurve = new AnimationCurve(
+                new Keyframe(0, 0),
+                new Keyframe(0.5f, -depth),
+                new Keyframe(1, 0)
+            );
+
+            for (int i = 0; i < shapeCurve.keys.Length; i++)
+                shapeCurve.SmoothTangents(i, 0.35f);
+        }
+        else
+        {
+            // V-SHAPE (20%) – sharper downward point
+            float depth = UnityEngine.Random.Range(0.7f, 1.0f);
+
+            shapeCurve = new AnimationCurve(
+                new Keyframe(0, 0),
+                new Keyframe(0.5f, -depth),
+                new Keyframe(1, 0)
+            );
+
+            for (int i = 0; i < shapeCurve.keys.Length; i++)
+                shapeCurve.SmoothTangents(i, 0f);
+        }
+
+        //}
+        //else
+        //{
+        //    // Experimental: more varied curves
+        //    int keyCount = UnityEngine.Random.Range(3, 6);
+        //    Keyframe[] keys = new Keyframe[keyCount];
+
+        //    keys[0] = new Keyframe(0, 0);
+        //    keys[keyCount - 1] = new Keyframe(1, 0);
+
+        //    for (int i = 1; i < keyCount - 1; i++)
+        //    {
+        //        float time = i / (float)(keyCount - 1);
+        //        keys[i] = new Keyframe(time, UnityEngine.Random.Range(-1f, 1f));
+        //    }
+
+        //    shapeCurve = new AnimationCurve(keys);
+
+        //    for (int i = 0; i < keyCount; i++)
+        //        shapeCurve.SmoothTangents(i, 0.5f);
+        //}
+
+        // === MESH QUALITY ===
+        samples = 20;
+        //isRealistic ?
+        //    UnityEngine.Random.Range(10, 20) :
+        //    UnityEngine.Random.Range(10, 30);
+
+        // === CROSS-SECTION SIZE ===
+        // Width: horizontal size of the guard
+        //width = isRealistic ?
+        //    UnityEngine.Random.Range(0.07f, 0.09f) :
+        //    UnityEngine.Random.Range(0.08f, 0.12f);
+
+        // Thickness: vertical size of the guard
+        thickness = isRealistic ?
+            UnityEngine.Random.Range(0.02f, 0.035f) :
+            UnityEngine.Random.Range(0.02f, 0.055f);
+
+            float widthMult = isRealistic ?
+           UnityEngine.Random.Range(0.9f, 1.2f) :
+           UnityEngine.Random.Range(0.85f, 1.3f);
+
+        width = bladeThickness * widthMult;
+
+        // === TAPER CURVES ===
+        // How width/thickness change along the guard
+
+        float widthRoll = UnityEngine.Random.value;
+        float thickRoll = UnityEngine.Random.value;
+
+        if (isRealistic && thickRoll < 0.5f)
+        {
+            thicknessCurve = GenerateWaistedWidthCurve();
+        } else
+        {
+            thicknessCurve = GenerateGuardTaperCurve(isRealistic);
+
+        }
+
+
+        if (isRealistic && widthRoll < 0.5f)
+        {
+            // 50%: waisted guard (most common historically)
+            widthCurve = GenerateWaistedWidthCurve();
+
+        }
+        else
+        {
+            // Remaining cases: U / V / flat logic
+            widthCurve = GenerateGuardTaperCurve(isRealistic);
+
+        }
+
+        // === RIDGE DEPTH ===
+        ridgeDepth = isRealistic ?
+            UnityEngine.Random.Range(0.003f, 0.008f) :
+            UnityEngine.Random.Range(0.0f, 0.015f);
+
+        // Regenerate with new parameters
+        GenerateSplinePoints();
+        GenerateGuard();
+    }
+
+    AnimationCurve GenerateWaistedWidthCurve()
+    {
+        // INCREASED minimum end value to prevent pinching
+        float endValue = UnityEngine.Random.Range(0.5f, 0.65f); // CHANGED from 0.25f-0.4f
+        float shoulderTimeL = UnityEngine.Random.Range(0.15f, 0.25f);
+        float shoulderTimeR = UnityEngine.Random.Range(0.75f, 0.85f);
+
+        // Shoulder should be noticeably larger than ends
+        float shoulderValue = endValue + UnityEngine.Random.Range(0.15f, 0.25f); // CHANGED from 0.0f-0.05f
+        float centerValue = UnityEngine.Random.Range(0.95f, 1.1f); // CHANGED from 0.9f-1.15f
+
+        AnimationCurve curve = new AnimationCurve(
+            new Keyframe(0f, endValue),
+            new Keyframe(shoulderTimeL, shoulderValue),
+            new Keyframe(0.5f, centerValue),
+            new Keyframe(shoulderTimeR, shoulderValue),
+            new Keyframe(1f, endValue)
+        );
+
+        // Smooth everything for a forged look
+        for (int i = 0; i < curve.keys.Length; i++)
+            curve.SmoothTangents(i, 0.35f);
+
+        return curve;
+    }
+
+
+    AnimationCurve GenerateGuardTaperCurve(bool isRealistic)
+    {
+        if (!isRealistic)
+            return GenerateRandomTaperCurve();
+
+        float roll = UnityEngine.Random.value;
+
+        // FLAT (very common)
+        if (roll < 0.35f)
+        {
+            return AnimationCurve.Linear(0, 1f, 1, 1f);
+        }
+        // U SHAPE (thin ends, thick middle)
+        else if (roll < 0.60f)
+        {
+            float end = UnityEngine.Random.Range(0.7f, 0.9f); // CHANGED from 0.6f-0.85f
+            return new AnimationCurve(
+                new Keyframe(0, end),
+                new Keyframe(0.5f, 1f),
+                new Keyframe(1, end)
+            );
+        }
+        // INVERTED U (thick ends)
+        else if (roll < 0.75f)
+        {
+            float end = UnityEngine.Random.Range(1.05f, 1.25f); // CHANGED from 1.1f-1.35f
+            return new AnimationCurve(
+                new Keyframe(0, end),
+                new Keyframe(0.5f, 1f),
+                new Keyframe(1, end)
+            );
+        }
+        // V SHAPE (sharp middle taper)
+        else if (roll < 0.90f)
+        {
+            float mid = UnityEngine.Random.Range(0.65f, 0.85f); // CHANGED from 0.5f-0.8f
+            AnimationCurve curve = new AnimationCurve(
+                new Keyframe(0, 1f),
+                new Keyframe(0.5f, mid),
+                new Keyframe(1, 1f)
+            );
+
+            for (int i = 0; i < curve.keys.Length; i++)
+                curve.SmoothTangents(i, 0f);
+
+            return curve;
+        }
+        // INVERTED V (sharp middle bulge)
+        else
+        {
+            float mid = UnityEngine.Random.Range(1.15f, 1.4f); // CHANGED from 1.2f-1.5f
+            AnimationCurve curve = new AnimationCurve(
+                new Keyframe(0, 1f),
+                new Keyframe(0.5f, mid),
+                new Keyframe(1, 1f)
+            );
+
+            for (int i = 0; i < curve.keys.Length; i++)
+                curve.SmoothTangents(i, 0f);
+
+            return curve;
+        }
+    }
+
+    // Also update the random taper curve to be less extreme:
+    private AnimationCurve GenerateRandomTaperCurve()
+    {
+        int keyCount = UnityEngine.Random.Range(3, 5);
+        Keyframe[] keys = new Keyframe[keyCount];
+
+        for (int i = 0; i < keyCount; i++)
+        {
+            float time = i / (float)(keyCount - 1);
+            float value = UnityEngine.Random.Range(0.7f, 1.3f); // CHANGED from 0.5f-1.5f
+            keys[i] = new Keyframe(time, value);
+        }
+
+        AnimationCurve curve = new AnimationCurve(keys);
+
+        // Smooth the curve
+        for (int i = 0; i < keyCount; i++)
+            curve.SmoothTangents(i, 0.5f);
+
+        return curve;
+    }
+
+    void CenterSplineVertically(Spline s)
+    {
+        // Option A: use midpoint (best for guards)
+        float midT = 0.5f;
+        SplineUtility.Evaluate(s, midT, out float3 midPos, out _, out _);
+
+        float yOffset = midPos.y;
+
+        // Move every knot so midpoint sits at y = 0
+        for (int i = 0; i < s.Count; i++)
+        {
+            BezierKnot knot = s[i];
+            float3 pos = knot.Position;
+            pos.y -= yOffset;
+            knot.Position = pos;
+            s[i] = knot;
+        }
+    }
+
 }
