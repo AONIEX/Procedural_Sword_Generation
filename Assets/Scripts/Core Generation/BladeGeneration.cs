@@ -192,6 +192,8 @@ public class BladeGeneration : MonoBehaviour
     public SwordShaderControl swordShaderControl;
     public HiltCreation hiltCreation;
     public TextureExporter textureExporter;
+    public Material baeMaterial;
+
 
     private MeshFilter meshFilter;
     void Start()
@@ -224,39 +226,44 @@ public class BladeGeneration : MonoBehaviour
     {
         if (meshFilter == null)
         {
-
             meshFilter = GetComponent<MeshFilter>();
         }
 
         if (meshFilter != null)
         {
-
             string folderPath = Application.dataPath + "/Exported/" + "blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + "/";
 
-            // --- Create a folder for this sword ---
+            // Create folder
             if (!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);
             }
 
-            // Full path to the .obj file
+            // Export mesh
             string meshFilePath = Path.Combine(folderPath, "_blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
-
-            // Export the mesh using the correct file path
             RuntimeObjExporter.ExportMesh(meshFilter.mesh, meshFilePath);
             Debug.Log("Exported Mesh to: " + meshFilePath);
 
-            // Export the texture to the same folder
-            textureExporter.ExportAllTextures(folderPath);
-            Debug.Log("Exported Mesh");
+                // Use runtime baker
+                var result = ShaderGraphPBRBaker_Runtime.BakePBRMaps(
+                    material: baeMaterial,
+                    outputFolder: folderPath,
+                    resolution: 2048,
+                    createMaterial: true
+                );
 
+                if (result.success && result.bakedMaterial != null)
+                {
+                    Debug.Log("Baked material created!");
+                    // You can use result.bakedMaterial directly
+                    // Or access it via result.materialPath
+                }
+
+            Debug.Log("Export Complete!");
         }
-
-
     }
 
 
-    
     private void ApplyMeshQualitySettings()
     {
         switch (meshQuality)
