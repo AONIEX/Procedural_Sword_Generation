@@ -2,10 +2,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 using Unity.Mathematics;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HiltCreation : MonoBehaviour
 {
+    [Header("Grip")]
+    public GameObject gripHolder;
+
+    [Header("Grip Scale")]
+    [Range(0.01f, 1.0f)]
+    [DisplayName("Grip Scale", "General", 2, "")]
+    public float gripScale = 0.3f;
+
     [Header("Material")]
     public Material guardMaterial;
 
@@ -45,6 +54,8 @@ public class HiltCreation : MonoBehaviour
     [Range(0.005f, 0.1f)][DisplayName("Ridge Depth", "Hilt Creation", 2, "")]
     public float ridgeDepth = 0.005f;
 
+
+
     private Mesh mesh;
     private Vector3 lastNormal = Vector3.up;
 
@@ -67,6 +78,14 @@ public class HiltCreation : MonoBehaviour
     {
         GenerateSplinePoints();
         GenerateGuard();
+        ScaleGrip();
+
+
+    }
+    public void ScaleGrip()
+    {
+        gripHolder.transform.localScale = new Vector3(gripHolder.transform.localScale.x, gripScale, gripHolder.transform.localScale.z);
+
     }
 
 
@@ -213,8 +232,25 @@ public class HiltCreation : MonoBehaviour
             GetComponent<MeshRenderer>().material = guardMaterial;
     }
 
+    public void RandomiseGrip()
+    {
+        bool isRealistic = UnityEngine.Random.value < 0.9f;
+        if (isRealistic)
+        {
+           gripScale = UnityEngine.Random.Range(0.3f, .42f);
+        }
+        else
+        {
+            gripScale = UnityEngine.Random.Range(0.2f, 1.0f);
+
+        }
+
+    }
+
     public void RandomiseGuard(float bladeWidth, float bladeThickness)
     {
+        RandomiseGrip();
+
         // 90% realistic, 10% experimental
         bool isRealistic = UnityEngine.Random.value < 0.9f;
 
@@ -361,8 +397,7 @@ public class HiltCreation : MonoBehaviour
             UnityEngine.Random.Range(0.0f, 0.015f);
 
         // Regenerate with new parameters
-        GenerateSplinePoints();
-        GenerateGuard();
+        RegenerateGuard();
     }
 
     AnimationCurve GenerateWaistedWidthCurve()
