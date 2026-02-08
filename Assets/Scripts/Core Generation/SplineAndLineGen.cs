@@ -1021,28 +1021,7 @@ public class SplineAndLineGen : MonoBehaviour
             widthSettings.userDefinedCurve = GenerateRandomWidthCurve();
         }
 
-        // === TIP SETTINGS ===
-        float tipRoll = UnityEngine.Random.value;
-        if (isRealistic)
-        {
-            tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.ForcedCenterX :
-                                       tipRoll < 0.9f ? TipLeanMode.Centered :
-                                       TipLeanMode.RandomLean;
-        }
-        else
-        {
-            tipSettings.tipLeanMode = (TipLeanMode)UnityEngine.Random.Range(0, 5);
-        }
-
-        tipSettings.heightOffset = isRealistic ?
-            UnityEngine.Random.Range(0, 0.3f) :
-            UnityEngine.Random.Range(-0.2f, 1f);
-
-        tipSettings.tipLeanStrengthCurve = GenerateRealisticCurve(
-            isRealistic ? 0.3f : 0.5f,
-            isRealistic ? 0.8f : 1f
-        );
-
+     
         // === EDGE SETTINGS (DECIDE FIRST) ===
         float edgeRoll = UnityEngine.Random.value;
         bool hasAlternatingPattern = false;
@@ -1134,6 +1113,38 @@ public class SplineAndLineGen : MonoBehaviour
                 UnityEngine.Random.Range(0.25f, 0.75f) :
                 UnityEngine.Random.Range(0f, 1.4f);
         }
+
+        // === TIP SETTINGS ===
+        float tipRoll = UnityEngine.Random.value;
+        if (isRealistic)
+        {
+            if(curvatureSettings.curvatureMode == CurvatureMode.RandomOutward) {
+                tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.Centered :
+                                         tipRoll < 0.95f ? TipLeanMode.RandomLean :
+                                         TipLeanMode.ForcedCenterX;
+            }
+            else
+            {
+                tipSettings.tipLeanMode = tipRoll < 0.7f ? TipLeanMode.ForcedCenterX :
+                                      tipRoll < 0.9f ? TipLeanMode.Centered :
+                                      TipLeanMode.RandomLean;
+            }
+              
+        }
+        else
+        {
+            tipSettings.tipLeanMode = (TipLeanMode)UnityEngine.Random.Range(0, 5);
+        }
+
+        tipSettings.heightOffset = isRealistic ?
+            UnityEngine.Random.Range(0, 0.3f) :
+            UnityEngine.Random.Range(-0.2f, 1f);
+
+        tipSettings.tipLeanStrengthCurve = GenerateRealisticCurve(
+            isRealistic ? 0.3f : 0.5f,
+            isRealistic ? 0.8f : 1f
+        );
+
 
         // === REST OF CURVATURE SETTINGS ===
         if (curvatureSettings.curvatureMode != CurvatureMode.None)

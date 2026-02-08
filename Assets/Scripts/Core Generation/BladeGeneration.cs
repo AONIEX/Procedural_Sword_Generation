@@ -247,7 +247,7 @@ public class BladeGeneration : MonoBehaviour
             Debug.Log("Exported Mesh to: " + meshFilePath);
 
             // Export the texture to the same folder
-            textureExporter.ExportTexture(folderPath);
+            textureExporter.ExportAllTextures(folderPath);
             Debug.Log("Exported Mesh");
 
         }

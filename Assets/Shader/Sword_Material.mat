@@ -61,7 +61,7 @@ Material:
     - _RustScale2: 202.21
     - _RustSmoothness: 0.65
     - _Rust_Influence: 0
-    - _Rust_Power: 0.70768243
+    - _Rust_Power: 1
     - _ScratchScale: 4.65
     - _Scratched_Power: 6
     - _ShiningCellAmount: 5
@@ -71,12 +71,12 @@ Material:
     - _BaseColor: {r: 0.53935915, g: 0.5658401, b: 0.645283, a: 1}
     - _BaseTiling: {r: 1, g: 1, b: 0, a: 0}
     - _BlemishTiling: {r: 60, g: 60, b: 0, a: 0}
-    - _Dark_Rust_Color: {r: 0.65882355, g: 0.10980392, b: 0.043137256, a: 0}
-    - _DarkestBaseColor: {r: 0.03921569, g: 0.03921569, b: 0.0470588, a: 1}
-    - _LightestBaseColor: {r: 0.2274509, g: 0.2470588, b: 0.3607843, a: 1}
+    - _Dark_Rust_Color: {r: 0.6156863, g: 0.33333334, b: 0, a: 0}
+    - _DarkestBaseColor: {r: 0.6603774, g: 0.6603774, b: 0.6603774, a: 1}
+    - _LightestBaseColor: {r: 0.7509433, g: 0.7509433, b: 0.7509433, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Rust_color: {r: 0.85660374, g: 0.00484863, b: 0.009427954, a: 0}
-    - _Scratch_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Rust_color: {r: 1, g: 0.6117647, b: 0.15686275, a: 0}
+    - _Scratch_Color: {r: 0.8264151, g: 0.8264151, b: 0.8264151, a: 1}
     - _Scratched_Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scratched_Tiling: {r: 5, g: 200, b: 0, a: 0}
     - _SharpColor: {r: 1, g: 1, b: 1, a: 0}

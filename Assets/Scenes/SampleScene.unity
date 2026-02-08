@@ -847,7 +847,13 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: bf8a2c076d4fe114b80612b51055e93c, type: 2}
   renderTexture: {fileID: 8400000, guid: defbf1ce248f3e84abc1e8071e7e3ba0, type: 2}
   bakeCamera: {fileID: 1038458366}
+  meshRenderer: {fileID: 28350896}
   swordName: Blade
+  textureResolution: 2048
+  exportAlbedo: 1
+  exportNormal: 1
+  exportMetallic: 1
+  exportSmoothness: 1
 --- !u!1 &42807033
 GameObject:
   m_ObjectHideFlags: 0
