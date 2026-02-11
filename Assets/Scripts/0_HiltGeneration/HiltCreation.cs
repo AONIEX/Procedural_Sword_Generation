@@ -11,7 +11,7 @@ public class HiltCreation : MonoBehaviour
     public GameObject gripHolder;
 
     [Header("Grip Scale")]
-    [Range(0.01f, 1.0f)]
+    [Range(0.8f, 3.0f)]
     [DisplayName("Grip Scale", "General", 2, "")]
     public float gripScale = 0.3f;
 
@@ -237,11 +237,11 @@ public class HiltCreation : MonoBehaviour
         bool isRealistic = UnityEngine.Random.value < 0.9f;
         if (isRealistic)
         {
-           gripScale = UnityEngine.Random.Range(0.3f, .42f);
+           gripScale = UnityEngine.Random.Range(0.8f, 1.2f);
         }
         else
         {
-            gripScale = UnityEngine.Random.Range(0.2f, 1.0f);
+            gripScale = UnityEngine.Random.Range(0.75f, 3.0f);
 
         }
 

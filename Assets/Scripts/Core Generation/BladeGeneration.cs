@@ -192,7 +192,7 @@ public class BladeGeneration : MonoBehaviour
     public SwordShaderControl swordShaderControl;
     public HiltCreation hiltCreation;
     public TextureExporter textureExporter;
-    public Material baeMaterial;
+    public Material originalBladeMaterial;
 
 
     private MeshFilter meshFilter;
@@ -224,10 +224,14 @@ public class BladeGeneration : MonoBehaviour
 
     public void ExportMesh()
     {
+        
+        //Export Handle and Guard
+        
         if (meshFilter == null)
         {
             meshFilter = GetComponent<MeshFilter>();
         }
+
 
         if (meshFilter != null)
         {
@@ -242,11 +246,22 @@ public class BladeGeneration : MonoBehaviour
             // Export mesh
             string meshFilePath = Path.Combine(folderPath, "_blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
             RuntimeObjExporter.ExportMesh(meshFilter.mesh, meshFilePath);
+
+
+            string guardFilePath = Path.Combine(folderPath, "_guard_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
+
+            RuntimeObjExporter.ExportMesh(guard.GetComponent<MeshFilter>().mesh, guardFilePath);
+
+            string handleFilePath = Path.Combine(folderPath, "_handle_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
+
+            RuntimeObjExporter.ExportMesh(handle.GetComponent<MeshFilter>().mesh, handleFilePath);
+
+
             Debug.Log("Exported Mesh to: " + meshFilePath);
 
                 // Use runtime baker
                 var result = ShaderGraphPBRBaker_Runtime.BakePBRMaps(
-                    material: baeMaterial,
+                    material: originalBladeMaterial,
                     outputFolder: folderPath,
                     resolution: 2048,
                     createMaterial: true
@@ -1915,19 +1930,19 @@ public class BladeGeneration : MonoBehaviour
 
     public void CalculateHandandGuardSize()
     {
-        if (guard != null)
-            guard.transform.localScale = new Vector3(
-                baseWidth * 2,
-                guard.transform.localScale.y,
-                Mathf.Max(bladeThickness, 0.05f) * 1.2f
-            );
+        //if (guard != null)
+        //    guard.transform.localScale = new Vector3(
+        //        baseWidth * 2,
+        //        guard.transform.localScale.y,
+        //        Mathf.Max(bladeThickness, 0.05f) * 1.2f
+        //    );
 
-        if (handle != null)
-            handle.transform.localScale = new Vector3(
-                baseWidth,
-                handle.transform.localScale.y,
-                handle.transform.localScale.z
-            );
+        //if (handle != null)
+        //    handle.transform.localScale = new Vector3(
+        //        baseWidth,
+        //        handle.transform.localScale.y,
+        //        handle.transform.localScale.z
+        //    );
 
         // CRITICAL FIX: Always align holder with first segment center
         if (holder != null && splineGen != null &&
