@@ -5,8 +5,6 @@ using System.Reflection;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 
-
-
 //FOR SAVING DATA
 [Serializable]
 public class BladeGenerationData
@@ -25,8 +23,6 @@ public class BladeGenerationData
 
     public List<BladeGeneration.FullerSettings> fullers;
 }
-
-
 
 [System.Serializable]
 public class BladeProfileLayer
@@ -110,7 +106,6 @@ public class BladeGeneration : MonoBehaviour
     [DisplayName("Sharp Edge Material", "Rendering", 1, "Materials")]
     public Material sharpEdgeMaterial;
 
-
     public enum FullerType
     {
         None,
@@ -118,8 +113,6 @@ public class BladeGeneration : MonoBehaviour
         Hollow,
         Hollow_Circular
     }
-
-
 
     [System.Serializable]
     public class FullerSettings
@@ -150,8 +143,6 @@ public class BladeGeneration : MonoBehaviour
         [Range(0.05f, 1.1f), DisplayName("Circle Radias", "Fullers", 13, "Shape")]
         public float circleRadius = 0.3f;
     }
-   
-
 
     [DisplayName("Fuller Settings", "Fullers", 20, "General")]
     public List<FullerSettings> fullers;
@@ -250,7 +241,6 @@ public class BladeGeneration : MonoBehaviour
             string meshFilePath = Path.Combine(folderPath, "_blade_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
             RuntimeObjExporter.ExportMesh(meshFilter.mesh, meshFilePath);
 
-
             string guardFilePath = Path.Combine(folderPath, "_guard_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
 
             RuntimeObjExporter.ExportMesh(guard.GetComponent<MeshFilter>().mesh, guardFilePath);
@@ -258,7 +248,6 @@ public class BladeGeneration : MonoBehaviour
             string handleFilePath = Path.Combine(folderPath, "_handle_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".obj");
 
             RuntimeObjExporter.ExportMesh(handle.GetComponent<MeshFilter>().mesh, handleFilePath);
-
 
             Debug.Log("Exported Mesh to: " + meshFilePath);
 
@@ -391,7 +380,6 @@ public class BladeGeneration : MonoBehaviour
             out sharpStartBack
         );
 
-
         GenerateUVs(vertices, smoothLefts, smoothRights, smoothCenters,
               frontVertexCount, sharpStartFront, sharpStartBack, ringCount);
 
@@ -404,8 +392,6 @@ public class BladeGeneration : MonoBehaviour
                frontVertexCount,
                trianglesFrontBack
            );
-
-
 
         // 4. Connect bevels to blade faces
         ConnectBevels(
@@ -445,8 +431,6 @@ public class BladeGeneration : MonoBehaviour
             meshCollider = gameObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = mesh3D;
         meshCollider.convex = false;
-    
-    
     }
 
     private void ApplyNicksToEdge(
@@ -523,7 +507,6 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-
     private void GenerateUVs(List<Vector3> vertices,
                      List<Vector3> smoothLefts,
                      List<Vector3> smoothRights,
@@ -546,7 +529,7 @@ public class BladeGeneration : MonoBehaviour
         for (int i = 0; i < vertices.Count; i++)
             uvs.Add(Vector2.zero);
 
-        // 1. Front face UVs
+        // Front face UVs
         for (int ring = 0; ring < ringCount; ring++)
         {
             float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
@@ -562,7 +545,7 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // 2. Back face UVs
+        // Back face UVs
         for (int i = 0; i < frontVertexCount; i++)
         {
             int backIndex = i + frontVertexCount;
@@ -570,7 +553,7 @@ public class BladeGeneration : MonoBehaviour
                 uvs[backIndex] = new Vector2(1f - uvs[i].x, uvs[i].y);
         }
 
-        // 3. Bevel UVs
+        // Bevel UVs
         for (int ring = 0; ring < ringCount; ring++)
         {
             float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
@@ -599,11 +582,7 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
-        // Note: Circular hollow fuller updates UVs for its vertices inside ApplyCircularHollowFuller
     }
-
-
-
 
     private void ApplyFullers(List<Vector3> vertices,
         List<Vector3> smoothLefts,
@@ -862,7 +841,6 @@ public class BladeGeneration : MonoBehaviour
             vertices[to + frontVertexCount] = vertices[from + frontVertexCount];
             uvs[to + frontVertexCount] = uvs[from + frontVertexCount];
         }
-
         #endregion
 
         #region Edge snapping
@@ -881,7 +859,6 @@ public class BladeGeneration : MonoBehaviour
             if (holeMax[r] < width - 1) Snap(right, right + 1);
             if (holeMax[r] < width - 2) Snap(right, right + 2);
         }
-
         #endregion
 
         #region Cap snapping (TRACKED)
@@ -913,7 +890,6 @@ public class BladeGeneration : MonoBehaviour
                     SnapCap(r, next, v);
             }
         }
-
         #endregion
 
         #region Walls
@@ -1090,12 +1066,9 @@ public class BladeGeneration : MonoBehaviour
         // Scale depth based on blade dimensions
         // Larger blades need proportionally shallower fullers relative to blade thickness
         float bladeSizeScale = Mathf.Clamp(avgWidth / 0.5f, 0.5f, 2f);
-
         float[,] depthMap = new float[ringCount, widthSubdivisions];
-
         float fadeInLength = 0.05f;
         float fadeOutLength = 0.05f;
-
         // Set maximum depth relative to blade dimensions
         float maxAllowedDepth = bladeThickness * 0.35f; // Reduced from 0.4f
 
@@ -1146,7 +1119,6 @@ public class BladeGeneration : MonoBehaviour
             {
                 float widthT = vertIdx / (float)(widthSubdivisions - 1);
                 float widthPos = widthT * 2f - 1f;
-
                 float dist = Mathf.Abs(widthPos - centerPos) / width;
 
                 if (dist > 1f)
@@ -1179,7 +1151,6 @@ public class BladeGeneration : MonoBehaviour
             {
                 int front = ringStart + v;
                 int back = front + frontVertexCount;
-
                 float d = Mathf.Min(smoothedDepth[ringIdx, v], maxAllowedDepth);
 
                 vertices[front] -= ringNormal * d;
@@ -1232,7 +1203,6 @@ public class BladeGeneration : MonoBehaviour
             bool leftBevelActive = !(leftThis && leftNext);
 
             // ----- RIGHT EDGE -----
-
             bool rightThis =
                 (hollowHitsRightPerRing != null &&
                  i < hollowHitsRightPerRing.Length &&
@@ -1252,8 +1222,6 @@ public class BladeGeneration : MonoBehaviour
                  circularHitsRightPerRing[i + 1]);
 
             bool rightBevelActive = !(rightThis && rightNext);
-
-  
 
             // ----- INDICES -----
             int frontA = i * widthSubdivisions;
@@ -1318,8 +1286,6 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-
-
     private void GenerateBackFace(
      List<Vector3> vertices,
      List<int> frontTriangles,
@@ -1350,13 +1316,11 @@ public class BladeGeneration : MonoBehaviour
 
             Vector3 left = smoothLefts[ring];
             Vector3 right = smoothRights[ring];
-
             //Use the ORIGINAL segment center for thickness distribution
             Vector3 segmentCenter = smoothGeometricCenters[ring];
 
             // The spine center (with offset applied) - for reference only
             Vector3 spineCenter = smoothCenters[ring];
-
             Vector3 widthDir = (right - left).normalized;
             Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
             Vector3 bladeNormal = Vector3.Cross(widthDir, forwardDir).normalized;
@@ -1401,10 +1365,8 @@ public class BladeGeneration : MonoBehaviour
                 }
 
                 float baseHalf = bladeThickness * 0.5f;
-
                 // Use the blend function with profiles (widthT is now relative to segment center)
                 float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
-
                 // Apply tip fade
                 float halfThickness = shaped * profileTipFade;
 
@@ -1485,7 +1447,6 @@ public class BladeGeneration : MonoBehaviour
             Vector3 center = smoothCenters[i];
             Vector3 left = smoothLefts[i];
             Vector3 right = smoothRights[i];
-
             Vector3 leftOffset = left - center;
             Vector3 rightOffset = right - center;
 
@@ -1550,7 +1511,6 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-
     private float CalculateMaxBladeWidth(List<Vector3> smoothLefts, List<Vector3> smoothRights)
     {
         float maxWidth = 0f;
@@ -1584,8 +1544,6 @@ public class BladeGeneration : MonoBehaviour
         }
 
         int ringIndex = 0;
-        const float TRANSITION_BLEND_RANGE = 0.3f; // Smooth collapse transitions over 30% of segment
-
         for (int i = 0; i < segments.Count - 1; i++)
         {
             Segment p0 = segments[Mathf.Max(i - 1, 0)];
@@ -1617,7 +1575,7 @@ public class BladeGeneration : MonoBehaviour
 
                 float t = j / (float)currentSubdivisions;
 
-                // IMPORTANT: Save the original segment center from Catmull-Rom interpolation
+                // Save the original segment center from Catmull-Rom interpolation
                 Vector3 originalSegmentCenter = CatmullRom(p0.center, p1.center, p2.center, p3.center, t);
                 Vector3 center = originalSegmentCenter; // Start with the segment center
                 Vector3 left = CatmullRom(p0.left, p1.left, p2.left, p3.left, t);
@@ -1753,7 +1711,6 @@ public class BladeGeneration : MonoBehaviour
                 // Curvature smoothing (now uses the offset center)
                 Vector3 leftOffset = left - center;
                 Vector3 rightOffset = right - center;
-
                 float tipFalloff = isTipSegment ? Mathf.Clamp01(1f - t) : 1f;
                 float adjustedBlend = curvatureBlend * tipFalloff;
 
@@ -1783,11 +1740,6 @@ public class BladeGeneration : MonoBehaviour
                         Debug.LogWarning($"Left collapse: {leftCollapseBlend:F3}, Right collapse: {rightCollapseBlend:F3}");
                     }
                 }
-
-                //if (smoothLefts.Count == 0 && i == 0 && j == 0)
-                //{
-                //    baseWidth = Vector3.Distance(left, right);
-                //}
 
                 smoothCenters.Add(center);
                 smoothLefts.Add(left);
@@ -1852,12 +1804,9 @@ public class BladeGeneration : MonoBehaviour
             {
                 float t = s / (float)(widthSubdivisions - 1);
                 Vector3 point = Vector3.Lerp(left, right, t);
-
              
                 vertices.Add(point);
             }
-
-
         }
 
         for (int i = 0; i < ringStarts.Count - 1; i++)
@@ -1872,9 +1821,6 @@ public class BladeGeneration : MonoBehaviour
                 int c = baseB + j;
                 int d = baseB + j + 1;
 
-           
-
-
                     triangles.Add(a);
                     triangles.Add(b);
                     triangles.Add(c);
@@ -1882,8 +1828,6 @@ public class BladeGeneration : MonoBehaviour
                     triangles.Add(b);
                     triangles.Add(d);
                     triangles.Add(c);
-
-
             }
         }
 
@@ -2248,7 +2192,6 @@ public class BladeGeneration : MonoBehaviour
                     sum += depthMap[k, v] * w;
                     weightSum += w;
                 }
-
                 smoothed[r, v] = sum / weightSum;
             }
         }
@@ -2467,7 +2410,6 @@ public class BladeGeneration : MonoBehaviour
             Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
             Vector3 planePoint = smoothCenters[r];
 
-
             for (int v = holeMin[r]; v < holeMax[r]; v++)
             {
                 int a = r * widthSubdivisions + v;
@@ -2605,20 +2547,16 @@ public class BladeGeneration : MonoBehaviour
         splineGen.SetRandomParamaters();
         SetRandomParamaters();
         RegenerateBlade(true);
-
         if (swordShaderControl != null)
             swordShaderControl.RandomizeShader();
         if(hiltCreation != null)  
             hiltCreation.RandomiseGuard(baseWidth, bladeThickness);
-
-
     }
 
     private void SetRandomParamaters()
     {
         // 90% chance of realistic sword, 10% chance of experimental/fantasy
         bool isRealistic = UnityEngine.Random.value < 0.9f;
-
 
         // Define ranges based on realism
         float thicknessMin = isRealistic ? 0.04f : 0.03f;
@@ -2664,13 +2602,6 @@ public class BladeGeneration : MonoBehaviour
             sharpSide = isRealistic && sharpRoll < 0.5f ? SharpSide.Both :
                         (UnityEngine.Random.value < 0.5f ? SharpSide.Left : SharpSide.Right);
         }
-            
-
-        // Mesh quality
-        //float qualityRoll = UnityEngine.Random.value;
-        //meshQuality = qualityRoll < 0.1f ? MeshQuality.Low :
-        //              qualityRoll < 0.5f ? MeshQuality.Medium :
-        //              qualityRoll < 0.9f ? MeshQuality.High : MeshQuality.Ultra;
 
         // Generate profiles and fullers
         GenerateRandomProfiles(isRealistic);
@@ -2716,7 +2647,7 @@ public class BladeGeneration : MonoBehaviour
                 continue;
             }
 
-            // ========== ENHANCED SELECTION WITH VISUAL CONTRAST ==========
+            // SELECTION
             BladeBaseProfile selectedProfile;
 
             if (profileCount == 1 || isFirstProfile)
@@ -2748,7 +2679,6 @@ public class BladeGeneration : MonoBehaviour
                 // Weighted random selection
                 selectedProfile = WeightedRandomProfile(candidates, weights);
             }
-            // ============================================================
 
             baseProfiles.Add(new BladeProfileLayer
             {
@@ -2778,7 +2708,7 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-    // Helper: Calculate visual contrast between two profiles
+    //  Calculate visual contrast between two profiles
     private float GetProfileContrast(BladeBaseProfile a, BladeBaseProfile b)
     {
         // Define shape "families" - similar shapes have low contrast
@@ -2804,7 +2734,7 @@ public class BladeGeneration : MonoBehaviour
         return 0.8f;
     }
 
-    // Helper: Weighted random selection
+    // Weighted random selection
     private BladeBaseProfile WeightedRandomProfile(List<BladeBaseProfile> profiles, List<float> weights)
     {
         if (profiles.Count == 0)
@@ -2945,7 +2875,6 @@ public class BladeGeneration : MonoBehaviour
         }
     }
 
-    // Helper method unchanged except adding "previous" logic
     private FullerSettings GenerateRandomFuller(FullerType type, FullerSettings previous, bool isRealistic)
     {
         float start = UnityEngine.Random.Range(0.1f, 0.8f);
@@ -2992,7 +2921,6 @@ public class BladeGeneration : MonoBehaviour
         };
     }
 
-
     private AnimationCurve GenerateRandomCurve()
     {
         // Generate smooth random curves
@@ -3015,9 +2943,6 @@ public class BladeGeneration : MonoBehaviour
         {
             curve.SmoothTangents(i, 0.5f);
         }
-
         return curve;
     }
-
- 
 }
