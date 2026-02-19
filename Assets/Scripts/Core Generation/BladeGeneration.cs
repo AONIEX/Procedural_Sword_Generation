@@ -196,6 +196,9 @@ public class BladeGeneration : MonoBehaviour
 
 
     private MeshFilter meshFilter;
+
+    [Range(0, 30), DisplayName("Nick Amount", "Edge & Spine", 4, "Edge")]
+    public int nickAmount = 0;
     void Start()
     {
         HandleXPosition = holder.transform.localPosition.x;
@@ -421,6 +424,10 @@ public class BladeGeneration : MonoBehaviour
             sharpStartBack,
             ringCount
         );
+
+        ApplyNicksToEdge(vertices, smoothLefts, smoothRights, smoothCenters,
+             frontVertexCount, sharpStartFront, sharpStartBack);
+
         // 5. Final mesh
         mesh3D.SetVertices(vertices);
         mesh3D.SetUVs(0, uvs); // Apply UVs
@@ -446,6 +453,82 @@ public class BladeGeneration : MonoBehaviour
             meshCollider = gameObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = mesh3D;
         meshCollider.convex = false;
+    
+    
+    }
+
+    private void ApplyNicksToEdge(
+    List<Vector3> vertices,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights,
+    List<Vector3> smoothCenters,
+    int frontVertexCount,
+    int sharpStartFront,
+    int sharpStartBack)
+    {
+        if (nickAmount <= 0) return;
+
+        int ringCount = smoothCenters.Count;
+
+        float totalLength = 0f;
+        float[] cumulative = new float[ringCount];
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulative[i] = totalLength;
+        }
+
+        var rng = new System.Random();
+
+        for (int n = 0; n < nickAmount; n++)
+        {
+            float pos = (float)(rng.NextDouble() * 0.83 + 0.05);   // 0.05 - 0.88
+            float halfWidth = (float)(rng.NextDouble() * 0.022 + 0.008); // width along blade
+            float depth = (float)(rng.NextDouble() * 0.10 + 0.04);  // inward bite
+
+            bool leftEdge = sharpSide == SharpSide.Left ? true :
+                            sharpSide == SharpSide.Right ? false :
+                            rng.NextDouble() < 0.5;
+
+            for (int ring = 0; ring < ringCount; ring++)
+            {
+                float t = totalLength > 0f ? cumulative[ring] / totalLength : 0f;
+                float dist = Mathf.Abs(t - pos);
+                if (dist >= halfWidth) continue;
+
+                float alpha = 1f - (dist / halfWidth);
+                alpha = alpha * alpha * (3f - 2f * alpha); // smoothstep
+                float bladeWidth = Vector3.Distance(smoothLefts[ring], smoothRights[ring]);
+                float disp = depth * alpha * bladeWidth * 0.5f;
+
+                Vector3 widthDir = (smoothRights[ring] - smoothLefts[ring]).normalized;
+
+                if (leftEdge)
+                {
+                    int fi = ring * widthSubdivisions;
+                    int bi = fi + frontVertexCount;
+                    int bvf = sharpStartFront + ring * 2;
+                    int bvb = sharpStartBack + ring * 2;
+
+                    vertices[fi] += widthDir * disp;
+                    vertices[bi] += widthDir * disp;
+                    if (bvf < sharpStartBack) vertices[bvf] += widthDir * disp;
+                    if (bvb < vertices.Count) vertices[bvb] += widthDir * disp;
+                }
+                else
+                {
+                    int fi = ring * widthSubdivisions + (widthSubdivisions - 1);
+                    int bi = fi + frontVertexCount;
+                    int bvf = sharpStartFront + ring * 2 + 1;
+                    int bvb = sharpStartBack + ring * 2 + 1;
+
+                    vertices[fi] -= widthDir * disp;
+                    vertices[bi] -= widthDir * disp;
+                    if (bvf < sharpStartBack) vertices[bvf] -= widthDir * disp;
+                    if (bvb < vertices.Count) vertices[bvb] -= widthDir * disp;
+                }
+            }
+        }
     }
 
 
@@ -2556,6 +2639,7 @@ public class BladeGeneration : MonoBehaviour
         // 90% chance of realistic sword, 10% chance of experimental/fantasy
         bool isRealistic = UnityEngine.Random.value < 0.9f;
 
+
         // Define ranges based on realism
         float thicknessMin = isRealistic ? 0.04f : 0.03f;
         float thicknessMax = isRealistic ? 0.08f : 0.15f;
@@ -2577,6 +2661,16 @@ public class BladeGeneration : MonoBehaviour
 
         // Profile overlap blend
         profileOverlapBlendAmount = UnityEngine.Random.Range(0.3f, 1.0f);
+
+        float nickRoll = UnityEngine.Random.value;
+        if(nickRoll < 0.66)
+        {
+            nickAmount = 0;
+        }
+        else
+        {
+            nickAmount =  UnityEngine.Random.Range(0, 30);
+        }
 
         // Sharp side
         float sharpRoll = UnityEngine.Random.value;
