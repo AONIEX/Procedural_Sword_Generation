@@ -379,10 +379,6 @@ public class BladeGeneration : MonoBehaviour
             hollowHitsRightPerRing = new bool[ringCount];
         }
 
-
-       
-
-
         // 3. Bevel / ridge vertices
         int sharpStartFront, sharpStartBack;
         GenerateBevelVertices(
@@ -394,10 +390,6 @@ public class BladeGeneration : MonoBehaviour
             out sharpStartFront,
             out sharpStartBack
         );
-
-       
-
-
 
 
         GenerateUVs(vertices, smoothLefts, smoothRights, smoothCenters,
@@ -499,33 +491,33 @@ public class BladeGeneration : MonoBehaviour
                 float alpha = 1f - (dist / halfWidth);
                 alpha = alpha * alpha * (3f - 2f * alpha); // smoothstep
                 float bladeWidth = Vector3.Distance(smoothLefts[ring], smoothRights[ring]);
-                float disp = depth * alpha * bladeWidth * 0.5f;
+                float disp = depth * alpha * bladeWidth * 0.5f; //displacment
 
                 Vector3 widthDir = (smoothRights[ring] - smoothLefts[ring]).normalized;
 
                 if (leftEdge)
                 {
-                    int fi = ring * widthSubdivisions;
-                    int bi = fi + frontVertexCount;
-                    int bvf = sharpStartFront + ring * 2;
-                    int bvb = sharpStartBack + ring * 2;
+                    int frontIndex = ring * widthSubdivisions;
+                    int backIndex = frontIndex + frontVertexCount;
+                    int bevelFront = sharpStartFront + ring * 2;
+                    int bevelBack = sharpStartBack + ring * 2;
 
-                    vertices[fi] += widthDir * disp;
-                    vertices[bi] += widthDir * disp;
-                    if (bvf < sharpStartBack) vertices[bvf] += widthDir * disp;
-                    if (bvb < vertices.Count) vertices[bvb] += widthDir * disp;
+                    vertices[frontIndex] += widthDir * disp;
+                    vertices[backIndex] += widthDir * disp;
+                    if (bevelFront < sharpStartBack) vertices[bevelFront] += widthDir * disp;
+                    if (bevelBack < vertices.Count) vertices[bevelBack] += widthDir * disp;
                 }
                 else
                 {
-                    int fi = ring * widthSubdivisions + (widthSubdivisions - 1);
-                    int bi = fi + frontVertexCount;
-                    int bvf = sharpStartFront + ring * 2 + 1;
-                    int bvb = sharpStartBack + ring * 2 + 1;
+                    int frontIndex = ring * widthSubdivisions + (widthSubdivisions - 1);
+                    int backIndex = frontIndex + frontVertexCount;
+                    int bevelFront = sharpStartFront + ring * 2 + 1;
+                    int bevelBack = sharpStartBack + ring * 2 + 1;
 
-                    vertices[fi] -= widthDir * disp;
-                    vertices[bi] -= widthDir * disp;
-                    if (bvf < sharpStartBack) vertices[bvf] -= widthDir * disp;
-                    if (bvb < vertices.Count) vertices[bvb] -= widthDir * disp;
+                    vertices[frontIndex] -= widthDir * disp;
+                    vertices[backIndex] -= widthDir * disp;
+                    if (bevelFront < sharpStartBack) vertices[bevelFront] -= widthDir * disp;
+                    if (bevelBack < vertices.Count) vertices[bevelBack] -= widthDir * disp;
                 }
             }
         }
@@ -1087,7 +1079,7 @@ public class BladeGeneration : MonoBehaviour
             cumulativeLengths.Add(totalLength);
         }
 
-        // FIX: Calculate average width to scale fuller depth appropriately
+        //Calculate average width to scale fuller depth appropriately
         float avgWidth = 0f;
         for (int i = 0; i < ringCount; i++)
         {
@@ -1095,7 +1087,7 @@ public class BladeGeneration : MonoBehaviour
         }
         avgWidth /= ringCount;
 
-        // FIX: Scale depth based on blade dimensions
+        // Scale depth based on blade dimensions
         // Larger blades need proportionally shallower fullers relative to blade thickness
         float bladeSizeScale = Mathf.Clamp(avgWidth / 0.5f, 0.5f, 2f);
 
@@ -1104,7 +1096,7 @@ public class BladeGeneration : MonoBehaviour
         float fadeInLength = 0.05f;
         float fadeOutLength = 0.05f;
 
-        // FIX: Set maximum depth relative to blade dimensions
+        // Set maximum depth relative to blade dimensions
         float maxAllowedDepth = bladeThickness * 0.35f; // Reduced from 0.4f
 
         for (int ringIdx = 0; ringIdx < ringCount; ringIdx++)
@@ -1138,7 +1130,7 @@ public class BladeGeneration : MonoBehaviour
             if (lengthMask <= 0f)
                 continue;
 
-            // FIX: Apply size scaling to depth calculation
+            // Apply size scaling to depth calculation
             float depth = fuller.fullerDepth * (bladeThickness * 0.5f) * lengthMask;
             depth = depth / bladeSizeScale; // Scale down for larger blades
             depth = Mathf.Min(depth, maxAllowedDepth); // Hard cap
@@ -1359,7 +1351,7 @@ public class BladeGeneration : MonoBehaviour
             Vector3 left = smoothLefts[ring];
             Vector3 right = smoothRights[ring];
 
-            // KEY FIX: Use the ORIGINAL segment center for thickness distribution
+            //Use the ORIGINAL segment center for thickness distribution
             Vector3 segmentCenter = smoothGeometricCenters[ring];
 
             // The spine center (with offset applied) - for reference only
@@ -2013,21 +2005,9 @@ public class BladeGeneration : MonoBehaviour
 
     public void CalculateHandandGuardSize()
     {
-        //if (guard != null)
-        //    guard.transform.localScale = new Vector3(
-        //        baseWidth * 2,
-        //        guard.transform.localScale.y,
-        //        Mathf.Max(bladeThickness, 0.05f) * 1.2f
-        //    );
+     
 
-        //if (handle != null)
-        //    handle.transform.localScale = new Vector3(
-        //        baseWidth,
-        //        handle.transform.localScale.y,
-        //        handle.transform.localScale.z
-        //    );
-
-        // CRITICAL FIX: Always align holder with first segment center
+        // Always align holder with first segment center
         if (holder != null && splineGen != null &&
             splineGen.segments != null && splineGen.segments.Count > 0)
         {
@@ -2229,7 +2209,7 @@ public class BladeGeneration : MonoBehaviour
     {
         ApplyMeshQualitySettings();
 
-        // FIX: Clear existing mesh data
+        //Clear existing mesh data
         MeshFilter meshFilter = GetComponent<MeshFilter>();
         if (meshFilter != null && meshFilter.mesh != null)
         {
