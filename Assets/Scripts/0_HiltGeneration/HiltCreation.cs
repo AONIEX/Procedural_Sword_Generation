@@ -21,7 +21,7 @@ public class HiltCreation : MonoBehaviour
     [Header("Spline Generation")]
     public SplineContainer spline;
 
-    [Range(5f, 10f)] [DisplayName("Point Count", "Hilt Creation", 2, "")]
+    [Range(5f, 10f)] [DisplayName("Point Count", "Hilt Creation", 2, "", isAdvanced : true)]
     public int pointCount = 5;
 
     [Range(0.1f, 2f)]
@@ -30,28 +30,28 @@ public class HiltCreation : MonoBehaviour
     public float splineLength = 0.3f;
 
     [Header("Spline Shape Controls")]
-    [DisplayName("Shape Curve", "Hilt Creation", 2, "")]
+    [DisplayName("Shape Curve", "Hilt Creation", 2, "", isAdvanced: true)]
 
     public AnimationCurve shapeCurve = AnimationCurve.Linear(0, 0, 1, 0);
-    [Range(0.05f, 0.3f)][DisplayName("Max Height", "Hilt Creation", 2, "")]
+    [Range(0.05f, 0.3f)][DisplayName("Max Height", "Hilt Creation", 2, "", isAdvanced: true)]
     public float maxHeight = 0.1f;
 
     [Header("Mesh Extrusion")]
-    [Range(10f,30f)] [DisplayName("Sample Count", "Hilt Creation", 2, "")]
+    [Range(10f,30f)] [DisplayName("Sample Count", "Hilt Creation", 2, "", isAdvanced: true)]
     public int samples = 20;
     [Range(0.01f,0.2f)] [DisplayName("Width", "Hilt Creation", 2, "")]
 
     public float width = 0.05f;
-    [Range(0.01f,0.2f)] [DisplayName("Thickness", "Hilt Creation", 2, "")]
+    [Range(0.01f,0.2f)] [DisplayName("Thickness", "Hilt Creation", 2, "", isAdvanced: true)]
     public float thickness = 0.05f;
 
-    [DisplayName("Thickness Curve", "Hilt Creation", 2, "")]
+    [DisplayName("Thickness Curve", "Hilt Creation", 2, "", isAdvanced: true)]
     public AnimationCurve thicknessCurve = AnimationCurve.Linear(0, 1, 1, 1);
-    [DisplayName("Width Curve", "Hilt Creation", 2, "")]
+    [DisplayName("Width Curve", "Hilt Creation", 2, "", isAdvanced: true)]
     public AnimationCurve widthCurve = AnimationCurve.Linear(0, 1, 1, 1);
 
     [Header("Ridge Controls")]
-    [Range(0.005f, 0.1f)][DisplayName("Ridge Depth", "Hilt Creation", 2, "")]
+    [Range(0.005f, 0.1f)][DisplayName("Ridge Depth", "Hilt Creation", 2, "", isAdvanced: true)]
     public float ridgeDepth = 0.005f;
 
 

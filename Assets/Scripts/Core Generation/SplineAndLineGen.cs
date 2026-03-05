@@ -96,7 +96,7 @@ public class TipSettings
     public float heightOffset = 0f;
 
     [Tooltip("Curve allows user to control the tip leaning strength")]
-    [DisplayName("Tip Lean Strength Curve", "Blade Tip", 3, "Curve")]
+    [DisplayName("Tip Lean Strength Curve", "Blade Tip", 3, "Curve", isAdvanced: true)]
     public AnimationCurve tipLeanStrengthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     public void CopyFrom(TipSettings other)
@@ -118,7 +118,7 @@ public class CoreSettings
     public int splinePointCount = 5;
 
     [Tooltip("Defines spacing between blade segments")]
-    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Geometry", 1, "Spacing")]
+    [Range(0.25f, 2f), DisplayName("Height Spacing", "Blade Geometry", 1, "Spacing", isAdvanced : true)]
     public float heightSpacing = 0.5f;
 
     [DisplayName("Height Spacing Mode", "Blade Geometry", 2, "Spacing")]
@@ -128,7 +128,7 @@ public class CoreSettings
     public float totalBladeHeight = 3;
 
     [Vector2Range(0.1f, 1f)]
-    [DisplayName("Height Spacing Range", "Blade Geometry", 4, "Spacing")]
+    [DisplayName("Height Spacing Range", "Blade Geometry", 4, "Spacing", isAdvanced: true)]
     public Vector2 minAndMaxHeightSpacing = new Vector2(0.25f, 1f);
 
     [Vector2Range(0.2f, 1f)]
@@ -136,7 +136,7 @@ public class CoreSettings
     public Vector2 minAndMaxWidth = new Vector2(0.2f, 1f);
 
     [Vector2Range(-45f, 45f)]
-    [DisplayName("Segment Angle Range", "Curvature & Flow", 6, "Angles")]
+    [DisplayName("Segment Angle Range", "Curvature & Flow", 6, "Angles", isAdvanced: true)]
     public Vector2 minAndMaxAngle = new Vector2(-45f, 45f);
 
     public void CopyFrom(CoreSettings other)
@@ -158,17 +158,17 @@ public class WidthSettings
     [DisplayName("Use Random Width Curve", "Blade Geometry", 0, "Width")]
     public bool useRandomWidthCurve = true;
 
-    [DisplayName("User Defined Curve", "Blade Geometry", 1, "Width")]
+    [DisplayName("User Defined Curve", "Blade Geometry", 1, "Width", isAdvanced: true)]
     public AnimationCurve userDefinedCurve;
 
     [HideInUI]
     [DisplayName("Width Bias Curve", "Blade Geometry", 2, "Width")]
     public AnimationCurve randomWidthBiasCurve;
 
-    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Geometry", 3, "Noise")]
+    [Range(0f, 1f), DisplayName("Noise Influence", "Blade Geometry", 3, "Width", isAdvanced: true)]
     public float noiseInfluence = 1;
 
-    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Geometry", 4, "Noise")]
+    [Range(0.01f, 1f), DisplayName("Noise Frequency", "Blade Geometry", 4, "Width", isAdvanced: true)]
     public float noiseFrequency = 0.123f;
 
     public void CopyFrom(WidthSettings other)
@@ -206,10 +206,10 @@ public class CurvatureSettings
     [Range(0, .2f), DisplayName("Step Size", "Curvature & Flow", 4, "Curvature")]
     public float curvature_StepSize = 0.3f;
 
-    [DisplayName("Curvature Shape", "Curvature & Flow", 5, "Shape")]
+    [DisplayName("Curvature Shape", "Curvature & Flow", 5, "Shape", isAdvanced: true)]
     public AnimationCurve curvatureShape = AnimationCurve.Linear(0, 0, 1, 1);
 
-    [DisplayName("Curvature Direction", "Curvature & Flow", 6, "Direction")]
+    [DisplayName("Curvature Direction", "Curvature & Flow", 6, "Direction", isAdvanced: true)]
     public Vector3 curvatureDirection = new Vector3(1, 0, 0);
 
     public void CopyFrom(CurvatureSettings other)
@@ -235,7 +235,7 @@ public class EdgeSettings
     [DisplayName("Edge Collapse Mode", "Edge & Spine", 0, "Collapse")]
     public EdgeCollapseMode edgeCollapseMode = EdgeCollapseMode.None;
 
-    [DisplayName("Collapse Pattern", "Edge & Spine", 1, "Collapse")]
+    [DisplayName("Collapse Pattern", "Edge & Spine", 1, "Collapse", isAdvanced: true)]
     public string collapsePattern = "LRL";
 
     [Range(-1f, 1f), DisplayName("Spine Offset", "Edge & Spine", 2, "Spine")]
@@ -253,9 +253,9 @@ public class EdgeSettings
 public class SplineAndLineGen : MonoBehaviour
 {
     [Header("Manual Edit Falloff")]
-    [DisplayName("Curve Fall Off Radius", "Manual", 2, "Curvature")]
+    [DisplayName("Curve Fall Off Radius", "Manual Editing", 2, "Curvature", isAdvanced: true)]
     [Range(1, 5)] public int editFalloffRadius = 2;
-    [DisplayName("Curve Fall Off Curve", "Manual", 2, "Curvature")]
+    [DisplayName("Curve Fall Off Curve", "Manual Editing", 2, "Curvature", isAdvanced: true)]
     public AnimationCurve editFalloffCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
 

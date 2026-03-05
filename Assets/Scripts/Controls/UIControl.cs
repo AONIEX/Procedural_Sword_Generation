@@ -9,6 +9,12 @@ using TMPro;
 
 public class UIControl : MonoBehaviour
 {
+    [Header("Advanced UI")]
+    public Toggle advancedToggle; // wire up in Inspector (outside the scroll area)
+
+    private bool showAdvanced = false;
+    private HashSet<GameObject> advancedElements = new HashSet<GameObject>();
+
     public BladeGeneration bladeGen;
     public SwordShaderControl shaderControl;
     public HiltCreation hiltGen;
@@ -76,13 +82,16 @@ public class UIControl : MonoBehaviour
     }
 
     // ====================== UI BUILD ======================
-
     public void RefreshUI()
     {
+        advancedToggle = null; // <-- clear before destroying children
+
         foreach (Transform child in uiParent)
             Destroy(child.gameObject);
 
+        EnsureAdvancedToggle();
         sectionUIElements.Clear();
+        advancedElements.Clear();
         buildingUI = true;
 
         if (bladeGen != null)
@@ -101,10 +110,43 @@ public class UIControl : MonoBehaviour
 
         SetupSectionDropdown();
 
+        if (advancedToggle != null)
+        {
+            advancedToggle.isOn = showAdvanced;
+            advancedToggle.onValueChanged.RemoveAllListeners();
+            advancedToggle.onValueChanged.AddListener(v =>
+            {
+                showAdvanced = v;
+                int idx = sectionDropdown.value;
+                var names = sectionUIElements.Keys
+                    .OrderBy(s => s == "General" ? "" : s)
+                    .ToList();
+                if (idx >= 0 && idx < names.Count)
+                    ShowSection(names[idx]);
+            });
+        }
+
         if (sectionUIElements.ContainsKey("General"))
             ShowSection("General");
         else if (sectionUIElements.Count > 0)
             ShowSection(sectionUIElements.Keys.First());
+    }
+    void EnsureAdvancedToggle()
+    {
+        // Only create once - check by name if it already exists
+        if (advancedToggle != null) return;
+
+        GameObject row = Instantiate(toggleRowPrefab, uiParent);
+
+        TMP_Text text = row.GetComponentInChildren<TMP_Text>();
+        if (text != null) text.text = "Advanced Editing Options";
+
+        // Force it to always be the first element
+        row.transform.SetAsFirstSibling();
+        row.SetActive(true);
+
+        advancedToggle = row.GetComponentInChildren<Toggle>();
+        advancedToggle.isOn = showAdvanced;
     }
 
     void SetupSectionDropdown()
@@ -139,12 +181,13 @@ public class UIControl : MonoBehaviour
         if (!sectionUIElements.ContainsKey(section))
             return;
 
-        int siblingIndex = 0;
+        int siblingIndex = 1;
         foreach (var subPair in sectionUIElements[section].OrderBy(s => s.Key))
         {
             foreach (var go in subPair.Value)
             {
                 if (go == null) continue;
+                if (advancedElements.Contains(go) && !showAdvanced) continue;
                 go.SetActive(true);
                 go.transform.SetSiblingIndex(siblingIndex++);
             }
@@ -154,12 +197,12 @@ public class UIControl : MonoBehaviour
     // ====================== CORE GENERATION ======================
 
     void GenerateForObject(
-        object obj,
-        object rootOwner,
-        string currentSection = "General",
-        string currentSubSection = "Basic",
-        bool forceSection = false
-    )
+    object obj,
+    object rootOwner,
+    string currentSection = "General",
+    string currentSubSection = "Basic",
+    bool forceSection = false
+)
     {
         if (obj == null) return;
 
@@ -181,13 +224,14 @@ public class UIControl : MonoBehaviour
             string section = (forceSection ? currentSection : attr?.Section) ?? currentSection;
             string subSection = (forceSection ? currentSubSection : attr?.SubSection) ?? currentSubSection;
             string label = attr?.DisplayName ?? PrettyFieldName(field.Name);
+            bool isAdv = attr?.IsAdvanced ?? false;
 
             // ---------- RANGE ----------
             RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
             if (range != null && (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection, CreateSlider(obj, field, label, range, rootOwner));
+                AddToSectionWithAdvanced(section, subSection, CreateSlider(obj, field, label, range, rootOwner), isAdv);
                 continue;
             }
 
@@ -195,7 +239,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(Vector2))
             {
                 EnsureSubSectionExists(section, subSection);
-                CreateVector2Sliders(obj, field, label, section, subSection, rootOwner);
+                CreateVector2Sliders(obj, field, label, section, subSection, rootOwner, isAdv);
                 continue;
             }
 
@@ -203,7 +247,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(bool))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection, CreateToggle(obj, field, label, rootOwner));
+                AddToSectionWithAdvanced(section, subSection, CreateToggle(obj, field, label, rootOwner), isAdv);
                 continue;
             }
 
@@ -211,7 +255,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType.IsEnum)
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection, CreateEnumDropdown(obj, field, label, rootOwner));
+                AddToSectionWithAdvanced(section, subSection, CreateEnumDropdown(obj, field, label, rootOwner), isAdv);
                 continue;
             }
 
@@ -219,7 +263,7 @@ public class UIControl : MonoBehaviour
             if (field.FieldType == typeof(AnimationCurve))
             {
                 EnsureSubSectionExists(section, subSection);
-                AddToSection(section, subSection, CreateCurveEditor(obj, field, label, rootOwner));
+                AddToSectionWithAdvanced(section, subSection, CreateCurveEditor(obj, field, label, rootOwner), isAdv);
                 continue;
             }
 
@@ -233,7 +277,7 @@ public class UIControl : MonoBehaviour
                 for (int i = 0; i < list.Count; i++)
                 {
                     GameObject listHeader = CreateHeaderRow($"{label} {i + 1}");
-                    AddToSection(section, subSection, listHeader);
+                    AddToSectionWithAdvanced(section, subSection, listHeader, isAdv);
                     GenerateForObject(list[i], rootOwner, section, subSection, forceSection: true);
                 }
                 continue;
@@ -274,6 +318,11 @@ public class UIControl : MonoBehaviour
     {
         element.SetActive(false);
         sectionUIElements[section][subSection].Add(element);
+    }
+    void AddToSectionWithAdvanced(string section, string subSection, GameObject element, bool isAdvanced)
+    {
+        if (isAdvanced) advancedElements.Add(element);
+        AddToSection(section, subSection, element);
     }
 
     GameObject CreateHeaderRow(string label)
@@ -329,7 +378,7 @@ public class UIControl : MonoBehaviour
         return row;
     }
 
-    void CreateVector2Sliders(object obj, FieldInfo field, string label, string section, string subSection, object rootOwner)
+    void CreateVector2Sliders(object obj, FieldInfo field, string label, string section, string subSection, object rootOwner, bool isAdvanced = false)
     {
         Vector2 v = (Vector2)field.GetValue(obj);
         Vector2RangeAttribute range = field.GetCustomAttribute<Vector2RangeAttribute>();
@@ -371,7 +420,6 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Spline);
                 else if (rootOwner == hiltGen)
                     RequestGenerate(GenerationType.Guard);
-
             }
         });
 
@@ -389,14 +437,18 @@ public class UIControl : MonoBehaviour
                     RequestGenerate(GenerationType.Spline);
                 else if (rootOwner == hiltGen)
                     RequestGenerate(GenerationType.Guard);
-
             }
         });
+
+        if (isAdvanced)
+        {
+            advancedElements.Add(minRow);
+            advancedElements.Add(maxRow);
+        }
 
         AddToSection(section, subSection, minRow);
         AddToSection(section, subSection, maxRow);
     }
-
     GameObject CreateToggle(object obj, FieldInfo field, string label, object rootOwner)
     {
         GameObject row = Instantiate(toggleRowPrefab, uiParent);

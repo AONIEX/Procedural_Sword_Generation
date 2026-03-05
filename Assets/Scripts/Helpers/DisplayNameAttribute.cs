@@ -7,18 +7,21 @@ public class DisplayNameAttribute : Attribute
     public string Section;
     public int Order;
     public string SubSection;
+    public bool IsAdvanced;
 
     public DisplayNameAttribute(
        string displayName,
        string section = "General",
        int order = 0,
-       string subSection = "Basic")
+       string subSection = "Basic",
+       bool isAdvanced = false)
 
     {
         DisplayName = displayName;
         Section = section;
         Order = order;
         SubSection = subSection;
+        IsAdvanced = isAdvanced;
     }
 
 

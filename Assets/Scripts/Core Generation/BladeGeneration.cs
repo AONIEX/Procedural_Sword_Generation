@@ -36,10 +36,10 @@ public class BladeProfileLayer
     [Range(0, 1f), DisplayName("End Height", "Blade Profile", 2, "")]
     public float endHeight;
 
-    [DisplayName("Transition Curve", "Blade Profile", 2, "")]
+    [DisplayName("Transition Curve", "Blade Profile", 2, "", isAdvanced : true)]
     public AnimationCurve influenceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-    [Range(0, 2), DisplayName("Profile Scale", "Blade Profile", 2, "")]
+    [Range(0, 2), DisplayName("Profile Scale", "Blade Profile", 2, "", isAdvanced: true)]
     public float scale = 1;
 }
 
@@ -65,7 +65,7 @@ public class BladeGeneration : MonoBehaviour
     };
 
     [Range(0.1f, 3f)]
-    [DisplayName("Profile Blend Strenght", "Blade Profile", 3, "Blending")]
+    [DisplayName("Profile Blend Strenght", "Blade Profile", 3, "Blending" ,  isAdvanced: true)]
     public float profileOverlapBlendAmount = 0.5f;
 
     [Header("Mesh Quality")]
@@ -88,16 +88,16 @@ public class BladeGeneration : MonoBehaviour
     public GameObject handle;
     public GameObject holder;
 
-    [Range(-0.5f, 0.5f), DisplayName("Handle X Position", "General", 2, "Position")]
+    [Range(-0.5f, 0.5f), DisplayName("Handle X Position", "General", 2, "Position", isAdvanced: true)]
     public float HandleXPosition;
 
     [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7, "Width")]
     public float bladeThickness = 0.1f;
 
-    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0, "Edge")]
+    [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0, "Edge", isAdvanced: true)]
     public float edgeSharpness = 0.05f;
 
-    [Range(0.001f, 0.1f), DisplayName("Bevel Thickness", "Edge & Spine", 2, "Spine")]
+    [Range(0.001f, 0.1f), DisplayName("Bevel Thickness", "Edge & Spine", 2, "Spine", isAdvanced: true)]
     public float spineThickness = 0.005f;
 
     [DisplayName("Blade Material", "Rendering", 0, "Materials")]
@@ -136,7 +136,7 @@ public class BladeGeneration : MonoBehaviour
         [Range(0f, 1f), DisplayName("Fuller X Position", "Fullers", 14, "Position")]
         public float fullerCenter = 0.5f;
 
-        [DisplayName("Fuller Falloff", "Fullers", 15, "Shape")]
+        [DisplayName("Fuller Falloff", "Fullers", 15, "Shape", isAdvanced: true)]
         public AnimationCurve fullerFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
 

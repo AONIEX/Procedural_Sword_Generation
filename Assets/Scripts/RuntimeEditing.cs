@@ -74,7 +74,7 @@ public class RuntimeEditing : MonoBehaviour
         if (normalTex != null)
         {
             Vector2 hotspot = new Vector2(0,0);
-            Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
+            //Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
         }
 
         CreateHighlightObject();
@@ -104,7 +104,7 @@ public class RuntimeEditing : MonoBehaviour
                 if (hammerTex != null && !usingHammerTex)
                 {
                     Vector2 hotspot = new Vector2(hammerTex.width * 0.5f, hammerTex.height * 0.5f);
-                    Cursor.SetCursor(hammerTex, hotspot, CursorMode.Auto);
+                    //Cursor.SetCursor(hammerTex, hotspot, CursorMode.Auto);
                     usingHammerTex = true;
                 }
 
@@ -149,7 +149,7 @@ public class RuntimeEditing : MonoBehaviour
         if (hoveredBlade == null && normalTex != null && usingHammerTex)
         {
             Vector2 hotspot = new Vector2(0, 0);
-            Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
+            //Cursor.SetCursor(normalTex, hotspot, CursorMode.Auto);
             usingHammerTex = false;
         }
 
