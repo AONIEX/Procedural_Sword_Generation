@@ -266,8 +266,8 @@ public class SplineAndLineGen : MonoBehaviour
     [Header("Blade Preset")]
     public string presetName;
 
-    [DisplayName("Sword Preset", "General", 2, "Presets")]
-    public BladePresets bladePreset = BladePresets.None;
+    //[DisplayName("Sword Preset", "General", 2, "Presets")]
+    private BladePresets bladePreset = BladePresets.None;
 
     [Header("Symmetry")]
     [DisplayName("Don't Use Angles", "Curvature & Flow", 11, "Angles")]
