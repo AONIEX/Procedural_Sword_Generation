@@ -16,6 +16,8 @@ public class BladeGenerationData
 
     public float handleXPosition;
     public float bladeThickness;
+    public float tipThickness;
+    public float tipWidth;
     public float edgeSharpness;
     public float spineThickness;
 
@@ -93,6 +95,11 @@ public class BladeGeneration : MonoBehaviour
 
     [Range(0.01f, .2f), DisplayName("Blade Thickness", "Blade Geometry", 7, "Width")]
     public float bladeThickness = 0.1f;
+
+    [Range(0f, 0.05f), DisplayName("Tip Thickness", "Blade Tip", 8, "Width")]
+    public float tipThickness = 0f;
+    [Range(0f, 1f), DisplayName("Tip Width", "Blade Tip", 9, "Width")]
+    public float tipWidth = 0f;
 
     [Range(0f, 0.15f), DisplayName("Edge Sharpness", "Edge & Spine", 0, "Edge", isAdvanced: true)]
     public float edgeSharpness = 0.05f;
@@ -187,7 +194,8 @@ public class BladeGeneration : MonoBehaviour
 
 
     private MeshFilter meshFilter;
-
+    private int tipCapFrontStart = -1;
+    private int tipCapBackStart = -1;
     [Range(0, 30), DisplayName("Nick Amount", "Edge & Spine", 4, "Edge")]
     public int nickAmount = 0;
     void Start()
@@ -316,8 +324,9 @@ public class BladeGeneration : MonoBehaviour
         List<int> trianglesSharp = new List<int>();
 
         uvs.Clear();
+        tipCapFrontStart = -1;
+        tipCapBackStart = -1;
 
-   
 
         List<Vector3> smoothLefts = new List<Vector3>();
         List<Vector3> smoothRights = new List<Vector3>();
@@ -326,6 +335,8 @@ public class BladeGeneration : MonoBehaviour
 
         GenerateSmoothSegments(segments, smoothLefts, smoothRights, smoothCenters, smoothGeometricCenters);
 
+        if (tipWidth > 0f)
+            EnforceTipWidth(smoothLefts, smoothRights, smoothCenters);
         baseWidth = CalculateMaxBladeWidth(smoothLefts, smoothRights);
 
         // 1. Front face
@@ -382,6 +393,9 @@ public class BladeGeneration : MonoBehaviour
 
         GenerateUVs(vertices, smoothLefts, smoothRights, smoothCenters,
               frontVertexCount, sharpStartFront, sharpStartBack, ringCount);
+
+      
+        
 
         ApplyFullers(
                vertices,
@@ -553,21 +567,7 @@ public class BladeGeneration : MonoBehaviour
                 uvs[backIndex] = new Vector2(1f - uvs[i].x, uvs[i].y);
         }
 
-        // Bevel UVs
-        for (int ring = 0; ring < ringCount; ring++)
-        {
-            float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
-
-            int leftIndex = sharpStartFront + ring * 2;
-            int rightIndex = leftIndex + 1;
-
-            if (leftIndex < sharpStartBack)
-            {
-                uvs[leftIndex] = new Vector2(0f, v);
-                uvs[rightIndex] = new Vector2(1f, v);
-            }
-        }
-
+        // Bevel back UVs
         for (int ring = 0; ring < ringCount; ring++)
         {
             float v = totalLength > 0f ? cumulativeLengths[ring] / totalLength : 0f;
@@ -575,13 +575,25 @@ public class BladeGeneration : MonoBehaviour
             int leftIndex = sharpStartBack + ring * 2;
             int rightIndex = leftIndex + 1;
 
-            if (leftIndex < vertices.Count && rightIndex < vertices.Count)
+            if (leftIndex < uvs.Count && rightIndex < uvs.Count)
             {
                 uvs[leftIndex] = new Vector2(1f, v);
                 uvs[rightIndex] = new Vector2(0f, v);
             }
         }
 
+        // Cap face UVs 
+        if (tipWidth > 0f && tipCapFrontStart >= 0)
+        {
+            for (int i = 0; i < widthSubdivisions; i++)
+            {
+                float u = i / (float)(widthSubdivisions - 1);
+                if (tipCapFrontStart + i < uvs.Count)
+                    uvs[tipCapFrontStart + i] = new Vector2(u, 0.5f);
+                if (tipCapBackStart + i < uvs.Count)
+                    uvs[tipCapBackStart + i] = new Vector2(u, 0.5f);
+            }
+        }
     }
 
     private void ApplyFullers(List<Vector3> vertices,
@@ -1287,17 +1299,22 @@ public class BladeGeneration : MonoBehaviour
     }
 
     private void GenerateBackFace(
-     List<Vector3> vertices,
-     List<int> frontTriangles,
-     int frontVertexCount,
-     List<Vector3> smoothLefts,
-     List<Vector3> smoothRights,
-     List<Vector3> smoothCenters,
-     List<Vector3> smoothGeometricCenters,
-     List<int> trianglesFrontBack)
+    List<Vector3> vertices,
+    List<int> frontTriangles,
+    int frontVertexCount,
+    List<Vector3> smoothLefts,
+    List<Vector3> smoothRights,
+    List<Vector3> smoothCenters,
+    List<Vector3> smoothGeometricCenters,
+    List<int> trianglesFrontBack)
     {
         int ringCount = smoothLefts.Count;
         float spineOffset = splineGen.edgeSettings.spineOffset;
+
+        // The minimum profileTipFade we'll allow, derived from tipThickness.
+        float minTipFade = (bladeThickness > 0f)
+            ? Mathf.Clamp01(tipThickness / bladeThickness)
+            : 0f;
 
         for (int ring = 0; ring < ringCount; ring++)
         {
@@ -1312,14 +1329,15 @@ public class BladeGeneration : MonoBehaviour
                 float t = (ringCount - 1 - ring) / (float)(tipProfileFadeRings - 1);
                 profileTipFade = Mathf.Clamp01(t);
                 profileTipFade = Mathf.Pow(profileTipFade, 2.2f);
+
+                // Smoothly interpolate from minTipFade (at the very tip ring)
+                // to 1.0 (at the start of the fade zone) instead of going to 0.
+                profileTipFade = Mathf.Lerp(minTipFade, 1f, profileTipFade);
             }
 
             Vector3 left = smoothLefts[ring];
             Vector3 right = smoothRights[ring];
-            //Use the ORIGINAL segment center for thickness distribution
             Vector3 segmentCenter = smoothGeometricCenters[ring];
-
-            // The spine center (with offset applied) - for reference only
             Vector3 spineCenter = smoothCenters[ring];
             Vector3 widthDir = (right - left).normalized;
             Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
@@ -1331,14 +1349,8 @@ public class BladeGeneration : MonoBehaviour
             {
                 int frontIndex = ringStart + v;
 
-                // Standard t from left (0) to right (1)
                 float t = v / (float)(widthSubdivisions - 1);
 
-                // Get the vertex position
-                Vector3 vertexPos = Vector3.Lerp(left, right, t);
-
-                // Calculate where the segment center is along the left-right line
-                // This finds where the original segment center sits in the 0-1 range
                 float segmentCenterT;
                 float leftToRight = Vector3.Distance(left, right);
                 if (leftToRight > 0.0001f)
@@ -1348,26 +1360,17 @@ public class BladeGeneration : MonoBehaviour
                 }
                 else
                 {
-                    segmentCenterT = 0.5f; // Fallback to middle
+                    segmentCenterT = 0.5f;
                 }
 
-                // Calculate widthT relative to the SEGMENT CENTER
                 float widthT;
                 if (t < segmentCenterT)
-                {
-                    // Left of segment center: map to -1..0
                     widthT = (t / Mathf.Max(segmentCenterT, 0.0001f)) - 1f;
-                }
                 else
-                {
-                    // Right of segment center: map to 0..1
                     widthT = (t - segmentCenterT) / Mathf.Max(1f - segmentCenterT, 0.0001f);
-                }
 
                 float baseHalf = bladeThickness * 0.5f;
-                // Use the blend function with profiles (widthT is now relative to segment center)
                 float shaped = BlendThicknessAtOverlap(baseProfiles, bladeT, widthT, baseHalf);
-                // Apply tip fade
                 float halfThickness = shaped * profileTipFade;
 
                 vertices[frontIndex] += bladeNormal * halfThickness;
@@ -1375,24 +1378,73 @@ public class BladeGeneration : MonoBehaviour
             }
         }
 
+        // Tip block
+
+        int tipVertexFrontIndex = ringCount * widthSubdivisions;
+
+        if (tipWidth <= 0f)
+        {
+            // Sharp tip: offset the single convergence vertex for thickness
+            if (tipThickness > 0f)
+            {
+                Vector3 tipLeft = smoothLefts[ringCount - 1];
+                Vector3 tipRight = smoothRights[ringCount - 1];
+                Vector3 tipWidthDir = (tipRight - tipLeft).normalized;
+                Vector3 tipFwdDir = GetForwardDir(smoothCenters, ringCount - 1);
+                Vector3 tipNormal = Vector3.Cross(tipWidthDir, tipFwdDir).normalized;
+                float tipHalf = tipThickness * 0.5f;
+
+                vertices[tipVertexFrontIndex] += tipNormal * tipHalf;
+                vertices.Add(vertices[tipVertexFrontIndex] - tipNormal * tipHalf * 2f);
+            }
+            else
+            {
+                // No thickness — mirror the sharp point for the back face
+                vertices.Add(vertices[tipVertexFrontIndex]);
+            }
+        }
+        else
+        {
+            vertices.Add(vertices[ringCount * widthSubdivisions - 1]); // degenerate, never drawn
+        }
+
+        // Mirror front triangles to back face
         for (int i = 0; i < frontTriangles.Count; i += 3)
         {
             int a = frontTriangles[i];
             int b = frontTriangles[i + 1];
             int c = frontTriangles[i + 2];
 
-            int ringA = a / widthSubdivisions;
-            int ringB = b / widthSubdivisions;
-            int ringC = c / widthSubdivisions;
-
-            int vA = a % widthSubdivisions;
-            int vB = b % widthSubdivisions;
-            int vC = c % widthSubdivisions;
-
             trianglesFrontBack.Add(c + frontVertexCount);
             trianglesFrontBack.Add(b + frontVertexCount);
             trianglesFrontBack.Add(a + frontVertexCount);
         }
+
+        if (tipWidth > 0f)
+        {
+            int lastRingFront = (ringCount - 1) * widthSubdivisions;
+            int lastRingBack = lastRingFront + frontVertexCount;
+
+            tipCapFrontStart = vertices.Count;
+            for (int i = 0; i < widthSubdivisions; i++)
+                vertices.Add(vertices[lastRingFront + i]);
+
+            tipCapBackStart = vertices.Count;
+            for (int i = 0; i < widthSubdivisions; i++)
+                vertices.Add(vertices[lastRingBack + i]);
+
+            for (int i = 0; i < widthSubdivisions - 1; i++)
+            {
+                int f0 = tipCapFrontStart + i;
+                int f1 = tipCapFrontStart + i + 1;
+                int b0 = tipCapBackStart + i;
+                int b1 = tipCapBackStart + i + 1;
+
+                trianglesFrontBack.Add(f0); trianglesFrontBack.Add(f1); trianglesFrontBack.Add(b0);
+                trianglesFrontBack.Add(f1); trianglesFrontBack.Add(b1); trianglesFrontBack.Add(b0);
+            }
+        }
+
     }
     private void GenerateBevelVertices(
         List<Vector3> vertices,
@@ -1830,19 +1882,20 @@ public class BladeGeneration : MonoBehaviour
                     triangles.Add(c);
             }
         }
-
-        Segment tipSegment = segments[segments.Count - 1];
-        Vector3 tipPoint = tipSegment.center;
-        int tipIndex = vertices.Count;
-        vertices.Add(tipPoint);
-
-        int finalRingStart = ringStarts[ringStarts.Count - 1];
-
-        for (int i = 0; i < widthSubdivisions - 1; i++)
+        if (tipWidth <= 0f)
         {
-            triangles.Add(finalRingStart + i);
-            triangles.Add(tipIndex);
-            triangles.Add(finalRingStart + i + 1);
+            Segment tipSegment = segments[segments.Count - 1];
+            Vector3 tipPoint = tipSegment.center;
+            int tipIndex = vertices.Count;
+            vertices.Add(tipPoint);
+
+            int finalRingStart = ringStarts[ringStarts.Count - 1];
+            for (int i = 0; i < widthSubdivisions - 1; i++)
+            {
+                triangles.Add(finalRingStart + i);
+                triangles.Add(tipIndex);
+                triangles.Add(finalRingStart + i + 1);
+            }
         }
     }
 
@@ -2460,6 +2513,98 @@ public class BladeGeneration : MonoBehaviour
         return p - planeNormal * d;
     }
 
+
+    // Walks back through rings to find a valid non-degenerate width direction.
+    private Vector3 GetPrevWidthDir(List<Vector3> smoothLefts, List<Vector3> smoothRights, int fromRing)
+    {
+        for (int k = fromRing - 1; k >= 0; k--)
+        {
+            Vector3 span = smoothRights[k] - smoothLefts[k];
+            if (span.sqrMagnitude > 0.0001f)
+                return span.normalized;
+        }
+        return Vector3.right;
+    }
+
+    private void EnforceTipWidth(
+        List<Vector3> smoothLefts,
+        List<Vector3> smoothRights,
+        List<Vector3> smoothCenters)
+    {
+        if (tipWidth <= 0f) return;
+
+        int ringCount = smoothLefts.Count;
+        int lastRing = ringCount - 1;
+
+        // Extend the blend zone back into the segment BEFORE the tip segment.
+        // This prevents a hard kink at the tip-segment boundary where the
+        // constraint would otherwise suddenly appear.
+        int extraRings = Mathf.Max(3, segmentSubdivisions / 2);
+        int blendRings = tipSubdivisions + extraRings;
+        int blendStart = Mathf.Max(0, lastRing - blendRings);
+        int blendRange = lastRing - blendStart;
+
+        // Cubic ease-in (t³) means the constraint barely grazes the blend zone
+        // entry and reaches full tipWidth only at the very last ring — no sudden
+        // jump when the floor first becomes active.
+        for (int i = blendStart + 1; i <= lastRing; i++)
+        {
+            float rawT = blendRange > 0 ? (float)(i - blendStart) / blendRange : 1f;
+            float t = rawT * rawT * rawT;          // cubic ease-in
+            float minW = tipWidth * t;
+
+            Vector3 L = smoothLefts[i];
+            Vector3 R = smoothRights[i];
+            float w = Vector3.Distance(L, R);
+            if (w >= minW) continue;                  // already wide enough, skip
+
+            Vector3 dir = w > 0.0001f
+                ? (R - L).normalized
+                : GetPrevWidthDir(smoothLefts, smoothRights, i);
+
+            Vector3 mid = (L + R) * 0.5f;
+            smoothLefts[i] = mid - dir * (minW * 0.5f);
+            smoothRights[i] = mid + dir * (minW * 0.5f);
+        }
+
+        // Averages each ring's width against its neighbours. This dissolves the
+        // step discontinuity where the clamp first overrides the natural taper,
+        // without ever violating the minimum floor.
+        // Two iterations are enough to diffuse a single-ring step.
+        for (int pass = 0; pass < 2; pass++)
+        {
+            for (int i = blendStart + 1; i < lastRing; i++)
+            {
+                // Re-compute the floor for this ring so we never smooth below it.
+                float rawT = blendRange > 0 ? (float)(i - blendStart) / blendRange : 1f;
+                float t = rawT * rawT * rawT;
+                float minW = tipWidth * t;
+
+                float wPrev = Vector3.Distance(smoothLefts[i - 1], smoothRights[i - 1]);
+                float wCurr = Vector3.Distance(smoothLefts[i], smoothRights[i]);
+                float wNext = Vector3.Distance(smoothLefts[i + 1], smoothRights[i + 1]);
+
+                // Tri-ring average, clamped to the floor.
+                float wSmoothed = Mathf.Max((wPrev + wCurr + wNext) / 3f, minW);
+
+                // Direction from averaged neighbours rather than the (possibly
+                // just-clamped) current ring, for the smoothest possible result.
+                Vector3 prevDir = smoothRights[i - 1] - smoothLefts[i - 1];
+                Vector3 nextDir = smoothRights[i + 1] - smoothLefts[i + 1];
+                Vector3 avgDir = (prevDir + nextDir);
+                if (avgDir.sqrMagnitude < 0.0001f)
+                    avgDir = GetPrevWidthDir(smoothLefts, smoothRights, i);
+                else
+                    avgDir = avgDir.normalized;
+
+                // Keep the midpoint exactly where it is; only widen/narrow.
+                Vector3 mid = (smoothLefts[i] + smoothRights[i]) * 0.5f;
+                smoothLefts[i] = mid - avgDir * (wSmoothed * 0.5f);
+                smoothRights[i] = mid + avgDir * (wSmoothed * 0.5f);
+            }
+        }
+    }
+
     //FOR SAVING DATA 
     public BladeGenerationData GetData()
     {
@@ -2472,6 +2617,8 @@ public class BladeGeneration : MonoBehaviour
             bladeThickness = bladeThickness,
             edgeSharpness = edgeSharpness,
             spineThickness = spineThickness,
+            tipThickness = tipThickness,
+            tipWidth = tipWidth,
             sharpSide = sharpSide,
             fullers = fullers != null
                 ? new List<FullerSettings>(fullers)
@@ -2538,6 +2685,8 @@ public class BladeGeneration : MonoBehaviour
         edgeSharpness = data.edgeSharpness;
         spineThickness = data.spineThickness;
         sharpSide = data.sharpSide;
+        tipThickness = data.tipThickness;
+        tipWidth = data.tipWidth;
 
         RegenerateBlade(true);
     }

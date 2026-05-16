@@ -34,6 +34,10 @@ public class UIControl : MonoBehaviour
     public bool autoGenerate = true;
     public float maxGenerateRate = 4f;
 
+    public float autoRandomTime = 10;
+    public float currentAutoRandomTime = 10;
+    public bool autoRandom = true;
+
     private float lastGenerateTime = 0f;
     private bool pendingGenerate = false;
 
@@ -53,8 +57,20 @@ public class UIControl : MonoBehaviour
 
     void Update()
     {
+        if (autoRandom)
+        {
+            currentAutoRandomTime -= Time.deltaTime;
+            if (currentAutoRandomTime <= 0)
+            {
+                RandomGeneration();
+                currentAutoRandomTime = autoRandomTime;
+            }
+
+        }
+
         if (!pendingGenerate || !autoGenerate) return;
 
+       
         float interval = 1f / maxGenerateRate;
         if (Time.time - lastGenerateTime >= interval)
         {
@@ -567,6 +583,10 @@ public class UIControl : MonoBehaviour
         autoGenerate = TorF;
     }
 
+    public void AutoRandomSwitch(bool TorF)
+    {
+        autoRandom = TorF;
+    }
     public void RandomGeneration()
     {
         bladeGen.RandomGeneration();
