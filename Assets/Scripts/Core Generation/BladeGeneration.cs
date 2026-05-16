@@ -284,27 +284,27 @@ public class BladeGeneration : MonoBehaviour
         switch (meshQuality)
         {
             case MeshQuality.Low:
-                segmentSubdivisions = 5;
-                tipSubdivisions = 3;
-                widthSubdivisions = 5;
+                segmentSubdivisions = 12;
+                tipSubdivisions = 8;
+                widthSubdivisions = 12;
                 bevelAmount = 0.0f;
                 break;
             case MeshQuality.Medium:
-                segmentSubdivisions = 13;
-                tipSubdivisions = 9;
-                widthSubdivisions = 13;
+                segmentSubdivisions = 26;
+                tipSubdivisions = 18;
+                widthSubdivisions = 26;
                 bevelAmount = 0.04f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.High:
-                segmentSubdivisions = 26;
-                tipSubdivisions = 20;
-                widthSubdivisions = 26;
-                bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
-                break;
-            case MeshQuality.Ultra:
                 segmentSubdivisions = 50;
                 tipSubdivisions = 40;
                 widthSubdivisions = 50;
+                bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
+                break;
+            case MeshQuality.Ultra:
+                segmentSubdivisions = 100;
+                tipSubdivisions = 70;
+                widthSubdivisions = 100;
                 bevelAmount = 0.015f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }

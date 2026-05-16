@@ -7,8 +7,19 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+
+
+[System.Serializable]
+public class EngravingSettings
+{
+    public float brushSize = 20f;
+    public float depthValue = 0.5f;
+}
+
 public class UIControl : MonoBehaviour
 {
+
+
     [Header("Advanced UI")]
     public Toggle advancedToggle; // wire up in Inspector (outside the scroll area)
 
@@ -40,7 +51,7 @@ public class UIControl : MonoBehaviour
 
     private float lastGenerateTime = 0f;
     private bool pendingGenerate = false;
-
+    public ScrollRect scrollRect;
     private enum GenerationType { None, Full, Spline, Guard }
     private GenerationType pendingGeneration = GenerationType.None;
 
@@ -48,6 +59,9 @@ public class UIControl : MonoBehaviour
     private Dictionary<string, Dictionary<string, List<GameObject>>> sectionUIElements
         = new Dictionary<string, Dictionary<string, List<GameObject>>>();
 
+  
+    public EngravingSettings engravingSettings = new EngravingSettings();
+    public Material engravingDisplayMaterial;
     IEnumerator Start()
     {
         yield return null;
@@ -121,6 +135,8 @@ public class UIControl : MonoBehaviour
 
         if (hiltGen != null)
             GenerateForObject(hiltGen, hiltGen);
+
+        AddEngravingsSection();
 
         buildingUI = false;
 
@@ -592,4 +608,67 @@ public class UIControl : MonoBehaviour
         bladeGen.RandomGeneration();
         RefreshUI();
     }
+
+    //Engravings
+    void AddEngravingsSection()
+    {
+        string section = "Engravings";
+        string sub = "Drawing";
+
+        if (!sectionUIElements.ContainsKey(section))
+            sectionUIElements[section] = new Dictionary<string, List<GameObject>>();
+
+        if (!sectionUIElements[section].ContainsKey(sub))
+        {
+            var header = CreateHeaderRow(sub);
+            header.SetActive(false);
+            sectionUIElements[section][sub] = new List<GameObject>() { header };
+        }
+
+        // --- Create the drawing canvas ---
+        // Create the drawing canvas
+        GameObject drawingGO = new GameObject("EngravingCanvas", typeof(RectTransform), typeof(RawImage));
+        drawingGO.transform.SetParent(uiParent, false);
+
+        RawImage img = drawingGO.GetComponent<RawImage>();
+        img.color = Color.white;
+
+        // Add EngravingSystem to the same GameObject
+        EngravingSystem engraver = drawingGO.AddComponent<EngravingSystem>();
+
+        // Pass settings
+        engraver.engravingSettings = engravingSettings;
+
+        // Assign the RawImage
+        engraver.targetCanvas = img;
+        engraver.scrollRect = scrollRect;
+        engraver.brushMaterial = engravingDisplayMaterial;
+        // Assign the RenderTexture to the UI
+        img.texture = engraver.renderTexture;
+        img.material = engravingDisplayMaterial;
+
+
+        // --- Add brush size slider ---
+        var brushSlider = CreateSlider(
+            engravingSettings,
+            typeof(EngravingSettings).GetField("brushSize"),
+            "Brush Size",
+            new RangeAttribute(1, 200),
+            engravingSettings
+        );
+        brushSlider.SetActive(false);
+        sectionUIElements[section][sub].Add(brushSlider);
+
+        // --- Add depth slider ---
+        var depthSlider = CreateSlider(
+            engravingSettings,
+            typeof(EngravingSettings).GetField("depthValue"),
+            "Depth Value",
+            new RangeAttribute(0, 1),
+            engravingSettings
+        );
+        depthSlider.SetActive(false);
+        sectionUIElements[section][sub].Add(depthSlider);
+    }
+
 }
