@@ -335,9 +335,9 @@ public class BladeGeneration : MonoBehaviour
                 bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.Ultra:
-                segmentSubdivisions = 30;
-                tipSubdivisions = 35;
-                widthSubdivisions = 60;
+                segmentSubdivisions = 75;
+                tipSubdivisions = 50;
+                widthSubdivisions = 175;
                 bevelAmount = 0.01f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }
@@ -353,6 +353,8 @@ public class BladeGeneration : MonoBehaviour
     {
         Mesh mesh3D = new Mesh();
         mesh3D.name = "Blade Mesh"; // <--- ADDED: Name the mesh
+        mesh3D.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+
         List<Vector3> vertices = new List<Vector3>();
         List<int> trianglesFrontBack = new List<int>();
         List<int> trianglesSharp = new List<int>();

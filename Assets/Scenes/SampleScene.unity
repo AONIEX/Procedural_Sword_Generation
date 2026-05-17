@@ -769,7 +769,7 @@ MonoBehaviour:
   - {x: 0, y: 3.7567644, z: 0}
   splineGen: {fileID: 28350893}
   baseProfiles:
-  - profile: 2
+  - profile: 1
     startHeight: 0
     endHeight: 1
     influenceCurve:
