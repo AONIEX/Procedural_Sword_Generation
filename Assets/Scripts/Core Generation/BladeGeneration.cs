@@ -151,6 +151,39 @@ public class BladeGeneration : MonoBehaviour
         public float circleRadius = 0.3f;
     }
 
+    [System.Serializable]
+    public class EngravingLayerSettings
+    {
+        [DisplayName("Depth", "Engravings", 0, "Settings")]
+        [Range(0f, .5f)]
+        public float depth = 0.05f;
+
+        [DisplayName("Scale X", "Engravings", 1, "Settings")]
+        [Range(0.01f, 1f)]
+        public float scaleX = 0.5f;
+
+        [DisplayName("Scale Y", "Engravings", 2, "Settings")]
+        [Range(0.001f, 0.1f)]
+        public float scaleY = 0.01f;
+
+        [DisplayName("Offset X", "Engravings", 3, "Position")]
+        [Range(-1f, 1f)]
+        public float offsetX = 0f;
+
+        [DisplayName("Offset Y", "Engravings", 4, "Position")]
+        [Range(-1f, 1f)]
+        public float offsetY = 0f;
+    }
+
+    [HideInUI]
+    public RenderTexture engravingTexture;
+
+    [HideInUI]
+    private Texture2D engravingSnapshot;
+
+    [DisplayName("Engraving Layers", "Engravings", 0, "General")]
+    public List<EngravingLayerSettings> engravingLayers = new List<EngravingLayerSettings>();
+
     [DisplayName("Fuller Settings", "Fullers", 20, "General")]
     public List<FullerSettings> fullers;
 
@@ -296,22 +329,23 @@ public class BladeGeneration : MonoBehaviour
                 bevelAmount = 0.04f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.High:
-                segmentSubdivisions = 50;
-                tipSubdivisions = 40;
-                widthSubdivisions = 50;
+                segmentSubdivisions = 35;
+                tipSubdivisions = 25;
+                widthSubdivisions = 35;
                 bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.Ultra:
-                segmentSubdivisions = 100;
-                tipSubdivisions = 70;
-                widthSubdivisions = 100;
-                bevelAmount = 0.015f; //Setting for smooth-ish Circular Hollow Fullers
+                segmentSubdivisions = 30;
+                tipSubdivisions = 35;
+                widthSubdivisions = 60;
+                bevelAmount = 0.01f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }
     }
 
     public void Generate()
     {
+        BakeEngravingSnapshot();
         RegenerateBlade(true);
     }
 
@@ -663,7 +697,139 @@ public class BladeGeneration : MonoBehaviour
 
            );
         }
-       
+
+        ApplyEngravingFuller(
+            vertices, smoothLefts, smoothRights, smoothCenters, frontVertexCount);
+    }
+
+    private void ApplyEngravingFuller(
+     List<Vector3> vertices,
+     List<Vector3> smoothLefts,
+     List<Vector3> smoothRights,
+     List<Vector3> smoothCenters,
+     int frontVertexCount)
+    {
+        if (engravingSnapshot == null || engravingLayers == null || engravingLayers.Count == 0) return;
+        
+
+        int ringCount = smoothCenters.Count;
+        float totalLength = 0f;
+        float[] cumulative = new float[ringCount];
+
+
+        int _expectedMin = ringCount * widthSubdivisions + frontVertexCount;
+        if (vertices.Count < _expectedMin)
+        {
+            Debug.LogWarning($"[Engraving] Vertex count {vertices.Count} < expected {_expectedMin}; skipping.");
+            return;
+        }
+
+        for (int i = 1; i < ringCount; i++)
+        {
+            totalLength += Vector3.Distance(smoothCenters[i], smoothCenters[i - 1]);
+            cumulative[i] = totalLength;
+        }
+
+        // Calculate average blade width so we can correct for aspect ratio
+        float avgWidth = 0f;
+        for (int i = 0; i < ringCount; i++)
+            avgWidth += Vector3.Distance(smoothLefts[i], smoothRights[i]);
+        avgWidth /= ringCount;
+
+        // aspectRatio > 1 means the blade is taller than wide (typical sword)
+        // We use this to scale V so one unit in U == one unit in V in world space
+        float aspectRatio = (avgWidth > 0.0001f) ? totalLength / avgWidth : 1f;
+
+        float maxDepth = bladeThickness * 0.4f;
+
+        foreach (var layer in engravingLayers)
+        {
+            for (int ring = 0; ring < ringCount; ring++)
+            {
+                float v = totalLength > 0f ? cumulative[ring] / totalLength : 0f;
+
+                Vector3 left = smoothLefts[ring];
+                Vector3 right = smoothRights[ring];
+                Vector3 widthDir = (right - left).normalized;
+                Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
+                Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
+
+                int ringStart = ring * widthSubdivisions;
+
+                for (int w = 0; w < widthSubdivisions; w++)
+                {
+                    float rawU = w / (float)(widthSubdivisions - 1);
+
+                    // Correct V for aspect ratio so the texture maps as a square in world space
+                    float vCorrected = v / aspectRatio;
+
+                    // Replace the su/sv lines with:
+                    float su = (rawU - 0.5f) / Mathf.Max(layer.scaleX, 0.001f) + 0.5f - layer.offsetX;
+                    float sv = (vCorrected - 0.5f / aspectRatio) / Mathf.Max(layer.scaleY, 0.001f) + 0.5f - layer.offsetY;
+
+                    if (su < 0f || su > 1f || sv < 0f || sv > 1f) continue;
+
+                    float sample = engravingSnapshot.GetPixelBilinear(su, sv).r;
+                    float depth = (1f - sample) * layer.depth * maxDepth;
+
+                    if (depth <= 0f) continue;
+
+                    int frontIdx = ringStart + w;
+                    int backIdx = frontIdx + frontVertexCount;
+
+                    vertices[frontIdx] -= ringNormal * depth;
+                    if (backIdx < vertices.Count)
+                        vertices[backIdx] += ringNormal * depth;
+
+
+                }
+            }
+        }
+    }
+
+    public void SetEngravingTexture(RenderTexture rt)
+    {
+        engravingTexture = rt;
+        // Invalidate the stale CPU snapshot so the next regeneration
+        // is forced to re-bake from the newly assigned texture.
+        engravingSnapshot = null;
+    }
+
+    public void ClearEngraving()
+    {
+        // Clear the snapshot so ApplyEngravingFuller bails out immediately
+        engravingSnapshot = null;
+
+        // Clear the RenderTexture back to white (no engraving)
+        if (engravingTexture != null)
+        {
+            RenderTexture prev = RenderTexture.active;
+            RenderTexture.active = engravingTexture;
+            GL.Clear(true, true, Color.white);
+            RenderTexture.active = prev;
+        }
+    }
+
+    public void BakeEngravingSnapshot()
+    {
+        if (engravingTexture == null) return;
+
+        if (engravingSnapshot == null ||
+            engravingSnapshot.width != engravingTexture.width ||
+            engravingSnapshot.height != engravingTexture.height)
+        {
+            engravingSnapshot = new Texture2D(
+                engravingTexture.width,
+                engravingTexture.height,
+                TextureFormat.RFloat, false);
+        }
+
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = engravingTexture;
+        engravingSnapshot.ReadPixels(
+            new Rect(0, 0, engravingTexture.width, engravingTexture.height), 0, 0);
+        engravingSnapshot.Apply();
+        RenderTexture.active = prev;
     }
 
     private void ApplyCircularHollowFuller(
@@ -2204,14 +2370,15 @@ public class BladeGeneration : MonoBehaviour
     }
     private void RegenerateBlade(bool recalcHandle = false)
     {
+        // Always snapshot the current engraving paint before
+        // the mesh is rebuilt with (potentially different) quality settings.
+        BakeEngravingSnapshot();
+
         ApplyMeshQualitySettings();
 
-        //Clear existing mesh data
         MeshFilter meshFilter = GetComponent<MeshFilter>();
         if (meshFilter != null && meshFilter.mesh != null)
-        {
             meshFilter.mesh.Clear();
-        }
 
         splineGen.GenerateLinesAndSplines();
         SmoothSegmentCenters();
@@ -2224,6 +2391,7 @@ public class BladeGeneration : MonoBehaviour
 
         CalculateHandandGuardSize();
     }
+
 
     private float[,] SmoothDepthMap(float[,] depthMap, int ringCount)
     {
@@ -2693,6 +2861,8 @@ public class BladeGeneration : MonoBehaviour
 
     public void RandomGeneration()
     {
+        ClearEngraving(); // Clear engraving before randomising
+
         splineGen.SetRandomParamaters();
         SetRandomParamaters();
         RegenerateBlade(true);
@@ -3094,4 +3264,6 @@ public class BladeGeneration : MonoBehaviour
         }
         return curve;
     }
+
+  
 }

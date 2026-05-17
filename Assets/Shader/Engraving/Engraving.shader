@@ -4,7 +4,6 @@ Shader "Custom/Engraving"
     {
         _MainTex ("Base (RFloat)", 2D) = "white" {}
         _DoBrush ("Do Brush Pass", Float) = 0
-        _Depth ("Depth", Float) = 1
         _Size ("Size", Float) = 20
         _BrushPos ("BrushPos", Vector) = (0,0,0,0)
     }
@@ -24,7 +23,6 @@ Shader "Custom/Engraving"
 
             sampler2D _MainTex;
             float _DoBrush;
-            float _Depth;
             float _Size;
             float4 _BrushPos;
 
@@ -43,19 +41,19 @@ Shader "Custom/Engraving"
             {
                 float baseValue = tex2D(_MainTex, i.uv).r;
 
-                // DISPLAY MODE (no brush)
+                // DISPLAY MODE
                 if (_DoBrush < 0.5)
-                {
                     return float4(baseValue, baseValue, baseValue, 1);
-                }
 
                 // BRUSH MODE
                 float2 diff = i.uv - _BrushPos.xy;
                 float dist = length(diff);
                 float radius = _Size / 1024.0;
+
                 float mask = saturate(1.0 - dist / radius);
 
-                float brush = lerp(1.0, 0.0, mask);
+                // PURE BLACK STAMP (no greys)
+                float brush = (mask > 0.0) ? 0.0 : 1.0;
 
                 float result = min(baseValue, brush);
 

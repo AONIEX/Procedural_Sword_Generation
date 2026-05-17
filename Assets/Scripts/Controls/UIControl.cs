@@ -114,7 +114,7 @@ public class UIControl : MonoBehaviour
     // ====================== UI BUILD ======================
     public void RefreshUI()
     {
-        advancedToggle = null; // <-- clear before destroying children
+        advancedToggle = null;
 
         foreach (Transform child in uiParent)
             Destroy(child.gameObject);
@@ -123,6 +123,13 @@ public class UIControl : MonoBehaviour
         sectionUIElements.Clear();
         advancedElements.Clear();
         buildingUI = true;
+
+        // Seed default engraving layer BEFORE GenerateForObject reads the list
+        if (bladeGen != null && (bladeGen.engravingLayers == null || bladeGen.engravingLayers.Count == 0))
+            bladeGen.engravingLayers = new List<BladeGeneration.EngravingLayerSettings>
+        {
+            new BladeGeneration.EngravingLayerSettings()
+        };
 
         if (bladeGen != null)
             GenerateForObject(bladeGen, bladeGen);
@@ -583,7 +590,9 @@ public class UIControl : MonoBehaviour
     {
         if (!autoGenerate) return;
 
-        // Always prioritize Full over others
+        // Bake before generation so the CPU snapshot is fresh
+        bladeGen?.BakeEngravingSnapshot();
+
         if (type == GenerationType.Full)
             pendingGeneration = GenerationType.Full;
         else if (type == GenerationType.Guard && pendingGeneration != GenerationType.Full)
@@ -605,7 +614,13 @@ public class UIControl : MonoBehaviour
     }
     public void RandomGeneration()
     {
+
         bladeGen.RandomGeneration();
+
+        var engraver = uiParent.GetComponentInChildren<EngravingSystem>(true);
+        if (engraver != null)
+            engraver.ClearCanvas();
+
         RefreshUI();
     }
 
@@ -626,26 +641,33 @@ public class UIControl : MonoBehaviour
         }
 
         // --- Create the drawing canvas ---
-        // Create the drawing canvas
         GameObject drawingGO = new GameObject("EngravingCanvas", typeof(RectTransform), typeof(RawImage));
         drawingGO.transform.SetParent(uiParent, false);
 
         RawImage img = drawingGO.GetComponent<RawImage>();
         img.color = Color.white;
 
-        // Add EngravingSystem to the same GameObject
         EngravingSystem engraver = drawingGO.AddComponent<EngravingSystem>();
-
-        // Pass settings
+        engraver.bladeGeneration = bladeGen;
         engraver.engravingSettings = engravingSettings;
-
-        // Assign the RawImage
         engraver.targetCanvas = img;
         engraver.scrollRect = scrollRect;
         engraver.brushMaterial = engravingDisplayMaterial;
-        // Assign the RenderTexture to the UI
         img.texture = engraver.renderTexture;
         img.material = engravingDisplayMaterial;
+        // In AddEngravingsSection, after: img.material = engravingDisplayMaterial;
+        bladeGen.engravingTexture = engraver.renderTexture;
+
+        if (bladeGen.engravingLayers == null || bladeGen.engravingLayers.Count == 0)
+        {
+            bladeGen.engravingLayers = new List<BladeGeneration.EngravingLayerSettings>
+            {
+                new BladeGeneration.EngravingLayerSettings()
+            };
+        }
+
+        drawingGO.SetActive(false);
+        sectionUIElements[section][sub].Add(drawingGO); ;
 
 
         // --- Add brush size slider ---
@@ -670,5 +692,6 @@ public class UIControl : MonoBehaviour
         depthSlider.SetActive(false);
         sectionUIElements[section][sub].Add(depthSlider);
     }
+
 
 }

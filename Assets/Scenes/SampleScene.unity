@@ -860,12 +860,14 @@ MonoBehaviour:
   holder: {fileID: 1555368597}
   HandleXPosition: 0
   bladeThickness: 0.15
-  tipThickness: 0.05
-  tipWidth: 0.1
+  tipThickness: 0
+  tipWidth: 0
   edgeSharpness: 0.020563286
   spineThickness: 0.001
   bladeMaterial: {fileID: 2100000, guid: bf8a2c076d4fe114b80612b51055e93c, type: 2}
   sharpEdgeMaterial: {fileID: 2100000, guid: 0de71c5e29a52bb4f91c6833998fbac9, type: 2}
+  engravingTexture: {fileID: 0}
+  engravingLayers: []
   fullers:
   - fullerType: 0
     start: 0

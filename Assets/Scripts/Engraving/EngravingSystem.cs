@@ -12,11 +12,22 @@ public class EngravingSystem : MonoBehaviour
     private Vector2 lastUV;
     private bool hasLastUV = false;
     public ScrollRect scrollRect;
+    public BladeGeneration bladeGeneration;
     void Awake()
     {
-        renderTexture = new RenderTexture(1024, 1024, 0, RenderTextureFormat.RFloat);
-        renderTexture.Create();
-        ClearToWhite();
+        if (renderTexture == null || !renderTexture.IsCreated())
+        {
+            renderTexture = new RenderTexture(512, 512, 0, RenderTextureFormat.RFloat);
+            renderTexture.Create();
+            ClearToWhite();
+        }
+
+        if (targetCanvas != null)
+            targetCanvas.texture = renderTexture;
+
+        if (bladeGeneration != null)                   
+               bladeGeneration.SetEngravingTexture(renderTexture);
+
     }
 
     void Update()
@@ -79,7 +90,7 @@ public class EngravingSystem : MonoBehaviour
 
         // Interpolate between lastUV and uv
         float dist = Vector2.Distance(lastUV, uv);
-        int steps = Mathf.CeilToInt(dist * 50f); // 50 = resolution; increase for smoother lines
+        int steps = Mathf.CeilToInt(dist * 200); // 50 = resolution; increase for smoother lines
 
         for (int i = 0; i <= steps; i++)
         {
@@ -116,5 +127,14 @@ public class EngravingSystem : MonoBehaviour
         RenderTexture.active = renderTexture;
         GL.Clear(true, true, Color.white);
         RenderTexture.active = active;
+    }
+
+    public void ClearCanvas()
+    {
+        ClearToWhite();
+
+        // Also update the RawImage texture reference in case it was reassigned
+        if (targetCanvas != null)
+            targetCanvas.texture = renderTexture;
     }
 }
