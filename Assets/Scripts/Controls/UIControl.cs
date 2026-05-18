@@ -16,6 +16,13 @@ public class EngravingSettings
     public float depthValue = 0.5f;
 }
 
+[System.Serializable]
+public class EngravingPreset
+{
+    public string name;
+    public Texture2D texture;
+}
+
 public class UIControl : MonoBehaviour
 {
 
@@ -35,6 +42,7 @@ public class UIControl : MonoBehaviour
     public GameObject toggleRowPrefab;
     public GameObject curveEditorPrefab;
     public GameObject headerRowPrefab;
+    public GameObject buttonRowPrefab;
 
     public Transform uiParent;
     public TMP_Dropdown sectionDropdown;
@@ -62,6 +70,10 @@ public class UIControl : MonoBehaviour
   
     public EngravingSettings engravingSettings = new EngravingSettings();
     public Material engravingDisplayMaterial;
+
+    [Header("Engraving Presets")]
+    public List<EngravingPreset> engravingPresets = new List<EngravingPreset>();
+
     IEnumerator Start()
     {
         yield return null;
@@ -691,6 +703,58 @@ public class UIControl : MonoBehaviour
         );
         depthSlider.SetActive(false);
         sectionUIElements[section][sub].Add(depthSlider);
+
+
+        // --- Preset dropdown ---
+        if (engravingPresets != null && engravingPresets.Count > 0)
+        {
+            GameObject dropdownGO = Instantiate(dropdownRowPrefab, uiParent);
+            TMP_Text ddText = dropdownGO.GetComponentInChildren<TMP_Text>();
+            if (ddText != null) ddText.text = "Preset";
+
+            TMP_Dropdown dd = dropdownGO.GetComponentInChildren<TMP_Dropdown>();
+            dd.ClearOptions();
+            dd.AddOptions(engravingPresets.Select(p => p.name).ToList());
+
+            dropdownGO.SetActive(false);
+            sectionUIElements[section][sub].Add(dropdownGO);
+
+            // --- Apply preset button ---
+            GameObject applyButtonGO = Instantiate(buttonRowPrefab, uiParent);
+            TMP_Text applyText = applyButtonGO.GetComponentInChildren<TMP_Text>();
+            if (applyText != null) applyText.text = "Apply Preset";
+
+            Button applyBtn = applyButtonGO.GetComponentInChildren<Button>();
+            applyBtn.onClick.AddListener(() =>
+            {
+                int idx = dd.value;
+                if (idx < 0 || idx >= engravingPresets.Count) return;
+
+                var engraver = uiParent.GetComponentInChildren<EngravingSystem>(true);
+                if (engraver != null)
+                    engraver.ApplyPreset(engravingPresets[idx].texture);
+            });
+
+            applyButtonGO.SetActive(false);
+            sectionUIElements[section][sub].Add(applyButtonGO);
+        }
+
+        GameObject clearButtonGO = Instantiate(buttonRowPrefab, uiParent);
+        TMP_Text btnText = clearButtonGO.GetComponentInChildren<TMP_Text>();
+        if (btnText != null) btnText.text = "Clear Engraving";
+
+        Button btn = clearButtonGO.GetComponentInChildren<Button>();
+        btn.onClick.AddListener(() =>
+        {
+            var engraver = uiParent.GetComponentInChildren<EngravingSystem>(true);
+            if (engraver != null)
+                engraver.ClearCanvas();
+
+            bladeGen.ClearEngraving();
+        });
+
+        clearButtonGO.SetActive(false);
+        sectionUIElements[section][sub].Add(clearButtonGO);
     }
 
 

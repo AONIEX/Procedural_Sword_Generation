@@ -17,7 +17,7 @@ public class EngravingSystem : MonoBehaviour
     {
         if (renderTexture == null || !renderTexture.IsCreated())
         {
-            renderTexture = new RenderTexture(512, 512, 0, RenderTextureFormat.RFloat);
+            renderTexture = new RenderTexture(2048, 2048, 0, RenderTextureFormat.RFloat);
             renderTexture.Create();
             ClearToWhite();
         }
@@ -136,5 +136,15 @@ public class EngravingSystem : MonoBehaviour
         // Also update the RawImage texture reference in case it was reassigned
         if (targetCanvas != null)
             targetCanvas.texture = renderTexture;
+    }
+
+    public void ApplyPreset(Texture2D preset)
+    {
+        if (preset == null) return;
+        Graphics.Blit(preset, renderTexture);
+        if (targetCanvas != null)
+            targetCanvas.texture = renderTexture;
+        if (bladeGeneration != null)
+            bladeGeneration.BakeEngravingSnapshot();
     }
 }

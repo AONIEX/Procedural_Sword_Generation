@@ -860,7 +860,7 @@ MonoBehaviour:
   holder: {fileID: 1555368597}
   HandleXPosition: 0
   bladeThickness: 0.15
-  tipThickness: 0
+  tipThickness: 0.05
   tipWidth: 0
   edgeSharpness: 0.020563286
   spineThickness: 0.001
@@ -2125,6 +2125,7 @@ MonoBehaviour:
   toggleRowPrefab: {fileID: 5340144560994068897, guid: 303c48006e630614d89192d723025a5c, type: 3}
   curveEditorPrefab: {fileID: 3226288411551448251, guid: fe544107fe94d6645903a2b6401dd8ce, type: 3}
   headerRowPrefab: {fileID: 2171138229765442790, guid: b0b74239ff8a1a54b9329644d5fe5904, type: 3}
+  buttonRowPrefab: {fileID: 1058773422017701596, guid: 9623ddacfa5fdc84c92555d3bded7646, type: 3}
   uiParent: {fileID: 1428342025}
   sectionDropdown: {fileID: 1119054229}
   autoGenerate: 1
@@ -2137,6 +2138,11 @@ MonoBehaviour:
     brushSize: 20
     depthValue: 0.5
   engravingDisplayMaterial: {fileID: 2100000, guid: 2337f865746a21f40990224e279fb7fa, type: 2}
+  engravingPresets:
+  - name: Test 1
+    texture: {fileID: 2800000, guid: 7b42ef6c8adc1824b8681bc7b55f1e1d, type: 3}
+  - name: Test 2 Letter
+    texture: {fileID: 2800000, guid: 071d59b86b7c2e942bb94ed032c0959e, type: 3}
 --- !u!1 &499998574
 GameObject:
   m_ObjectHideFlags: 0

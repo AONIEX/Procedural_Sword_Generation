@@ -163,7 +163,7 @@ public class BladeGeneration : MonoBehaviour
         public float scaleX = 0.5f;
 
         [DisplayName("Scale Y", "Engravings", 2, "Settings")]
-        [Range(0.001f, 0.1f)]
+        [Range(0.001f, 0.15f)]
         public float scaleY = 0.01f;
 
         [DisplayName("Offset X", "Engravings", 3, "Position")]
@@ -335,9 +335,9 @@ public class BladeGeneration : MonoBehaviour
                 bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.Ultra:
-                segmentSubdivisions = 75;
+                segmentSubdivisions = 100;
                 tipSubdivisions = 50;
-                widthSubdivisions = 175;
+                widthSubdivisions = 125;
                 bevelAmount = 0.01f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }
@@ -772,9 +772,9 @@ public class BladeGeneration : MonoBehaviour
                     if (su < 0f || su > 1f || sv < 0f || sv > 1f) continue;
 
                     float sample = engravingSnapshot.GetPixelBilinear(su, sv).r;
-                    float depth = (1f - sample) * layer.depth * maxDepth;
+                    if (sample >= 0.5f) continue;          // hard cutoff — not engraved, skip entirely
 
-                    if (depth <= 0f) continue;
+                    float depth = layer.depth * maxDepth;  // full depth, no gradient
 
                     int frontIdx = ringStart + w;
                     int backIdx = frontIdx + frontVertexCount;
