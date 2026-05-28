@@ -18,6 +18,7 @@ public class EngravingSystem : MonoBehaviour
         if (renderTexture == null || !renderTexture.IsCreated())
         {
             renderTexture = new RenderTexture(2048, 2048, 0, RenderTextureFormat.RFloat);
+            renderTexture.filterMode = FilterMode.Bilinear;  // ADD THIS
             renderTexture.Create();
             ClearToWhite();
         }

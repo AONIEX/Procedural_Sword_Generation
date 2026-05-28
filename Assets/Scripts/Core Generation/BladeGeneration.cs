@@ -155,7 +155,7 @@ public class BladeGeneration : MonoBehaviour
     public class EngravingLayerSettings
     {
         [DisplayName("Depth", "Engravings", 0, "Settings")]
-        [Range(0f, .5f)]
+        [Range(-0.2f, .5f)]
         public float depth = 0.05f;
 
         [DisplayName("Scale X", "Engravings", 1, "Settings")]
@@ -323,21 +323,21 @@ public class BladeGeneration : MonoBehaviour
                 bevelAmount = 0.0f;
                 break;
             case MeshQuality.Medium:
-                segmentSubdivisions = 26;
-                tipSubdivisions = 18;
-                widthSubdivisions = 26;
+                segmentSubdivisions = 30;
+                tipSubdivisions = 20;
+                widthSubdivisions = 30;
                 bevelAmount = 0.04f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.High:
-                segmentSubdivisions = 35;
+                segmentSubdivisions = 50;
                 tipSubdivisions = 25;
-                widthSubdivisions = 35;
+                widthSubdivisions = 50;
                 bevelAmount = 0.025f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
             case MeshQuality.Ultra:
-                segmentSubdivisions = 100;
+                segmentSubdivisions = 80;
                 tipSubdivisions = 50;
-                widthSubdivisions = 125;
+                widthSubdivisions = 100;
                 bevelAmount = 0.01f; //Setting for smooth-ish Circular Hollow Fullers
                 break;
         }
@@ -703,21 +703,18 @@ public class BladeGeneration : MonoBehaviour
         ApplyEngravingFuller(
             vertices, smoothLefts, smoothRights, smoothCenters, frontVertexCount);
     }
-
     private void ApplyEngravingFuller(
-     List<Vector3> vertices,
-     List<Vector3> smoothLefts,
-     List<Vector3> smoothRights,
-     List<Vector3> smoothCenters,
-     int frontVertexCount)
+        List<Vector3> vertices,
+        List<Vector3> smoothLefts,
+        List<Vector3> smoothRights,
+        List<Vector3> smoothCenters,
+        int frontVertexCount)
     {
         if (engravingSnapshot == null || engravingLayers == null || engravingLayers.Count == 0) return;
-        
 
         int ringCount = smoothCenters.Count;
         float totalLength = 0f;
         float[] cumulative = new float[ringCount];
-
 
         int _expectedMin = ringCount * widthSubdivisions + frontVertexCount;
         if (vertices.Count < _expectedMin)
@@ -732,61 +729,174 @@ public class BladeGeneration : MonoBehaviour
             cumulative[i] = totalLength;
         }
 
-        // Calculate average blade width so we can correct for aspect ratio
         float avgWidth = 0f;
         for (int i = 0; i < ringCount; i++)
             avgWidth += Vector3.Distance(smoothLefts[i], smoothRights[i]);
         avgWidth /= ringCount;
 
-        // aspectRatio > 1 means the blade is taller than wide (typical sword)
-        // We use this to scale V so one unit in U == one unit in V in world space
         float aspectRatio = (avgWidth > 0.0001f) ? totalLength / avgWidth : 1f;
-
         float maxDepth = bladeThickness * 0.4f;
+
+        // Quality-compensated depth — lower quality meshes need more depth to
+        // remain visible because normal smoothing washes out shallow engravings.
+        float qualityDepthScale = Mathf.Clamp(35f / widthSubdivisions, 1f, 3f);
 
         foreach (var layer in engravingLayers)
         {
+            //  STEP 1: sample raw binary alpha into a per-vertex grid 
+            float[,] rawAlpha = new float[ringCount, widthSubdivisions];
+            float[,] suGrid = new float[ringCount, widthSubdivisions];
+            float[,] svGrid = new float[ringCount, widthSubdivisions];
+            bool[,] validGrid = new bool[ringCount, widthSubdivisions];
+
             for (int ring = 0; ring < ringCount; ring++)
             {
                 float v = totalLength > 0f ? cumulative[ring] / totalLength : 0f;
-
-                Vector3 left = smoothLefts[ring];
-                Vector3 right = smoothRights[ring];
-                Vector3 widthDir = (right - left).normalized;
-                Vector3 forwardDir = GetForwardDir(smoothCenters, ring);
-                Vector3 ringNormal = Vector3.Cross(widthDir, forwardDir).normalized;
-
-                int ringStart = ring * widthSubdivisions;
+                float vCorrected = v / aspectRatio;
 
                 for (int w = 0; w < widthSubdivisions; w++)
                 {
                     float rawU = w / (float)(widthSubdivisions - 1);
 
-                    // Correct V for aspect ratio so the texture maps as a square in world space
-                    float vCorrected = v / aspectRatio;
-
-                    // Replace the su/sv lines with:
                     float su = (rawU - 0.5f) / Mathf.Max(layer.scaleX, 0.001f) + 0.5f - layer.offsetX;
                     float sv = (vCorrected - 0.5f / aspectRatio) / Mathf.Max(layer.scaleY, 0.001f) + 0.5f - layer.offsetY;
 
                     if (su < 0f || su > 1f || sv < 0f || sv > 1f) continue;
 
-                    float sample = engravingSnapshot.GetPixelBilinear(su, sv).r;
-                    if (sample >= 0.5f) continue;          // hard cutoff — not engraved, skip entirely
+                    validGrid[ring, w] = true;
+                    suGrid[ring, w] = su;
+                    svGrid[ring, w] = sv;
 
-                    float depth = layer.depth * maxDepth;  // full depth, no gradient
+                    // Tiny 4-tap for sub-pixel AA only  NOT for mesh smoothing.
+                    float o = 0.0008f;
+                    float s00 = engravingSnapshot.GetPixelBilinear(su, sv).r;
+                    float s10 = engravingSnapshot.GetPixelBilinear(su + o, sv).r;
+                    float s01 = engravingSnapshot.GetPixelBilinear(su, sv + o).r;
+                    float s11 = engravingSnapshot.GetPixelBilinear(su + o, sv + o).r;
+                    float smp = (s00 + s10 + s01 + s11) * 0.25f;
+
+                    // Hard threshold  keep the symbol crisp.
+                    // Edge smoothness comes from the Gaussian blur below, not from
+                    // a wide SmoothStep band in texture space.
+                    rawAlpha[ring, w] = smp < 0.75f ? 1f : 0f;
+                }
+            }
+
+            //  STEP 2: Gaussian blur alpha in WORLD SPACE 
+            // This spreads the transition zone over several vertices regardless of
+            // mesh quality, giving smooth edges without sacrificing symbol crispness.
+            float[,] smoothAlpha = BlurAlphaWorldSpace(
+                rawAlpha, validGrid,
+                ringCount, widthSubdivisions,
+                smoothLefts, smoothRights,
+                sigma: 0.006f,   // 6 mm smooth falloff  tune to taste
+                kernelRadius: 4  // look ±4 vertices in each direction
+            );
+
+            if(meshQuality != MeshQuality.Ultra && meshQuality != MeshQuality.High)
+            {
+                smoothAlpha = rawAlpha;
+            }
+
+            //STEP 3: displace vertices 
+            for (int ring = 0; ring < ringCount; ring++)
+            {
+                Vector3 left = smoothLefts[ring];
+                Vector3 right = smoothRights[ring];
+                Vector3 widthDir = (right - left).normalized;
+                Vector3 fwdDir = GetForwardDir(smoothCenters, ring);
+                Vector3 ringNorm = Vector3.Cross(widthDir, fwdDir).normalized;
+                int ringStart = ring * widthSubdivisions;
+
+                for (int w = 0; w < widthSubdivisions; w++)
+                {
+                    if (!validGrid[ring, w]) continue;
+
+                    float alpha = smoothAlpha[ring, w];
+                    if (alpha <= 0.001f) continue;
+
+                    float su = suGrid[ring, w];
+                    float sv = svGrid[ring, w];
+
+                    // Fade only at the very edge of the UV tile (not a wide box).
+                    float fadeMargin = 0.02f;
+                    float fadeU = Mathf.Clamp01(Mathf.Min(su, 1f - su) / fadeMargin);
+                    float fadeV = Mathf.Clamp01(Mathf.Min(sv, 1f - sv) / fadeMargin);
+                    float boundaryFade = Mathf.SmoothStep(0f, 1f, fadeU)
+                                       * Mathf.SmoothStep(0f, 1f, fadeV);
+
+                    float depth = layer.depth * maxDepth * alpha * boundaryFade * qualityDepthScale;
 
                     int frontIdx = ringStart + w;
                     int backIdx = frontIdx + frontVertexCount;
 
-                    vertices[frontIdx] -= ringNormal * depth;
+                    vertices[frontIdx] -= ringNorm * depth;
                     if (backIdx < vertices.Count)
-                        vertices[backIdx] += ringNormal * depth;
-
-
+                        vertices[backIdx] += ringNorm * depth;
                 }
             }
         }
+    }
+
+    //  World-space Gaussian blur on the per-vertex alpha grid 
+    // Weights neighbours by actual 3-D distance, so the transition width in metres
+    // stays constant across all mesh quality settings.
+    private float[,] BlurAlphaWorldSpace(
+        float[,] alpha,
+        bool[,] valid,
+        int ringCount,
+        int widthCount,
+        List<Vector3> smoothLefts,
+        List<Vector3> smoothRights,
+        float sigma = 0.006f,
+        int kernelRadius = 4)
+    {
+        float[,] result = new float[ringCount, widthCount];
+        float sigma2x2 = 2f * sigma * sigma;
+
+        // Pre-build world positions for each vertex (centre of each ring × width)
+        Vector3[,] pos = new Vector3[ringCount, widthCount];
+        for (int r = 0; r < ringCount; r++)
+        {
+            Vector3 L = smoothLefts[r];
+            Vector3 R = smoothRights[r];
+            for (int w = 0; w < widthCount; w++)
+            {
+                float t = w / (float)(widthCount - 1);
+                pos[r, w] = Vector3.Lerp(L, R, t);
+            }
+        }
+
+        for (int r = 0; r < ringCount; r++)
+        {
+            for (int w = 0; w < widthCount; w++)
+            {
+                if (!valid[r, w]) continue;
+
+                float weightSum = 0f;
+                float alphaSum = 0f;
+
+                int r0 = Mathf.Max(0, r - kernelRadius);
+                int r1 = Mathf.Min(ringCount - 1, r + kernelRadius);
+                int w0 = Mathf.Max(0, w - kernelRadius);
+                int w1 = Mathf.Min(widthCount - 1, w + kernelRadius);
+
+                for (int nr = r0; nr <= r1; nr++)
+                {
+                    for (int nw = w0; nw <= w1; nw++)
+                    {
+                        float dist = Vector3.Distance(pos[r, w], pos[nr, nw]);
+                        float weight = Mathf.Exp(-(dist * dist) / sigma2x2);
+                        alphaSum += alpha[nr, nw] * weight;
+                        weightSum += weight;
+                    }
+                }
+
+                result[r, w] = weightSum > 0f ? alphaSum / weightSum : 0f;
+            }
+        }
+
+        return result;
     }
 
     public void SetEngravingTexture(RenderTexture rt)
@@ -831,6 +941,7 @@ public class BladeGeneration : MonoBehaviour
         engravingSnapshot.ReadPixels(
             new Rect(0, 0, engravingTexture.width, engravingTexture.height), 0, 0);
         engravingSnapshot.Apply();
+        engravingSnapshot.filterMode = FilterMode.Bilinear;
         RenderTexture.active = prev;
     }
 

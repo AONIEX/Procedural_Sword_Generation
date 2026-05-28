@@ -854,7 +854,7 @@ MonoBehaviour:
       m_RotationOrder: 4
     scale: 0
   profileOverlapBlendAmount: 0.5
-  meshQuality: 2
+  meshQuality: 3
   guard: {fileID: 1555368597}
   handle: {fileID: 2025118642}
   holder: {fileID: 1555368597}
