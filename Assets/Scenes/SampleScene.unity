@@ -2143,6 +2143,8 @@ MonoBehaviour:
     texture: {fileID: 2800000, guid: 7b42ef6c8adc1824b8681bc7b55f1e1d, type: 3}
   - name: Test 2 Letter
     texture: {fileID: 2800000, guid: 071d59b86b7c2e942bb94ed032c0959e, type: 3}
+  - name: Test 3 Letter
+    texture: {fileID: 2800000, guid: 1937a36d0eed1de459697cd0ebf4310f, type: 3}
 --- !u!1 &499998574
 GameObject:
   m_ObjectHideFlags: 0
