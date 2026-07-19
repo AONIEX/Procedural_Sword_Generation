@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _Depth: 0.5
     - _DoBrush: 0
-    - _Size: 91.711266
+    - _Size: 20
     m_Colors:
-    - _BrushPos: {r: 0.19786622, g: 0.9957202, b: 0, a: 0}
+    - _BrushPos: {r: NaN, g: NaN, b: 0, a: 0}
   m_BuildTextureStacks: []
